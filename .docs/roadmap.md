@@ -39,6 +39,7 @@ Outcomes and order only; active work goes in `implementation_plan.md` when a pha
   retired path. Each project's next session commits it with its other pending edits.
 - **Re-measure after the context rules** (from 2026-09-30) — once each of Nebulingo, Framvis and Tilspire has run two or three phases under the new rules, compare with `agent_audit.py` (peak context, gap re-caches, weighted total) against the 2026-09-30 figures in the orchestrator skill; adjust the ~250k ceiling and the ~150-tool-call split if they miss. Also record each main session's
   context growth per phase. If it is still ~100k under the new rules, revisit phase leads (built and
-  rolled back 2026-09-30, `reference/setup-architecture.md`).
+  rolled back 2026-09-30, `reference/setup-architecture.md`). Also judge compaction instead of fresh chats (2026-09-30): do compacted
+  sessions lose decisions or repeat work after a compaction? If so, tighten the summary rule.
 - **Generalise the suite helpers** — Nebulingo's `neighbour_suites.py` / `battery_gate.py` and Tilspire's slice runner into the audit suite with a small per-project config; when a third project needs one.
 - **Project follow-ups (unverified since 2026-09-01; belong in each project's own roadmap):** nebulingo — add `.tmp/` and `.docs/proofs/` to `.auditignore` and a `.token-limits.json` for `scripts/` (242 advisory findings → ~80); nebulingo — `includes/lesson_authoring.php` (819 KB, read 309 times by agents) is the costliest file to work near.

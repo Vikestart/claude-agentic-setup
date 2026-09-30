@@ -1,5 +1,6 @@
-"""Checks the context hook (context_guard.py) against synthetic transcripts: when it must stay
-silent, when it must add its notice, and that it finds a subagent's own transcript.
+"""Checks the context hook (context_guard.py) against synthetic transcripts: silent for the main
+chat, and for a subagent when it must stay silent, when it must add its notice, and that it finds
+the subagent's own transcript.
 Run after any change to the hook: python test_context_guard.py"""
 import json, os, subprocess, sys, tempfile, pathlib
 hook = pathlib.Path(__file__).with_name("context_guard.py")
@@ -40,55 +41,28 @@ def check(name, cond):
         print("FAIL", name)
 
 main = root / "proj" / "sess1.jsonl"
-write(main, [120000, 180000])
-check("below the ceiling: silent", call(main) == "")
+write(main, [120000, 260000, 405000])
+check("main chat past 250k and 400k: silent (compaction handles it)", call(main) == "")
 
-write(main, [120000, 180000, 260000])
-msg = call(main)
-check("past the ceiling: notice", "260k" in msg and "hand over" in msg)
-
-write(main, [120000, 260000, 290000])
-check("under STEP more growth: silent", call(main) == "")
-
-write(main, [120000, 260000, 311000])
-again = call(main)
-check("STEP more growth: notice again, without asking twice", "311k" in again and "do not ask again" in again)
-
-write(main, [311000, 90000])
-check("after a compaction: silent below the ceiling", call(main) == "")
-write(main, [311000, 90000, 255000])
-check("after a compaction: first notice again at the ceiling", "hand over" in call(main))
-
-write(main, [90000])
 agent = main.with_suffix("") / "subagents" / "agent-abc123.jsonl"
-write(agent, [100000, 400000], junk_first=True)
+write(agent, [100000, 180000])
+check("subagent below the ceiling: silent", call(main, "abc123") == "")
+write(agent, [100000, 260000], junk_first=True)
 amsg = call(main, "abc123")
-check("subagent: reads its own transcript", "400k" in amsg and "hand back" in amsg)
+check("subagent past the ceiling: reads its own transcript, hand back", "260k" in amsg and "hand back" in amsg)
+write(agent, [260000, 290000])
+check("subagent under STEP more growth: silent", call(main, "abc123") == "")
+write(agent, [260000, 311000])
+check("subagent STEP more growth: notice again", "311k" in call(main, "abc123"))
 
-main2 = root / "proj" / "sess2.jsonl"
-write(main2, [300000], partial_last=True)
-check("half-written newest line: skipped, last complete record read", "300k" in call(main2))
+agent2 = main.with_suffix("") / "subagents" / "agent-def456.jsonl"
+write(agent2, [300000], partial_last=True)
+check("half-written newest line: skipped, last complete record read", "300k" in call(main, "def456"))
 
-main3 = root / "proj" / "sess3c.jsonl"
-write(main3, [405000])
-check("past 400k: ask the owner about /compact", "/compact" in call(main3))
-write(main3, [405000, 455000])
-later = call(main3)
-check("under 100k more: no second /compact question", "/compact" not in later)
-write(main3, [405000, 455000, 510000])
-check("another 100k: ask again", "/compact" in call(main3))
-write(main3, [510000, 60000])
-call(main3)  # the hook runs on every tool call, so it sees the drop before the regrowth
-write(main3, [510000, 60000, 410000])
-check("after a compaction: asked again at 400k", "/compact" in call(main3))
-agent2 = main3.with_suffix("") / "subagents" / "agent-def456.jsonl"
-write(agent2, [450000])
-check("subagent past 400k: hand back, never /compact", "/compact" not in call(main3, "def456"))
-
-check("missing transcript: silent, exit 0", call(root / "nope" / "x.jsonl") == "")
+check("missing transcript: silent, exit 0", call(root / "nope" / "x.jsonl", "zzz") == "")
 
 bad = subprocess.run([sys.executable, str(hook)], input=json.dumps(
-    {"transcript_path": str(root / "proj" / "sess3.jsonl")}), capture_output=True, text=True,
+    {"transcript_path": str(root / "proj" / "sess3.jsonl"), "agent_id": "q"}), capture_output=True, text=True,
     env={**env, "CONTEXT_GUARD_LIMIT": "250k"})
 check("a mistyped setting falls back to the default and should stay silent",
       bad.returncode == 0 and not bad.stderr)

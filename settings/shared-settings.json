@@ -42,6 +42,13 @@
           "command": "python \"$HOME/.claude/hooks/context_guard.py\"",
           "timeout": 5
         }
+      ],
+      "SessionStart": [
+        {
+          "matcher": "compact",
+          "command": "python \"$HOME/.claude/hooks/after_compact.py\"",
+          "timeout": 10
+        }
       ]
     }
   },

@@ -27,6 +27,7 @@ def checks(gate_roots: list[Path]) -> list[tuple[str, list[str], str]]:
         ("AGENTS.md in sync", [py, str(AUDIT / "sync_agents_md.py"), "--check"], ""),
         ("credentials guard tests", [py, str(HOME / "hooks" / "test_guard_credentials.py")], r"^\d+/\d+ ok"),
         ("context guard tests", [py, str(HOME / "hooks" / "test_context_guard.py")], r"^\d+/\d+ ok"),
+        ("after-compact hook tests", [py, str(HOME / "hooks" / "test_after_compact.py")], r"^\d+/\d+ ok"),
     ]
     setup_tests = REPO / "install" / "test_setup.py"
     if setup_tests.is_file():

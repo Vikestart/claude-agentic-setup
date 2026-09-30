@@ -119,5 +119,8 @@ production path unless the plan or the owner excludes one; don't re-ask at routi
 5. **`changelog.md`:** append one line, `Phase N — …`, linking the reference doc if there is one.
    Near ~100 lines or at a major release or year boundary, rotate the oldest block into a dated
    reference archive. Never delete release or audit history.
-6. **Handover cadence:** CLAUDE.md's handover rule applies — past ~250k context, or after two or three
-   phases, ask once about a fresh chat.
+6. **Carry on.** No fresh-chat question: the docs just updated are what a compaction falls back
+   on (CLAUDE.md §1, "Compaction, not fresh chats"). If a handover raised this project's context
+   limit for the phase just finished, clear it: `python $HOME/.claude/skills/asdev-web-audit/scripts/context_override.py status`,
+   then `clear` when it reports `temporary` (a deliberate value is never touched). Start the next
+   approved phase, if any.

@@ -1,6 +1,6 @@
 ---
 name: asdev-handover
-description: Hand a project over to a fresh chat — bring every .docs working document up to date, review stray docs, sweep the reference library, write handover.md, and give a short paste-ready message for the new chat. Use ONLY once the user says yes to a proposed fresh chat, asks for a handover, or asks to wrap up for a new chat. Not for ordinary phase completion, a changelog line, or a status summary.
+description: Hand a project over to a fresh chat — bring every .docs working document up to date, review stray docs, sweep the reference library, write handover.md, and give a short paste-ready message for the new chat. Use ONLY when the user asks for a handover or to wrap up for a new chat (another machine, their partner, a long break) — sessions never propose one; compaction handles context size. Not for ordinary phase completion, a changelog line, or a status summary.
 ---
 
 # Handover
@@ -14,8 +14,9 @@ update files with `Edit` and scripts, and never re-emit a document that barely c
 
 ## Before you start
 
-- **Only on the owner's yes.** CLAUDE.md §1 says when to *ask*; this skill runs once they answer.
-  While the question is open, finish the current phase but do not start or research the next.
+- **Only when the owner asks.** Sessions never propose a handover (CLAUDE.md §1, "Compaction, not
+  fresh chats"); the owner asks when switching machines, handing to their partner, or before a long
+  break.
 - **List every repo this session touched** — a session on one project often edits another's docs,
   hooks or shared skills. Each one gets steps 0–3; the handover itself goes where the work continues.
 - **A global-setup session** (`~/.claude` itself) hands over in `~/.claude/.docs/`, which is part of
@@ -141,7 +142,9 @@ settings load at session start. Run from the project root, with
      split.
    Size it at the expected peak plus ~30k, rounded up to 50k, at most 1,000,000.
    Set it with `python $S/context_override.py set <N> --reason "<phase, why>"`. The script refuses a
-   value at or below the cap, and never overwrites a deliberate setting.
+   value at or below the cap, and never overwrites a deliberate setting. Handovers are rare now
+   (only on the owner's request), so the phase-completion routine clears it when the phase it was
+   raised for is done (`asdev-planner`, step 6) — otherwise it would outlive its phase indefinitely.
 3. Record the result on the handover's "Next session's context limit" line, and in the paste-ready
    message when it is raised.
 

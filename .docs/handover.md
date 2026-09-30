@@ -33,7 +33,6 @@
 
 ## Open questions for the owner
 - Add the partner as a collaborator on GitHub (owner action).
-- The terminal `claude` CLI login is still expired (`claude /login`); headless probes need it.
 - Disable connectors a project never uses (owner action; ~17k of MCP tool text per turn here).
 
 ## Read first

@@ -13,3 +13,5 @@ hooks/*
 !hooks/test_guard_credentials.py
 !hooks/context_guard.py
 !hooks/test_context_guard.py
+!hooks/after_compact.py
+!hooks/test_after_compact.py

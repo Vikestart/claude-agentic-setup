@@ -1,23 +1,20 @@
 #!/usr/bin/env python3
-"""PostToolUse hook: tell a session or subagent when its context passes the ceiling.
+"""PostToolUse hook: tell a subagent when its context passes the ceiling.
 
 Cost grows with context size × turns (measured 2026-09-30 in Nebulingo, Framvis and Tilspire: the
-largest single costs were threads at 500k–960k context, re-read on every turn). The rule is to hand
-back or hand over past ~250k, but a model cannot see its own context size — this hook can. It reads
-the newest `usage` record of the transcript it belongs to and, past the ceiling, adds one short
-notice to the conversation. It notices again only after another STEP of growth, so it never nags.
+largest single costs were threads at 500k–960k context, re-read on every turn). An agent past ~250k
+should hand back, but a model cannot see its own context size — this hook can. It reads the newest
+`usage` record of the agent's transcript and, past the ceiling, adds one short notice. It notices
+again only after another STEP of growth, so it never nags.
 
 Hooks receive the MAIN session's `transcript_path`; inside a subagent they also receive `agent_id`,
 and that agent's transcript is `<session>/subagents/agent-<agent_id>.jsonl` beside it.
 
-Past COMPACT (400k) the main chat is told instead to ask the owner once whether to `/compact` — a
-model cannot compact itself. That question repeats only every COMPACT_STEP. Since 2026-09-30 the
-settings also set `autoCompactWindow` to 400k, which compacts a session started after it before
-this question fires; the question remains for a session that was already running, which ignores
-the setting (`traps.md`).
+The main chat gets no notice (owner, 2026-09-30): it never asks about a fresh chat or `/compact`.
+Automatic compaction (`autoCompactWindow` 400k) handles its size, and `after_compact.py` points it
+back at the working docs afterwards (`reference/setup-architecture.md`).
 
-Environment: CONTEXT_GUARD_LIMIT (default 250000), CONTEXT_GUARD_STEP (default 50000),
-CONTEXT_GUARD_COMPACT (default 400000), CONTEXT_GUARD_COMPACT_STEP (default 100000).
+Environment: CONTEXT_GUARD_LIMIT (default 250000), CONTEXT_GUARD_STEP (default 50000).
 It must never break a tool call: any failure exits 0 silently.
 """
 import hashlib
@@ -36,18 +33,8 @@ def env_int(name, default):
 
 LIMIT = env_int("CONTEXT_GUARD_LIMIT", 250000)
 STEP = env_int("CONTEXT_GUARD_STEP", 50000)
-COMPACT = env_int("CONTEXT_GUARD_COMPACT", 400000)
-COMPACT_STEP = env_int("CONTEXT_GUARD_COMPACT_STEP", 100000)
 TAIL_BYTES = 512 * 1024
 STATE_DIR = Path(os.environ.get("CONTEXT_GUARD_STATE", Path(tempfile.gettempdir()) / "context_guard"))
-
-
-def transcript_for(event):
-    main = Path(event["transcript_path"])
-    agent = event.get("agent_id")
-    if agent:
-        return main.with_suffix("") / "subagents" / f"agent-{agent}.jsonl", True
-    return main, False
 
 
 def context_size(path):
@@ -69,66 +56,37 @@ def context_size(path):
     return None
 
 
-def should_notify(key, tokens, limit=None, step=None):
-    """None for silence, else True for the first notice and False for a repeat."""
-    limit, step = limit or LIMIT, step or STEP
+def should_notify(key, tokens):
+    """True when a notice is due: past the ceiling, and first time or another STEP since the last."""
     STATE_DIR.mkdir(parents=True, exist_ok=True)
     state = STATE_DIR / (hashlib.sha1(key.encode("utf-8")).hexdigest()[:16] + ".txt")
     try:
         last = int(state.read_text(encoding="utf-8"))
     except (OSError, ValueError):
         last = 0
-    # A compaction continues in the same transcript at a much smaller size. Without this reset the
-    # remembered peak (959k in one real Framvis chat) would silence the hook for the rest of it.
-    if last and tokens < last - step:
-        state.unlink(missing_ok=True)
-        last = 0
-    if tokens < limit or (last and tokens < last + step):
-        return None
+    if tokens < LIMIT or (last and tokens < last + STEP):
+        return False
     state.write_text(str(tokens), encoding="utf-8")
-    return not last
+    return True
 
 
-def compact_message(tokens):
-    return (f"Context guard: this session's context is ~{tokens // 1000}k tokens, past the "
-            f"~{COMPACT // 1000}k compaction point. Finish the current step, then ask the owner once, in "
-            "one line: type /compact now, or keep going? If they say keep going, carry on; this asks "
-            f"again only after another ~{COMPACT_STEP // 1000}k.")
-
-
-def message(tokens, is_agent, first):
-    k = f"~{tokens // 1000}k"
-    if is_agent:
-        return (f"Context guard: your context is {k} tokens, past the ~{LIMIT // 1000}k ceiling. "
-                "Every further turn re-reads all of it. Finish the current step, then hand back: "
-                "what is done, what is left, and the exact next step.")
-    if first:
-        return (f"Context guard: this session's context is {k} tokens, past the ~{LIMIT // 1000}k "
-                "ceiling. Finish the current step, then ask the owner once whether to hand over to a "
-                "fresh chat (CLAUDE.md §1, Handover).")
-    # The rule is to ask ONCE: a repeat is information, never a second question.
-    return (f"Context guard: context now {k} tokens. If the owner already declined a handover, do "
-            "not ask again; keep reads small and finish the current phase.")
+def message(tokens):
+    return (f"Context guard: your context is ~{tokens // 1000}k tokens, past the ~{LIMIT // 1000}k "
+            "ceiling. Every further turn re-reads all of it. Finish the current step, then hand back: "
+            "what is done, what is left, and the exact next step.")
 
 
 def main():
     try:
         event = json.load(sys.stdin)
-        path, is_agent = transcript_for(event)
+        agent = event.get("agent_id")
+        if not agent:
+            return 0
+        path = Path(event["transcript_path"]).with_suffix("") / "subagents" / f"agent-{agent}.jsonl"
         tokens = context_size(path)
-        if tokens is None:
-            return 0
-        first = should_notify(str(path), tokens)
-        # Agents never compact: past the ceiling they hand back, and a fresh agent is cheaper.
-        ask = None if is_agent else should_notify(f"{path}#compact", tokens, COMPACT, COMPACT_STEP)
-        if ask is not None:
-            text = compact_message(tokens)
-        elif first is not None:
-            text = message(tokens, is_agent, first)
-        else:
-            return 0
-        print(json.dumps({"hookSpecificOutput": {"hookEventName": "PostToolUse",
-                                                 "additionalContext": text}}))
+        if tokens is not None and should_notify(str(path), tokens):
+            print(json.dumps({"hookSpecificOutput": {"hookEventName": "PostToolUse",
+                                                     "additionalContext": message(tokens)}}))
     except Exception:  # a broken guard must never block the tool call it follows
         pass
     return 0

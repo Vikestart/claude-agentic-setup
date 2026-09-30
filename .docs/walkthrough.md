@@ -1,62 +1,34 @@
-# Walkthrough — phase leads and the 400k cap (2026-09-30)
+# Walkthrough — compaction instead of fresh chats (2026-09-30)
 
-> **Rolled back the same evening (owner's decision).** Spawn depth is 1 again and the lead rules are
-> gone. The lead definitions stay, dormant. Kept: the 400k cap, the traps entries, the executors'
-> foreground-shell note and the tightened agent-definition test. Why, and how to revive it:
-> `reference/setup-architecture.md`, "Phase leads".
+**What changed.** Sessions keep going without the owner: they never propose a fresh chat or ask for
+`/compact`. Automatic compaction (92% of the 400k window) handles their size; the working docs carry
+the state across it. The owner can still ask for a handover (another machine, the partner, a break).
+Why, and the self-restart routes tried first → `reference/setup-architecture.md` ("Compaction, not
+fresh chats") and `reference/traps.md` ("A cleared session wakes only on a message").
 
-## What was built
+**Built**
+- `hooks/after_compact.py` — `SessionStart` hook, matcher `compact`, installed through
+  `settings/shared-settings.json`. Names the `.docs/` working files in the session folder and tells
+  the session they beat the summary; a general reminder where the folder has no `.docs/`.
+- `CLAUDE.shared.md` §1 — "Compaction, not fresh chats" replaces the handover-proposal rule, plus a
+  "When compacting" line telling the summary what to keep. `~/.codex/AGENTS.md` regenerated.
+- `hooks/context_guard.py` — main-chat notices removed (250k handover, 400k `/compact`); the
+  subagent hand-back notice is unchanged.
+- Skills: `asdev-handover` runs only on the owner's request, and its step 4b override is now also
+  cleared by the phase-completion routine (`asdev-planner` step 6), since handovers are rare;
+  `asdev-orchestrator`'s ceiling note updated.
+- `.gitignore` lets the two new hook files into the repo (the reviewer caught that they were
+  ignored, which would have stopped the partner's install).
 
-- **Cap:** `autoCompactWindow` 400000 is back in `settings/shared-settings.json`. A session started
-  after it compacts at ~368k (400000 × 92%).
-- **Depth 2 and two lead definitions:** `agents/opus-medium-lead.md` and `agents/opus-high-lead.md`
-  are the only definitions that keep the Agent tool. `install/test_setup.py` guards that, including
-  the legacy `Task` name. `share_bundle.py` reads the depth from the shared settings.
-- **Rules:** CLAUDE.md §1/§6 (phase leads, the approval exception, integration, the budget and the
-  cap), orchestrator "Multi-phase runs", the planner's roster question and plan template, executor
-  long-run text for foreground roster agents, and the handover chip note. AGENTS.md regenerated.
-- **Docs:** `traps.md` (the cap obeyed, nested agents, foreground shells, new definitions in a
-  running session, chip side sessions), `setup-architecture.md` (definitions, the lead decision),
-  roadmap items 1 and "Re-measure".
+**Verified**
+- `hooks/test_after_compact.py` 8/8, `hooks/test_context_guard.py` 8/8; both run in
+  `install/verify.py --gate .` (passes, 0 blocking).
+- Falsified 4/4: `python skills/asdev-web-audit/scripts/falsify.py --suite "python hooks/test_after_compact.py" --mutations skills/asdev-web-audit/scripts/falsify/compact-hook.spec`
+- Live in the desktop app: a probe session with a 100k window compacted three times and got the
+  hook's notice each time, then re-read its plan. The summary kept task and state and dropped file
+  contents — consistent with the new rule, though a toy session cannot prove the rule caused it.
+- Detached review (`opus-high-reviewer`): four findings, all fixed (ignored hook files, an override
+  outliving its phase, a stale reference line, silence for htdocs-root sessions).
 
-## How it was verified
-
-- **Cap:** `get_usage` in a new session: `contextWindow` 400000, `autoCompactsAtPercent` 92.
-- **Probe, depth 2:**
-  - A background lead's background leaf never reported to the lead. The harness made the lead hand
-    back, and the leaf's result arrived at the main session.
-  - Foreground spawns returned inline. Nonces matched the leaf transcripts (`eb063f2a4b11`,
-    `ab29fa63657c`, `c80ed9ec7ad1`, `1b5ec8af273b`).
-  - Nested transcripts are flat under the root session's `subagents/`, and `agent_audit.py` read
-    them.
-  - A second probe, a foreground agent with a 75-second background command, got no completion
-    notice. The harness kills a foreground agent's background commands at its final response.
-- **Efficiency trial:** two scratch repos, the same two-phase task.
-  - Lead start-up is ~53k. A small-phase lead cost ~94k weighted. Each hand-back grew the main
-    session by ~4k.
-  - The baseline, 2026-09-30 main sessions: ~100k residue per phase over ~95 turns (Tilspire 88k →
-    504k over four or five phases; Framvis 99k → 193k for one).
-  - Break-even is under two phases for phases of that size. Leads are the default from two phases
-    that each need a roster.
-- **Detached review:** `opus-xhigh-reviewer` returned six should-fix findings and five nits. All
-  were taken except the share-bundle README wording, which is correct by depth.
-- **Checks:** `install/verify.py --gate .` 16/16; `install.py --check` in place; `falsify.py` on
-  `falsify/setup-repo.json` 16/16.
-
-## Agent spend (`agent_audit.py`, price-weighted)
-
-| agent | definition | turns | peak | weighted |
-|---|---|---|---|---|
-| arm A lead (both phases) | opus-medium-lead | 12 | 74k | 226k |
-| arm A leaves ×2 | opus-low-executor | 5 + 6 | 61k | 295k |
-| arm B leads ×2 | opus-medium-lead | 10 + 6 | 64k | 281k |
-| arm B leaves ×2 | opus-low-executor | 6 + 5 | 62k | 163k |
-| detached review | opus-xhigh-reviewer | 27 | 123k | 443k |
-| foreground-shell probe | opus-low-executor | 4 | 59k | 68k |
-
-Ten agents in total, including the plan review, which is the 10-agent cap. The probe was the tenth.
-
-## Where to look
-
-`skills/asdev-orchestrator/SKILL.md` ("Multi-phase runs"), `agents/*-lead.md`,
-`.docs/reference/traps.md` ("Nested agents"), `install/test_setup.py` (`AgentDefinitions`).
+**Not verified:** how well the summary rule holds up in a long real phase — the roadmap's re-measure
+item covers it.
