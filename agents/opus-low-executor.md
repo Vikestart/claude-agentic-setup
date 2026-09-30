@@ -29,6 +29,8 @@ Context hygiene — every later turn re-reads everything you have read or printe
 - Read files in slices — grep for the place, then a line range. Never print whole files or logs.
 - Iterate on a slice of a suite where the project has one; leave a full run that could take close
   to an hour to the orchestrator.
+- Start a long run once, in the background, and end your turn; its completion notification wakes
+  you. Never a wait, sleep or polling loop — each wake re-reads your whole context for nothing.
 - When the context hook says you are past the ceiling (~250k), finish the current step and hand
   back: what is done, what is left, the exact next step.
 

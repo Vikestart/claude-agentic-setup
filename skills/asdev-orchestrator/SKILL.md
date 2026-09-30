@@ -89,6 +89,11 @@ small, short-lived context matters more. The rules below keep it small.
 - **Keep an agent's waits short.** Agents run slices of a suite where the project has them; a full
   battery or long falsify run that could outlast the cache — anything near an hour, or over 5
   minutes in overage — is yours or a small fresh agent's, never a large builder's.
+- **A long run is started once, then the turn ends.** Whoever runs it — you or an agent — starts it
+  in the background and ends the turn; the completion notification wakes them. Never a wait, sleep
+  or polling loop: each wake re-reads the whole context for nothing (a ~220k Tilspire builder woke
+  every ~10 minutes through a 14-run falsify batch). Only a background agent — the default — is
+  woken; a foreground agent's end of turn is its final report, so never spawn one for a long run.
 - **In a planned phase you stay the orchestrator.** Long build/test loops and large writes go to a
   builder in the approved roster, not into your thread. Write the brief from the plan and the
   reference docs — reading the code first means it is read twice. Outside a plan, "directly by
@@ -145,7 +150,9 @@ and the verification to run and quote.
 - **A reference several agents need is read ONCE by you** and excerpted into each brief (73% of
   agent reads repeated another agent's).
 - **Always include:** the project's quiet runner by name (or `quiet.py` from the audit suite), the
-  context ceiling, and a report cap (executors ~900 words, reviewers ~1,200).
+  context ceiling, a report cap (executors ~900 words, reviewers ~1,200), and for any run
+  longer than a few minutes "start it in the background and end your turn" — never "keep working"
+  unless the brief names the independent work to do meanwhile.
 - Subagents inherit your authority, never spawn further agents, and return a concise result,
   blocker or correction request.
 

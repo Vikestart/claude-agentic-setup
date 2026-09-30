@@ -4,15 +4,7 @@ Outcomes and order only; active work goes in `implementation_plan.md` when a pha
 
 ## Next, in order (queued 2026-09-30)
 
-1. **Agents stop polling long runs** (owner report 2026-09-30, small — do first, it costs money in
-   running projects now). In Tilspire a builder (~220k context) started a new "wait" command about
-   every 10 minutes while a 14-run falsify batch (~6 min a run) went on; each wake re-read its whole
-   context for nothing. The brief had said "run it in the background and keep working", which left it
-   nothing to do. Add to the `asdev-orchestrator` skill ("The brief → Always include", and "Keep an
-   agent's waits short"): start a long run once, end the turn, let the completion notification wake
-   you — never a wait or sleep loop. Consider the same line in the executor definitions in `agents/`.
-
-2. **Automation mining** — a suite script that mines transcripts for repeated throwaway scripts
+1. **Automation mining** — a suite script that mines transcripts for repeated throwaway scripts
    (inline `python -`/`-c`, scripts written to temp/scratch folders) and repeated command sequences,
    ranked by frequency × tokens; then build the scripts it justifies. Already visible: `patch.py`
    (all-or-nothing exact replacements, CRLF-safe, unique anchors — improvised ~10× on 2026-09-30,
@@ -20,7 +12,7 @@ Outcomes and order only; active work goes in `implementation_plan.md` when a pha
    `settings.json` merge, backup-before-editing `~/.claude`, always-loaded-text measurement. Fold in
    the "Generalise the suite helpers" item below if the mining ranks them.
 
-3. **Self-started fresh sessions** (owner request 2026-09-30) — a session that hits the handover
+2. **Self-started fresh sessions** (owner request 2026-09-30) — a session that hits the handover
    point writes the handover and continues in a fresh session itself, without the owner starting
    one. Found 2026-09-30: the app's session tools refer to `start_session` and `hand_off_to_session`,
    but neither is offered in this session (find out what enables them — app version, a setting or a
