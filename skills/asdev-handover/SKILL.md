@@ -150,7 +150,9 @@ Waiting on the owner: whether the old export stays after launch.
     started. If it started on a new branch in a project bound to `main`/`staging`, say so.
   - Otherwise, if the session folder is **not** a git repository, offer the successor as a
     `spawn_task` chip: title "Continue: <project> handover", the paste-ready message as the prompt.
-    One click from the owner starts it.
+    One click from the owner starts it. It starts as a side session of this one (`detach_session`
+    refuses it), so tell the owner to use "Detach to top level" in the sidebar, or not to archive
+    this chat while the successor runs.
   - Otherwise, the paste-ready block is the hand-off. A chip in a git project starts its session in
     a new worktree branch, which breaks the branch rule.
 

@@ -77,9 +77,8 @@ small, short-lived context matters more. The rules below keep it small.
   sequential builders with disjoint files, each starting from the previous one's hand-back.
 - **Context ceiling ~250k.** An agent past it finishes its current step and hands back what is
   done, what is left, and the exact next step (the context hook tells it when). Start a fresh agent
-  for the rest from that hand-back. `autoCompactWindow` caps a main session at 400k, but only one
-  started after the setting (a running session ignores it; whether new ones obey is being checked,
-  `traps.md`). Where no cap applies, past ~400k the hook tells the main chat to ask the owner once
+  for the rest from that hand-back. `autoCompactWindow` caps a main session at 400k: a session started
+  after the setting compacts at ~368k (checked 2026-09-30); one already running ignores it (`traps.md`). Where no cap applies, past ~400k the hook tells the main chat to ask the owner once
   whether to `/compact` (a model cannot compact itself), and the owner's "keep going" stands until
   the next +100k. Agents never compact; they hand back.
 - **Approval covers the continuations.** An approved roster covers fresh continuation and
@@ -102,6 +101,35 @@ small, short-lived context matters more. The rules below keep it small.
   builder in the approved roster, not into your thread. Write the brief from the plan and the
   reference docs — reading the code first means it is read twice. Outside a plan, "directly by
   default" still governs.
+  In a run of two or more phases, a phase lead takes this role for its phase (next section).
+
+## Multi-phase runs: phase leads
+
+A plan of two or more phases gives each phase a lead — `opus-medium-lead`, or `opus-high-lead` when
+the phase touches anything sensitive — and an agent budget; the lead picks its roster within it and
+runs the phase to a verified local commit. You keep scope across phases, the owner's questions,
+verification, the phase-completion routine and release.
+
+- **Why from two phases (trial, 2026-09-30).** A lead cold-starts at ~53k; a whole small-phase lead
+  cost ~94k price-weighted, and its hand-back grew the main session by ~4k. A main session that runs
+  a phase itself keeps ~100k of it (Tilspire: 88k → 504k over four or five phases; Framvis: 99k →
+  193k for one) and re-reads it on each of the ~95 turns of every later phase: ~0.95M per later
+  phase. Over n phases leads save ~0.95M × n(n−1)/2 and cost ~0.14M × n (a lead, plus your spawn and
+  check): break-even is under two phases. A one-phase session runs as before. The first real run
+  with leads is compared against these figures (roadmap, "Re-measure").
+- **One lead at a time,** spawned in the background with the phase's plan section, the budget and
+  the number of agents the phase has spawned so far.
+- **A lead spawns its roster in the foreground.** A background child's result never reaches a lead:
+  the harness makes the lead hand back and the child reports to you. If that happens, pass the
+  child's result to a resumed lead (the resume conditions below) or a continuation lead — do not
+  finish the phase yourself.
+- **Check each phase yourself:** `audit_all.py --since <phase base>` and `git log`; the lead's
+  verdicts are claims.
+- **A lead that hands back at ~250k** gets a continuation lead, briefed with the hand-back and the
+  number of agents spawned so far. An owner's answer goes to a fresh continuation lead too, unless a
+  resume is cheap: under ~150k and inside the cache hour.
+- **Budget:** the 10-agent cap counts a lead, its roster and its continuations, per phase. The
+  concurrent cap looks session-wide, so a lead's roster shares it with you.
 
 ## Proposing a roster
 
@@ -119,8 +147,9 @@ small, short-lived context matters more. The rules below keep it small.
   the roster.
 - **A `fork`** inherits the session's model, effort and whole conversation, so it never serves as a
   detached review and never satisfies an effort rule.
-- **A session opened before a definition existed** cannot see it, and still runs the old CLAUDE.md.
-  There, spawn `general-purpose` (executor) or `Plan` (reviewer; no edit or spawn tools) with the
+- **A session opened before a definition existed** may not be offered it, and still runs the old CLAUDE.md
+  (on 2026-09-30 one running session was offered two new definitions; `traps.md`). Where the Agent
+  tool does not offer the definition, spawn `general-purpose` (executor) or `Plan` (reviewer; no edit or spawn tools) with the
   definition's model and its rules in the brief. Both inherit the session's effort.
 - **Wherever effort is inherited rather than set**, the floor is a precondition: before spawning for
   sensitive work, check the session's effort; below `high`, say so and wait — only the owner can
@@ -138,7 +167,8 @@ small, short-lived context matters more. The rules below keep it small.
 - **The 10-agent cap counts in total** per task, phase or workflow run, workflow agents included;
   a queue, batching or ultracode does not lift it. `settings.json` enforces part of it
   (`CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS=10` refuses an eleventh concurrent spawn,
-  `CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH=1` stops subagents spawning their own). Nothing caps a
+  `CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH=2` allows a lead's roster and nothing deeper; only the
+  definitions' frontmatter keeps other agents from spawning). Nothing caps a
   workflow's total, and an approved wave above 10 at once also needs that setting raised first.
 - **Never run suites that share a disposable database concurrently** — two agents resetting one
   instance corrupt both runs and produce failures that look like real regressions.
@@ -157,7 +187,8 @@ and the verification to run and quote.
   context ceiling, a report cap (executors ~900 words, reviewers ~1,200), and for any run
   longer than a few minutes "start it in the background and end your turn" — never "keep working"
   unless the brief names the independent work to do meanwhile.
-- Subagents inherit your authority, never spawn further agents, and return a concise result,
+- Subagents inherit your authority, never spawn further agents (a phase lead excepted, within its
+  budget), and return a concise result,
   blocker or correction request.
 
 ## While they work

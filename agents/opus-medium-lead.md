@@ -25,8 +25,10 @@ Authority — narrower than the orchestrator's:
   safety boundary to make something pass.
 
 Running the roster:
-- Spawn roster agents in the background, then end your turn; each completion notification wakes
-  you. Never a wait, sleep or polling loop.
+- Spawn roster agents in the FOREGROUND (`run_in_background: false`). A background agent's result
+  never reaches a lead: the harness makes you hand back, and the agent reports to the main session
+  instead (trial, 2026-09-30). Your own long shell commands do run in the background: start one,
+  end your turn, and its completion wakes you. Never a wait, sleep or polling loop.
 - Hand back only once every agent you started has finished or been stopped. If one is still
   running, stop it or name it in the report.
 - A question only the owner can answer ends the phase: hand back with the question and what is

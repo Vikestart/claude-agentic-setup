@@ -57,7 +57,8 @@ reload live and do not list it as restart-only. Tested 2026-09-30 at ~220k: `get
 auto-compaction at 97% of 1M both before and after setting 150k in the project's
 `settings.local.json`, and no compaction followed; the 400k user-level value, set mid-session, did
 not apply either. → The cap was removed that day, then restored at the owner's request the same
-evening for sessions started after it (untested until then; the first such session checks it). To
+evening. A session started after it DOES obey: `get_usage` reported `contextWindow` 400000 at 92%
+(~368k), 2026-09-30, app Claude Code 2.1.284. To
 read where a session will compact, `get_usage` reports `contextWindow` and `autoCompactsAtPercent`;
 their product is the compaction point.
 Subagents get their own model's window (1M for Opus and Fable), not the parent's; no setting caps
@@ -108,6 +109,9 @@ subagents the OLD CLAUDE.md even though the file on disk is new: a reviewer spaw
 on 2026-09-25 quoted the retired Sonnet rule back.
 → After changing either, tell running sessions or start fresh ones; do not trust an old session to follow
 the new rules.
+Exception seen 2026-09-30 (Claude Code 2.1.284): a session running since ~18:12 was offered two agent
+definitions written at ~19:10, announced as "new agent types are now available". Its CLAUDE.md stays
+old either way, so the advice stands.
 
 **The desktop app runs its own Claude Code, not the CLI on PATH.**
 `claude --version` said 2.1.252 while the app ran 2.1.280 from
@@ -118,12 +122,26 @@ to be redone. → Check behaviour against the newest version in that folder.
 `CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS` (default 20) refuses an Agent-tool spawn past the cap, but
 workflow agents never count toward it, and it is skipped under ultracode at xhigh.
 `CLAUDE_CODE_WORKFLOW_MAX_CONCURRENT_AGENTS` only QUEUES a workflow's agents (default: cores − 2, max 16).
-`CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH=1` stops subagents spawning their own. `workflowSizeGuideline` is
+`CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH` caps nesting for every agent alike (1 = no subagent spawns;
+since 2026-09-30 it is 2, for phase leads — see "Nested agents" below). `workflowSizeGuideline` is
 advice to the model plus an in-app warning past its size (small = 5), off under ultracode.
 → Nothing caps a workflow's TOTAL agent count; CLAUDE.md §6 is the only limit there.
 Settings changes reach a RUNNING session: a `workflowSizeGuideline` change was announced mid-session, and
 new Bash commands saw changed `env` values at once. Whether the spawn check itself sees an `env` change
 without a restart is unverified — start a new session when it has to be certain.
+
+**Nested agents: a background grandchild reports to the ROOT session, not to its parent.**
+Probed 2026-09-30 (Claude Code 2.1.284, depth 2): a background lead that spawned a leaf with
+`run_in_background: true` and ended its turn was made to hand back at once ("the harness required a
+handback"), and the leaf's result arrived at the main session. The same lead spawning in the
+foreground got the result inline — nonce matched, commits made. A subagent's own background Bash
+does wake it. Nested transcripts land flat in the root session's `subagents/agent-<id>.jsonl`, so
+`context_guard.py` and `agent_audit.py` see them. → Leads spawn their roster in the foreground.
+
+**A `spawn_task` chip session is a side session of the chat that offered it.**
+2026-09-30: the handover's chip started its successor with `parentSessionId` set and `detached`
+false, and `detach_session` refuses a chip-started session; archiving the parent may take the
+successor with it. → "Detach to top level" in the sidebar, or leave the parent unarchived.
 
 **`start_session` / `hand_off_to_session` sit behind a server-side rollout gate, not a setting.**
 Found 2026-09-30 in app 2.16120: one feature gate adds both tools to `ccd_session`, and `spawn_task`
