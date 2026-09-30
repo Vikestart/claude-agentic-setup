@@ -58,6 +58,8 @@ auto-compaction at 97% of 1M both before and after setting 150k in the project's
 `settings.local.json`, and no compaction followed; the 400k user-level value, set mid-session, did
 not apply either. → The cap was removed (the owner's `/compact` on the context hook's question
 replaces it). To read where a session will compact, `get_usage` reports `autoCompactsAtPercent`.
+Subagents get their own model's window (1M for Opus and Fable), not the parent's; no setting caps
+one agent — the ~250k context hook is the only per-agent limit.
 A model cannot trigger compaction: no tool does it, `send_message` refuses the current session, and
 `clear_session("self")` is `/clear` (no summary), refused for a session serving Remote Control.
 
@@ -94,8 +96,8 @@ Killing a Windows process also leaves its children running — use `taskkill /T 
 **Backslashes in a Bash-tool heredoc can arrive halved,** even with a quoted `<<'EOF'`: a doubled
 backslash written in Python source reached the interpreter as a single one, so `"\\n"` became a real
 newline and an anchor never matched (2026-09-30, three times; the first draft of this very entry was
-mangled the same way). → For text containing backslashes, use the Edit tool or a script file
-written with Write.
+mangled the same way). → For text containing backslashes, use the Edit tool, a script file
+written with Write, or — for several exact replacements — a `patch.py` spec written with Write.
 
 **A running session keeps the instructions it started with — and so do its subagents.**
 CLAUDE.md and the agent list load once, at session start. A session open while either changes still

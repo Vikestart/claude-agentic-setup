@@ -4,18 +4,7 @@ Outcomes and order only; active work goes in `implementation_plan.md` when a pha
 
 ## Next, in order (queued 2026-09-30)
 
-1. **Build the scripts the mining justifies** — `automation_mine.py` exists (2026-09-30); its
-   September ranking, by tokens the model wrote:
-   - ~~`patch.py`~~ — built 2026-09-30 (~4,300 runs, ~2.4M tokens, ~120 failures in September);
-     CLAUDE.md §0 points at it. Rerun the miner in a few weeks to see the habit actually moved.
-   - **falsify mutations without a hand-written JSON file** — 138 runs build one; "inline python →
-     falsify.py" is the most common command sequence (96 transcripts).
-   - **Nebulingo's test-database preamble** (`PHASE98_TEST_*` exports, 171 runs) — a project
-     script, for that project's own roadmap.
-   - Smaller: JSON config writes (~100 runs), a `git diff --numstat` check (~200 runs). Rerun the
-     miner after `patch.py` lands; fold in "Generalise the suite helpers" below if it ranks them.
-
-2. **Self-started fresh sessions** (owner request 2026-09-30) — a session that hits the handover
+1. **Self-started fresh sessions** (owner request 2026-09-30) — a session that hits the handover
    point writes the handover and continues in a fresh session itself, without the owner starting
    one. Found 2026-09-30: the app's session tools refer to `start_session` and `hand_off_to_session`,
    but neither is offered in this session (find out what enables them — app version, a setting or a
@@ -24,7 +13,22 @@ Outcomes and order only; active work goes in `implementation_plan.md` when a pha
    already exist; a one-time scheduled task (`fireAt`) starts a fresh unattended session with a
    prompt, but each one is a stored task file, it runs only while the app is open, and unattended
    sessions cannot message back. Outcome: the handover skill ends by starting the successor itself,
-   with the paste-ready message as its first prompt.
+   with the paste-ready message as its first prompt. Also found 2026-09-30: `clear_session` is
+   refused for a session serving Remote Control, and every session here has Remote Control on;
+   `get_usage` (session tools) reads any running session's context size; the newer `SendMessage`
+   tool supersedes `send_message`. Check `ToolSearch` for `start_session` first — the app updates.
+
+2. **Build the scripts the mining justifies** — `automation_mine.py` exists (2026-09-30); its
+   September ranking, by tokens the model wrote:
+   - ~~`patch.py`~~ — built 2026-09-30 (~4,300 runs, ~2.4M tokens, ~120 failures in September);
+     CLAUDE.md §0 points at it. Rerun the miner in a few weeks to see the habit actually moved
+     (`automation_mine.py --since <date>`; September's figures above are the baseline).
+   - **falsify mutations without a hand-written JSON file** — 138 runs build one; "inline python →
+     falsify.py" is the most common command sequence (96 transcripts).
+   - **Nebulingo's test-database preamble** (`PHASE98_TEST_*` exports, 171 runs) — a project
+     script, for that project's own roadmap.
+   - Smaller: JSON config writes (~100 runs), a `git diff --numstat` check (~200 runs). Rerun the
+     miner after `patch.py` lands; fold in "Generalise the suite helpers" below if it ranks them.
 
 ## Later
 

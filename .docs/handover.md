@@ -1,46 +1,48 @@
-# Handover — `~/.claude` global setup — 2026-09-30 (evening)
+# Handover — `~/.claude` global setup — 2026-09-30 (night)
 
 ## State
-- **Under git since today:** the shared parts live in the private repo `Vikestart/claude-agentic-setup`,
-  cloned at `~/.claude/claude-agentic-setup`; `~/.claude/agents`, `hooks`, `.docs` and each
-  `skills/asdev-*` are junctions into it, `~/.claude/CLAUDE.md` is an import stub. Branch `main`, in
-  sync with origin (checked with `git fetch` just before this handover); this handover's docs are
-  committed and pushed at the end of it.
-- Checks, last run after the final code change: `install/verify.py` 16/16 (both self-tests, parity,
-  AGENTS.md in sync at 78 lines, guard tests 25/25, context-guard tests 10/10, setup tests, audit gate
-  0 blocking on every skill and the repo) · `install.py --check` in place · 12/12 guards falsified.
-- A fresh session (owner's probe) loads both import levels and sees 12 agents and 7 `asdev-*` skills.
-- Deployment: n/a (tooling; live on write, and on the other machine at its next pull). No project
-  repository under htdocs was changed.
+- Repo `~/.claude/claude-agentic-setup`, branch `main`, in sync with origin (`git fetch` just before
+  this handover); tree clean apart from this handover's docs, committed and pushed at its end.
+- Checks after the last code change: `install/verify.py --gate .` 16/16 (web-audit self-test 31/31,
+  context guard 15/15, credentials guard 25/25, setup tests incl. the new `unset`, parity, AGENTS.md in
+  sync, audit gate 0 blocking) · `install.py --check` in place · every guard added today falsified.
+- Deployment: n/a (tooling; live on write here, on the partner's machine at their next pull, where
+  the post-merge installer also retires the removed hooks and the `autoCompactWindow` key).
+- No project repository under htdocs was changed.
 
 ## Since the last handover
-- **Shared setup repo** — plan, build, install, reviews, push →
-  [`walkthrough.md`](walkthrough.md), [`changelog.md`](changelog.md),
-  [`reference/setup-repo.md`](reference/setup-repo.md).
-- Fable confirmed running at `xhigh` (roadmap item closed; `reference/setup-architecture.md`).
+- Agents start a long run once in the background and end the turn; the completion notice wakes
+  them (orchestrator skill + all executor definitions). Only background agents are woken.
+- `automation_mine.py` (audit suite): ranks throwaway scripts and repeated command sequences from the
+  transcripts by the tokens spent writing them. September baseline in `roadmap.md` item 2.
+- `patch.py` (audit suite): exact, all-or-nothing replacements from an unescaped spec; CLAUDE.md §0
+  points at it. Built because patch scripts topped the ranking (~4,300 runs, ~2.4M tokens).
+- Context: no automatic compaction cap. Past ~400k the context hook tells the main chat to ask the
+  owner once whether to `/compact` (again every +100k). A cap and a self-raising script were built,
+  proven inert in a running desktop session, and removed. → `reference/traps.md`,
+  `reference/setup-architecture.md` (context_guard row).
+- Installer: `unset` section in `settings/shared-settings.json` removes a key only while it holds the
+  value the setup wrote (`reference/setup-repo.md`, settings merge).
 
 ## Decisions
-- Links (junctions) into a repo in its own subfolder, not `~/.claude` as the repo — tokens, memory and
-  transcripts are then outside any working tree (→ `reference/setup-repo.md`, `setup-architecture.md`).
-- `--uninstall` copies the current repo content back instead of restoring backups, so no edit is lost.
-- A pull applies the other maintainer's changes by itself (post-merge / post-rewrite / post-checkout).
-- The setup repo has only `main`; CLAUDE.md's Branches bullet names it as the exception.
+- No compaction cap; the owner's word on the hook's question is the override — a running app
+  session ignores `autoCompactWindow`, and a model cannot compact itself (→ `traps.md`).
+- The owner wants self-managing mechanisms, not admin tasks; owner input shrinks to one word asked
+  once (memory `self-managing-not-admin`).
 
 ## Next
-1. **Agents stop polling long runs** — roadmap item 1: a small edit to the `asdev-orchestrator` skill
-   (and possibly the executor definitions), from the owner's Tilspire report.
-2. **Automation mining** — roadmap item 2: the transcript-mining script, then `patch.py` first. This
-   session improvised all-or-nothing patch scripts ~6 more times and hit the heredoc-backslash trap
-   twice more — more evidence for `patch.py`.
-3. **Self-started fresh sessions** — roadmap item 3.
+1. **Self-started fresh sessions** — roadmap item 1, with today's findings in it. Start with
+   `ToolSearch` for `start_session` / `hand_off_to_session`; if still absent, find what enables them,
+   then weigh the fallbacks listed there. Goal: this handover skill ends by starting its successor.
+2. **The next mined script** — roadmap item 2: falsify runs without a hand-written mutation file.
 
 ## Open questions for the owner
-- Add the partner as a collaborator on GitHub (owner action); they follow the repo's `README.md`.
-- Whether `~/.claude/backups/pre-install-20260930-180134` (originals before the install) can go.
+- Add the partner as a collaborator on GitHub (owner action).
+- Whether the backups can go: `~/.claude/backups/pre-install-20260930-*` (four folders now, one per
+  settings apply today) and the older dated files beside them.
 - The terminal `claude` CLI login is still expired (`claude /login`); headless probes need it.
-- Disable connectors a project never uses (owner action; the base context was ~82k per turn).
-- astole's local commit `97dac17` — moot if the repo is deleted, as the owner intends.
+- Disable connectors a project never uses (owner action; ~16k of MCP tool text per turn here).
 
 ## Read first
-- [`roadmap.md`](roadmap.md), [`reference/setup-repo.md`](reference/setup-repo.md),
-  [`reference/setup-architecture.md`](reference/setup-architecture.md), [`reference/traps.md`](reference/traps.md)
+- [`roadmap.md`](roadmap.md), [`reference/setup-architecture.md`](reference/setup-architecture.md),
+  [`reference/traps.md`](reference/traps.md), [`reference/setup-repo.md`](reference/setup-repo.md)
