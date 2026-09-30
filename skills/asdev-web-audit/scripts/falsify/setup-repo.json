@@ -82,5 +82,26 @@
     "old": "                raise Stop(f'A shared hook must run",
     "new": "                continue; Stop(f'A shared hook must run",
     "expect": "unreadable hook form was not refused"
+  },
+  {
+    "name": "an executor regains the Agent tool",
+    "file": "agents/opus-medium-executor.md",
+    "old": "disallowedTools: Agent\n",
+    "new": "",
+    "expect": "AgentDefinitions.test_only_phase_leads_keep_the_agent_tool) [opus-medium-executor.md]"
+  },
+  {
+    "name": "a reviewer's list drops Agent",
+    "file": "agents/opus-high-reviewer.md",
+    "old": "NotebookEdit, Agent, Artifact",
+    "new": "NotebookEdit, Artifact",
+    "expect": "AgentDefinitions.test_only_phase_leads_keep_the_agent_tool) [opus-high-reviewer.md]"
+  },
+  {
+    "name": "a lead loses the Agent tool",
+    "file": "agents/opus-medium-lead.md",
+    "old": "effort: medium\n",
+    "new": "effort: medium\ndisallowedTools: Agent\n",
+    "expect": "AgentDefinitions.test_only_phase_leads_keep_the_agent_tool) [opus-medium-lead.md]"
   }
 ]

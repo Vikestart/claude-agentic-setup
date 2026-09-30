@@ -11,8 +11,10 @@ Hooks receive the MAIN session's `transcript_path`; inside a subagent they also 
 and that agent's transcript is `<session>/subagents/agent-<agent_id>.jsonl` beside it.
 
 Past COMPACT (400k) the main chat is told instead to ask the owner once whether to `/compact` — a
-model cannot compact itself, and the owner decided (2026-09-30) against a hard automatic cap so that
-a demanding session can keep going on their word. That question repeats only every COMPACT_STEP.
+model cannot compact itself. That question repeats only every COMPACT_STEP. Since 2026-09-30 the
+settings also set `autoCompactWindow` to 400k, which compacts a session started after it before
+this question fires; the question remains for a session that was already running, which ignores
+the setting (`traps.md`).
 
 Environment: CONTEXT_GUARD_LIMIT (default 250000), CONTEXT_GUARD_STEP (default 50000),
 CONTEXT_GUARD_COMPACT (default 400000), CONTEXT_GUARD_COMPACT_STEP (default 100000).

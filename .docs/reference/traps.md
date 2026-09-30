@@ -56,8 +56,10 @@ allowlist in `settings.json` named a retired path for two days while the check p
 reload live and do not list it as restart-only. Tested 2026-09-30 at ~220k: `get_usage` reported
 auto-compaction at 97% of 1M both before and after setting 150k in the project's
 `settings.local.json`, and no compaction followed; the 400k user-level value, set mid-session, did
-not apply either. → The cap was removed (the owner's `/compact` on the context hook's question
-replaces it). To read where a session will compact, `get_usage` reports `autoCompactsAtPercent`.
+not apply either. → The cap was removed that day, then restored at the owner's request the same
+evening for sessions started after it (untested until then; the first such session checks it). To
+read where a session will compact, `get_usage` reports `contextWindow` and `autoCompactsAtPercent`;
+their product is the compaction point.
 Subagents get their own model's window (1M for Opus and Fable), not the parent's; no setting caps
 one agent — the ~250k context hook is the only per-agent limit.
 A model cannot trigger compaction: no tool does it, `send_message` refuses the current session, and

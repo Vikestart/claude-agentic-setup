@@ -38,6 +38,12 @@ EXCLUDED_SUFFIXES = {".pyc", ".pyo"}
 # in-house ones: a person's own agents live untracked in the same linked folder and stay private.
 AGENT_DEFS = CLAUDE_HOME / "agents"
 AGENT_PATTERNS = ("opus-*.md", "fable-*.md")
+# The README quotes the depth the setup itself applies, so the two cannot drift apart.
+SHARED_SETTINGS = Path(__file__).resolve().parents[3] / "settings" / "shared-settings.json"
+
+
+def spawn_depth() -> str:
+    return json.loads(SHARED_SETTINGS.read_text(encoding="utf-8"))["set"]["env.CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH"]
 
 README = """# Shared agent setup
 
@@ -76,13 +82,14 @@ enforce the parts it can, add these to `~/.claude/settings.json` (a new session 
 ```json
 "env": {
   "CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS": "10",
-  "CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH": "1"
+  "CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH": "@@SPAWN_DEPTH@@"
 },
 "workflowSizeGuideline": "medium"
 ```
 
-The first refuses an eleventh subagent running at once, the second stops subagents spawning their own,
-and the third tells Claude to keep workflows under 10 agents and warns you when one goes past that.
+The first refuses an eleventh subagent running at once, the second sets how deep agents may spawn
+agents (at "2", a phase lead — `agents/*-lead.md` — runs its own roster, and no agent below it can
+spawn), and the third tells Claude to keep workflows under 10 agents and warns you when one goes past that.
 
 ## What is here
 
@@ -211,7 +218,7 @@ def main() -> int:
             z.write(src, arc)
         for text, arc in configs:
             z.writestr(arc, text)
-        z.writestr("README.md", README)
+        z.writestr("README.md", README.replace("@@SPAWN_DEPTH@@", spawn_depth()))
 
     # Prove the copy before announcing it.
     bad = []

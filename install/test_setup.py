@@ -144,6 +144,23 @@ class SettingsMerge(unittest.TestCase):
         self.assertNotIn(hook["command"], commands)
 
 
+class AgentDefinitions(unittest.TestCase):
+    # At spawn depth 2 the depth limit no longer stops an executor or reviewer from nesting; only its
+    # own frontmatter does, and an agent spawned that way counts against no phase budget.
+    def test_only_phase_leads_keep_the_agent_tool(self):
+        defs = sorted((REPO / "agents").glob("*.md"))
+        self.assertTrue(any(p.name.endswith("-lead.md") for p in defs), "no lead definitions found")
+        for path in defs:
+            front = path.read_text(encoding="utf-8").split("---")[1]
+            fields = dict(line.split(":", 1) for line in front.strip().splitlines() if ":" in line)
+            denied = {t.strip() for t in fields.get("disallowedTools", "").split(",")}
+            allowed = fields.get("tools")
+            can_spawn = "Agent" not in denied and (allowed is None or "Agent" in allowed)
+            with self.subTest(path.name):
+                self.assertEqual(can_spawn, path.name.endswith("-lead.md"),
+                                 "only *-lead.md may keep the Agent tool")
+
+
 class GitBash(unittest.TestCase):
     def test_found_from_the_git_a_hook_sees(self):
         root = Path(tempfile.mkdtemp(prefix="setup-gitbash-"))
