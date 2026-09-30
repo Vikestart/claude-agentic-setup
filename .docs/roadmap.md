@@ -29,8 +29,9 @@ Outcomes and order only; active work goes in `implementation_plan.md` when a pha
 
 ## Later
 
-
-- **Project AGENTS.md files stop repeating the scanner path** — xampp-pulse and tilspire-com (both had uncommitted AGENTS.md edits on 2026-09-29). xampp-pulse still points at the retired `~/.codex/skills/web-audit` copy: replace the path with a pointer to the global audit rule, at each project's next session.
+- **Commit the AGENTS.md scanner-path fix** — done in the working tree 2026-09-30: xampp-pulse
+  (on `main`) and tilspire-com (on `staging`) now point at the global audit rule instead of a
+  retired path. Each project's next session commits it with its other pending edits.
 - **Re-measure after the context rules** (from 2026-09-30) — once each of Nebulingo, Framvis and Tilspire has run two or three phases under the new rules, compare with `agent_audit.py` (peak context, gap re-caches, weighted total) against the 2026-09-30 figures in the orchestrator skill; adjust the ~250k ceiling and the ~150-tool-call split if they miss. Also record each main session's
   context growth per phase. If it is still ~100k under the new rules, revisit phase leads (built and
   rolled back 2026-09-30, `reference/setup-architecture.md`).
