@@ -22,7 +22,8 @@
       "Bash(python ~/.claude/skills/asdev-web-audit/scripts/harness_parity.py *)",
       "Bash(python ~/.claude/skills/asdev-web-audit/scripts/audit_delta.py *)",
       "Bash(python ~/.claude/skills/asdev-web-audit/scripts/agent_audit.py *)",
-      "Bash(python ~/.claude/skills/asdev-web-audit/scripts/self_test.py *)"
+      "Bash(python ~/.claude/skills/asdev-web-audit/scripts/self_test.py *)",
+      "Bash(python ~/.claude/hooks/context_window.py *)"
     ],
     "permissions.deny": [
       "Read(~/.claude/.credentials.json)"
@@ -40,6 +41,20 @@
           "matcher": "*",
           "command": "python \"$HOME/.claude/hooks/context_guard.py\"",
           "timeout": 5
+        }
+      ],
+      "SessionStart": [
+        {
+          "matcher": "*",
+          "command": "python \"$HOME/.claude/hooks/context_window.py\" --hook",
+          "timeout": 10
+        }
+      ],
+      "SessionEnd": [
+        {
+          "matcher": "*",
+          "command": "python \"$HOME/.claude/hooks/context_window.py\" --hook",
+          "timeout": 10
         }
       ]
     }

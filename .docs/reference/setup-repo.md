@@ -26,7 +26,7 @@ why. Traps it produced are in [`traps.md`](traps.md) (Windows and shell).
 - **Private, never committed:** `CLAUDE.personal.md`, `settings.json`, `setup-state.json`, memory and
   transcripts (`projects/`), `backups/`, `proposals/`, each skill's `local/` and `.sandbox/`. A person's
   own agents and hooks sit inside the linked folders, kept untracked by `.gitignore`'s allowlist
-  (`agents/opus-*`, `agents/fable-*`, and the four hook files by name).
+  (`agents/opus-*`, `agents/fable-*`, and the six hook files by name).
 
 ## CLAUDE.md and AGENTS.md
 

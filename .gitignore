@@ -13,3 +13,5 @@ hooks/*
 !hooks/test_guard_credentials.py
 !hooks/context_guard.py
 !hooks/test_context_guard.py
+!hooks/context_window.py
+!hooks/test_context_window.py
