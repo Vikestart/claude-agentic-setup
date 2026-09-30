@@ -158,6 +158,17 @@ off the table.
 `spawn_task` is the one-click fallback, but only outside git repositories. In a repo, a chip starts
 its session in a new worktree branch, while the owner's sessions run in the main checkout.
 
+**A cleared session wakes only on a message — not a hook, not a cron.**
+2026-09-30, app 2.16120: `clear_session("self")` stops the session's process (`isRunning` false),
+and none starts until a message arrives. So no `SessionStart` hook fires after the clear (only the
+earlier `startup` was logged), an `asyncRewake` hook never gets the chance, and `CronCreate` jobs are
+in-memory and die with the process. What does work: `send_message` from another attended session
+to the idle cleared one starts a turn with an empty context. Remote Control must be off before a
+self-clear, and a woken session turning it back on because another session asked was refused by
+auto mode. Scheduled-task runs are "unattended": no `AskUserQuestion`, no Remote Control, and
+`send_message` can neither leave nor reach them.
+→ The spare-session relay (roadmap item 1) builds on the one path that works.
+
 ---
 
 ## Windows and shell
