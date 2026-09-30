@@ -1,5 +1,9 @@
 # Handover — `~/.claude` global setup — 2026-09-30 (late)
 
+> **Done since (2026-09-30, the verification session):** the plan's verification, steps 4–5 and the
+> detached review are complete and pushed; see [`walkthrough.md`](walkthrough.md). "State" and "Next" item 1
+> below are history. The open owner questions still stand.
+
 ## State
 - Repo `~/.claude/claude-agentic-setup`, branch `main`, **ahead of origin on purpose**: `0454fc9`
   (phase leads steps 1–3) and this handover are held back until the next session's checks pass.

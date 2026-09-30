@@ -54,6 +54,7 @@ specific to this work.
 
 ## Subagents
 None — <why one writer is right> | a table: role · agent definition · exact model release · files owned · checks it runs
+For a run with phase leads, one line for EVERY phase the plan names: phase · lead definition · agent budget (the lead picks its roster), so the approval survives a handover.
 
 ## Release
 local → staging → production (or which stage is excluded, and why)

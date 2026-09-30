@@ -141,7 +141,7 @@ Waiting on the owner: whether the old export stays after launch.
   project's branch rules, and report the true commit and push state.
 - If this session changed the global `CLAUDE.md`, a skill or `~/.claude/agents`, add a second
   fenced block: an FYI for the owner's other running chats. They loaded the old instructions at
-  start, keep following them, hand the old text to their subagents, and cannot spawn an agent
+  start, keep following them, hand the old text to their subagents, and may not be offered an agent
   definition added since. State the new rules plainly, as information rather than tasks.
 - Report one line per step (what changed, what was retired), then the paste-ready block.
 - **Start the successor**, so the owner does not have to paste:

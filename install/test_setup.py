@@ -153,9 +153,12 @@ class AgentDefinitions(unittest.TestCase):
         for path in defs:
             front = path.read_text(encoding="utf-8").split("---")[1]
             fields = dict(line.split(":", 1) for line in front.strip().splitlines() if ":" in line)
+            # `Task` is the Agent tool's legacy name; `Agent(type, …)` limits it but still grants it.
+            spawn = ("Agent", "Task")
             denied = {t.strip() for t in fields.get("disallowedTools", "").split(",")}
             allowed = fields.get("tools")
-            can_spawn = "Agent" not in denied and (allowed is None or "Agent" in allowed)
+            grants = allowed is None or any(t.strip().split("(")[0] in spawn for t in allowed.split(","))
+            can_spawn = not denied.intersection(spawn) and grants
             with self.subTest(path.name):
                 self.assertEqual(can_spawn, path.name.endswith("-lead.md"),
                                  "only *-lead.md may keep the Agent tool")

@@ -135,8 +135,11 @@ Probed 2026-09-30 (Claude Code 2.1.284, depth 2): a background lead that spawned
 `run_in_background: true` and ended its turn was made to hand back at once ("the harness required a
 handback"), and the leaf's result arrived at the main session. The same lead spawning in the
 foreground got the result inline — nonce matched, commits made. A subagent's own background Bash
-does wake it. Nested transcripts land flat in the root session's `subagents/agent-<id>.jsonl`, so
-`context_guard.py` and `agent_audit.py` see them. → Leads spawn their roster in the foreground.
+does NOT outlive its turn when the subagent runs in the foreground: the shell's reply says it "is
+terminated when you give your final response", and a probe with a 75-second command got no notice.
+A background subagent's reply promises the notice instead. Nested transcripts land flat in the root session's `subagents/agent-<id>.jsonl`, so
+`context_guard.py` and `agent_audit.py` see them. → Leads spawn their roster in the foreground, and the roster waits for
+long commands in the foreground.
 
 **A `spawn_task` chip session is a side session of the chat that offered it.**
 2026-09-30: the handover's chip started its successor with `parentSessionId` set and `detached`

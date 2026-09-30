@@ -1,43 +1,57 @@
-# Walkthrough — the global setup in a shared private repo (2026-09-30)
+# Walkthrough — phase leads and the 400k cap (2026-09-30)
 
 ## What was built
 
-- The private repo `Vikestart/claude-agentic-setup`, cloned at `~/.claude/claude-agentic-setup` and
-  pushed (`main`, 4 commits). `~/.claude/agents`, `hooks`, `.docs` and each `skills/asdev-*` are
-  junctions into it; `~/.claude/CLAUDE.md` is a stub importing `CLAUDE.shared.md`; the owner's machine
-  bullets are in the private `~/.claude/CLAUDE.personal.md`.
-- `install/install.py` (install, `--check`, `--force-backup`, `--uninstall`), `install/precommit.py`
-  and four tracked git hooks (pre-commit scan; apply-on-pull), `settings/shared-settings.json`,
-  `install/verify.py` (every check, one line each), `install/test_setup.py` (16 tests).
-- `sync_agents_md.py` expands imports; `harness_parity.py` and `security_audit.py` work through
-  junctions; `share_bundle.py` never ships the personal file.
-- Docs: [`reference/setup-repo.md`](reference/setup-repo.md), new traps, the agent-policy reasons and
-  cost-measurement method moved out of private memory into `setup-architecture.md`.
+- **Cap:** `autoCompactWindow` 400000 is back in `settings/shared-settings.json`. A session started
+  after it compacts at ~368k (400000 × 92%).
+- **Depth 2 and two lead definitions:** `agents/opus-medium-lead.md` and `agents/opus-high-lead.md`
+  are the only definitions that keep the Agent tool. `install/test_setup.py` guards that, including
+  the legacy `Task` name. `share_bundle.py` reads the depth from the shared settings.
+- **Rules:** CLAUDE.md §1/§6 (phase leads, the approval exception, integration, the budget and the
+  cap), orchestrator "Multi-phase runs", the planner's roster question and plan template, executor
+  long-run text for foreground roster agents, and the handover chip note. AGENTS.md regenerated.
+- **Docs:** `traps.md` (the cap obeyed, nested agents, foreground shells, new definitions in a
+  running session, chip side sessions), `setup-architecture.md` (definitions, the lead decision),
+  roadmap items 1 and "Re-measure".
 
 ## How it was verified
 
-- All 102 moved files hash identically through the links; `verify.py` 16/16 (both self-tests, parity,
-  AGENTS.md, both hook suites, setup tests, the gate on every skill and the repo: 0 blocking).
-- AGENTS.md differs from before only by its header, the §2 note and the moved "never push to `main`".
-- 12 guards falsified RED for the right reason (`skills/asdev-web-audit/scripts/falsify/setup-repo.json`).
-- The partner's first install rehearsed from a clone in a scratch home, 18/18, including a merge pull
-  and a rebasing pull that applied a shared settings change by themselves. It caught a real bug: in a
-  git hook, Git Bash was not found, so no pull would have applied anything.
-- A fresh session (owner's probe) quoted the personal and the shared rule and listed 12 agents and
-  7 `asdev-*` skills: nested imports and discovery through junctions both work.
-- `precommit.py --all` clean; the Fable review scanned the full history: nothing private.
+- **Cap:** `get_usage` in a new session: `contextWindow` 400000, `autoCompactsAtPercent` 92.
+- **Probe, depth 2:**
+  - A background lead's background leaf never reported to the lead. The harness made the lead hand
+    back, and the leaf's result arrived at the main session.
+  - Foreground spawns returned inline. Nonces matched the leaf transcripts (`eb063f2a4b11`,
+    `ab29fa63657c`, `c80ed9ec7ad1`, `1b5ec8af273b`).
+  - Nested transcripts are flat under the root session's `subagents/`, and `agent_audit.py` read
+    them.
+  - A second probe, a foreground agent with a 75-second background command, got no completion
+    notice. The harness kills a foreground agent's background commands at its final response.
+- **Efficiency trial:** two scratch repos, the same two-phase task.
+  - Lead start-up is ~53k. A small-phase lead cost ~94k weighted. Each hand-back grew the main
+    session by ~4k.
+  - The baseline, 2026-09-30 main sessions: ~100k residue per phase over ~95 turns (Tilspire 88k →
+    504k over four or five phases; Framvis 99k → 193k for one).
+  - Break-even is under two phases for phases of that size. Leads are the default from two phases
+    that each need a roster.
+- **Detached review:** `opus-xhigh-reviewer` returned six should-fix findings and five nits. All
+  were taken except the share-bundle README wording, which is correct by depth.
+- **Checks:** `install/verify.py --gate .` 16/16; `install.py --check` in place; `falsify.py` on
+  `falsify/setup-repo.json` 16/16.
 
-## Reviews and agent spend (`agent_audit.py`)
+## Agent spend (`agent_audit.py`, price-weighted)
 
-| Agent | Model · effort | Turns | Peak context | Weighted |
+| agent | definition | turns | peak | weighted |
 |---|---|---|---|---|
-| Plan review | Opus 5.5 · xhigh | 26 | 134k | 0.45M |
-| Final review | Fable 5.1 · xhigh | 11 | 145k | 0.38M |
+| arm A lead (both phases) | opus-medium-lead | 12 | 74k | 226k |
+| arm A leaves ×2 | opus-low-executor | 5 + 6 | 61k | 295k |
+| arm B leads ×2 | opus-medium-lead | 10 + 6 | 64k | 281k |
+| arm B leaves ×2 | opus-low-executor | 6 + 5 | 62k | 163k |
+| detached review | opus-xhigh-reviewer | 27 | 123k | 443k |
+| foreground-shell probe | opus-low-executor | 4 | 59k | 68k |
 
-The plan review found 11 real defects (fixed before building); the final review 5 (fixed before the
-push). The build ran in the main chat at `high`.
+Ten agents in total, including the plan review, which is the 10-agent cap. The probe was the tenth.
 
 ## Where to look
 
-`~/.claude/claude-agentic-setup/README.md` (setting up a machine), `reference/setup-repo.md` (how it
-works), `reference/traps.md` (Windows and shell).
+`skills/asdev-orchestrator/SKILL.md` ("Multi-phase runs"), `agents/*-lead.md`,
+`.docs/reference/traps.md` ("Nested agents"), `install/test_setup.py` (`AgentDefinitions`).

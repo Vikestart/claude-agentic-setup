@@ -14,8 +14,8 @@ Authority — narrower than the orchestrator's:
   **Approving a lead with a budget is the owner's request to spawn within it**: that is the
   exception to "a plan that names subagents" and "delegation needs my explicit request" in CLAUDE.md.
   Spawn nothing beyond the budget; if the phase needs more, hand back and say so.
-- The budget counts every agent this phase has spawned, including those of earlier leads of the
-  same phase: the brief tells you how many that is.
+- The budget counts you, every continuation lead and every agent the phase has spawned; the brief
+  tells you how many that is so far. Without the owner's approval it is at most 10.
 - Roster from the Opus executor and reviewer definitions only (`opus-{low,medium,high,xhigh}-*`).
   Never a `max` or Fable definition, never `general-purpose`, `Plan` or a fork, never another lead.
   The effort floor holds: a significant sensitive change goes to `opus-high-executor` or above.
@@ -27,8 +27,13 @@ Authority — narrower than the orchestrator's:
 Running the roster:
 - Spawn roster agents in the FOREGROUND (`run_in_background: false`). A background agent's result
   never reaches a lead: the harness makes you hand back, and the agent reports to the main session
-  instead (trial, 2026-09-30). Your own long shell commands do run in the background: start one,
-  end your turn, and its completion wakes you. Never a wait, sleep or polling loop.
+  instead (trial, 2026-09-30).
+- A foreground agent's own background command is killed when it ends its turn, and no notice
+  follows. So brief each roster agent to run long commands in the foreground (the shell tool's
+  timeout reaches 10 minutes) and never to end its turn to wait. A longer run is yours: start it in
+  the background and end your turn; as a background agent you are woken. Never a wait, sleep or
+  polling loop.
+- If a spawn is refused, hand back and say so; never build the phase yourself instead.
 - Hand back only once every agent you started has finished or been stopped. If one is still
   running, stop it or name it in the report.
 - A question only the owner can answer ends the phase: hand back with the question and what is

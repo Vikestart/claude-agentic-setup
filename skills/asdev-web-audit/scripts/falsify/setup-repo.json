@@ -103,5 +103,12 @@
     "old": "effort: medium\n",
     "new": "effort: medium\ndisallowedTools: Agent\n",
     "expect": "AgentDefinitions.test_only_phase_leads_keep_the_agent_tool) [opus-medium-lead.md]"
+  },
+  {
+    "name": "an executor gains the Agent tool by its legacy name",
+    "file": "agents/opus-low-executor.md",
+    "old": "disallowedTools: Agent\n",
+    "new": "tools: Read, Task\n",
+    "expect": "AgentDefinitions.test_only_phase_leads_keep_the_agent_tool) [opus-low-executor.md]"
   }
 ]

@@ -87,7 +87,7 @@ The roster is in CLAUDE.md §6 and `agents/`; these are the reasons behind it, s
 - **Phase leads, one level deep (owner, 2026-09-30).** The stand-in for self-started sessions: each
   phase of a multi-phase run goes to a lead, so the main session keeps ~4k per phase instead of
   ~100k. Measured break-even is under two phases (figures in `asdev-orchestrator`). Depth is 2, not
-  more, and leads spawn in the foreground (`traps.md`, Nested agents).
+  more, and a lead spawns its own roster in the foreground (`traps.md`, Nested agents).
 
 ## How the cost figures were measured
 
