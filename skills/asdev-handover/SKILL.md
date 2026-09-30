@@ -18,9 +18,9 @@ update files with `Edit` and scripts, and never re-emit a document that barely c
   While the question is open, finish the current phase but do not start or research the next.
 - **List every repo this session touched** — a session on one project often edits another's docs,
   hooks or shared skills. Each one gets steps 0–3; the handover itself goes where the work continues.
-- **A global-setup session** (`~/.claude` itself) hands over in `~/.claude/.docs/`. It is not a git
-  repository, so there is no commit step; its backups are the ones `reference/setup-architecture.md`
-  names.
+- **A global-setup session** (`~/.claude` itself) hands over in `~/.claude/.docs/`, which is part of
+  the shared repo `~/.claude/claude-agentic-setup` (since 2026-09-30): commit there and push to `main`
+  (`git pull --rebase` first; the other maintainer sees it at their next pull).
 
 ## 0. Establish the true state — from the source, not memory
 
