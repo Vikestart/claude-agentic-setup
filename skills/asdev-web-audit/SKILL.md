@@ -113,7 +113,7 @@ assessed inside the active Git scope. Standalone scanners intentionally show raw
 - `agent_audit.py` — what a subagent ACTUALLY did, from its transcript: files read and written, cost, tool errors, and **scope violations** against `--owned` / `--forbidden` globs. Reads leave no trace in Git, so this is the only way to check a read-only agent stayed in its lane — the reviewer it was written for read a forbidden `local/` overlay via `cat`, so Bash commands are matched too, and matching is case-sensitive (`fnmatch` is not, on Windows, and `*/local/*` otherwise flags every `AppData/Local/Temp` path). Per agent it also reports average and peak context, cache writes straight after a pause over 5 minutes (a full re-cache), and a price-weighted total (read 0.1, write 2, output 5) — the figures to record in a phase's walkthrough. `--summary` regenerates the estate-wide figures the `asdev-orchestrator` skill quotes, so they can be re-grounded instead of drifting into folklore. Read-only.
 - `automation_mine.py` — which throwaway work keeps being rewritten: inline interpreter runs, long shell blocks and scratch-folder scripts grouped by the identifiers they use, plus recurring command sequences, ranked by the tokens the model wrote for them, with a `fail` count per group. Run it before choosing the next suite script (CLAUDE.md §0: a procedure done twice becomes a script). `--since`, `--project`, `--min`, `--json`. Read-only; ~2 minutes over 2 GB of transcripts.
 - `handover.py` — scaffolds `.docs/handover.md`: branch and sync state, uncommitted files, recent commits, changed-file stat, the current `.docs/` plan/task/roadmap state, and optionally the aggregate gate (`--run-checks`). Leaves **decisions** and **next steps** blank — that is the half a script cannot write. `--stdout` previews; it refuses to overwrite an existing handover without `--force`.
-- `falsify.py` — `--suite "<cmd>" --mutations <json>`. Reverts each guard one at a time and proves it goes RED *for the right reason*. Refuses to start unless the suite is GREEN on a clean tree (otherwise "went red" may mean "could not run"), refuses a non-unique anchor, restores byte-exactly and verifies by SHA-256, and reports a guard that stays GREEN as **VACUOUS**.
+- `falsify.py` — `--suite "<cmd>" --mutations <spec>`. The spec is `patch.py`'s block format with `name:` and `expect:` lines above each block, written with the Write tool; a `.json` list still works. Reverts each guard one at a time and proves it goes RED *for the right reason*. Refuses to start unless the suite is GREEN on a clean tree (otherwise "went red" may mean "could not run"), refuses a non-unique anchor, restores byte-exactly and verifies by SHA-256, and reports a guard that stays GREEN as **VACUOUS**.
 
 **Writers — never part of the gate:**
 - `patch.py` — `patch.py SPEC [--root DIR] [--check]`. Exact, all-or-nothing replacements across files from a spec that needs no escaping: `@@@ path`, then blocks of `<<<<<<< OLD` (or `OLD xN` for exactly N occurrences) / `======= NEW` / `>>>>>>> END`. Write the spec with the Write tool, never a heredoc (a heredoc can halve backslashes). Every anchor is checked in memory first, so one miss writes no file, and a miss says where the anchor's first line does occur; CRLF files are matched and written in CRLF, bytes outside the replaced spans (a BOM included) are untouched. Exists because ~4,300 hand-written patch scripts in one month cost ~2.4M output tokens and failed ~120 times on exactly those traps.
@@ -139,7 +139,20 @@ assessed inside the active Git scope. Standalone scanners intentionally show raw
 Every new guard is reverted one at a time and shown to go RED *for the right reason* (CLAUDE.md §6):
 
 ```
-python $HOME/.claude/skills/asdev-web-audit/scripts/falsify.py --suite "<cmd>" --mutations <json>
+python $HOME/.claude/skills/asdev-web-audit/scripts/falsify.py --suite "<cmd>" --mutations <spec>
+```
+
+Write the spec with the Write tool. Nothing in it is escaped, so no script is needed to build JSON:
+
+```
+@@@ includes/auth.php
+name: admin gate
+expect: non-admin reached the admin page
+<<<<<<< OLD
+if (!$user->isAdmin()) {
+======= NEW
+if (false) {
+>>>>>>> END
 ```
 
 It proves the suite GREEN on a clean tree first — otherwise "went red" may only mean it could not run,

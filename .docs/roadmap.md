@@ -19,8 +19,9 @@ Outcomes and order only; active work goes in `implementation_plan.md` when a pha
    - ~~`patch.py`~~ — built 2026-09-30 (~4,300 runs, ~2.4M tokens, ~120 failures in September);
      CLAUDE.md §0 points at it. Rerun the miner in a few weeks to see the habit actually moved
      (`automation_mine.py --since <date>`; September's figures above are the baseline).
-   - **falsify mutations without a hand-written JSON file** — 138 runs build one; "inline python →
-     falsify.py" is the most common command sequence (96 transcripts).
+   - ~~falsify mutations without a hand-written JSON file~~ — built 2026-09-30: `--mutations` takes
+     `patch.py`'s unescaped block spec with `name:` / `expect:` lines. Baseline: 138 runs built the
+     JSON; "inline python → falsify.py" was the most common command sequence (96 transcripts).
    - **Nebulingo's test-database preamble** (`PHASE98_TEST_*` exports, 171 runs) — a project
      script, for that project's own roadmap.
    - Smaller: JSON config writes (~100 runs), a `git diff --numstat` check (~200 runs). Rerun the

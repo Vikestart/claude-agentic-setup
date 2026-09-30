@@ -11,9 +11,21 @@ removed was never testing anything.
 USAGE
 
     falsify.py --suite "node scripts/test_phase118_nav_search.mjs" \\
-               --mutations mutations.json
+               --mutations mutations.txt
 
-mutations.json is a list of objects:
+The mutations file uses patch.py's block format, written with the Write tool and
+escaped nowhere. `name:` and `expect:` lines above a block describe it:
+
+    @@@ assets/js/app-shell.js
+    name: duplicate option-id prefix
+    expect: duplicate DOM ids
+    <<<<<<< OLD
+    optionIdPrefix: 'shell-search',
+    ======= NEW
+    optionIdPrefix: 'dict',
+    >>>>>>> END
+
+A file ending in .json is instead a list of objects with the same fields:
 
     [{"name":   "duplicate option-id prefix",
       "file":   "assets/js/app-shell.js",
@@ -21,7 +33,7 @@ mutations.json is a list of objects:
       "new":    "optionIdPrefix: 'dict',",
       "expect": "duplicate DOM ids"}]
 
-`new` may be "" to delete the anchor outright. `expect` is a substring that must
+`new` may be "" (an empty NEW block) to delete the anchor outright. `expect` is a substring that must
 appear in the failing output -- it is what separates "red for the right reason"
 from "red because I broke the file".
 
@@ -49,6 +61,8 @@ import json
 import os
 import subprocess
 import sys
+
+import patch
 
 
 JOURNAL = ".falsify-inflight.json"
@@ -100,6 +114,41 @@ def run(cmd: str, cwd: str) -> tuple[int, str]:
     return proc.returncode, (proc.stdout or "") + (proc.stderr or "")
 
 
+def load_mutations(path: str) -> list[dict]:
+    """A .json list, or else patch.py's block spec with `name:` / `expect:` lines above each block.
+
+    WHY THE SPEC. Anchors are code, and code in JSON needs every quote, backslash and newline
+    escaped. So the JSON was built by an inline Python script before nearly every run (138 runs in
+    September 2026), where the same escapes break again in the shell. The spec is taken literally.
+    """
+    with open(path, encoding="utf-8") as handle:
+        text = handle.read()
+    if path.lower().endswith(".json"):
+        return json.loads(text)
+    try:
+        files = patch.parse(text)
+    except patch.SpecError as error:
+        raise SystemExit(f"falsify: {path}: {error}") from None
+    lines = text.lstrip(patch.BOM).replace("\r\n", "\n").split("\n")
+    mutations = []
+    for file, blocks in files:
+        for old, new, count, start in blocks:
+            if count != 1:
+                raise SystemExit(f"falsify: {path}: line {start}: a mutation's anchor must be unique; "
+                                 f"drop 'x{count}'")
+            # The block's own notes run back to the previous block's END or the file line;
+            # the nearest `name:` / `expect:` wins.
+            meta: dict[str, str] = {}
+            k = start - 2
+            while k >= 0 and lines[k] != patch.END and not lines[k].startswith(patch.FILE):
+                key, sep, value = lines[k].partition(":")
+                if sep and key.strip() in ("name", "expect"):
+                    meta.setdefault(key.strip(), value.strip())
+                k -= 1
+            mutations.append({"file": file, "old": old, "new": new, **meta})
+    return mutations
+
+
 def locate(data: bytes, needle: str) -> tuple[bytes, int]:
     """Return (anchor-as-bytes, occurrences), retrying an LF anchor as CRLF."""
     raw = needle.encode("utf-8")
@@ -113,15 +162,15 @@ def main() -> int:
     parser = argparse.ArgumentParser(
         description="Revert each guard one at a time and prove it goes red for the right reason.")
     parser.add_argument("--suite", required=True, help="command that must be GREEN on a clean tree")
-    parser.add_argument("--mutations", required=True, help="JSON file describing the mutations")
+    parser.add_argument("--mutations", required=True,
+                        help="patch.py-style block spec with name:/expect: lines, or a .json list")
     parser.add_argument("--cwd", default=".", help="working directory for the suite (default: cwd)")
     args = parser.parse_args()
 
     cwd = os.path.abspath(args.cwd)
-    with open(args.mutations, encoding="utf-8") as handle:
-        mutations = json.load(handle)
+    mutations = load_mutations(args.mutations)
     if not isinstance(mutations, list) or not mutations:
-        raise SystemExit("falsify: --mutations must be a non-empty JSON list.")
+        raise SystemExit("falsify: --mutations must hold at least one mutation.")
 
     files = sorted({os.path.join(cwd, m["file"]) for m in mutations})
     missing = [f for f in files if not os.path.isfile(f)]

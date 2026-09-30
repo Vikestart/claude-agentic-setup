@@ -475,5 +475,49 @@ class PatchTests(unittest.TestCase):
             self.assertIn("has no", r.stderr)
 
 
+class FalsifyTests(unittest.TestCase):
+    """falsify.py — mutations from an unescaped spec, so no script has to build the JSON."""
+
+    GUARD = b"<?php\r\n// note\r\nif ($user->isAdmin()) {\r\n    $path = 'C:\\data';\r\n}\r\n"
+    CHECK = ('import sys\nt = open("guard.php", "rb").read()\n'
+             'if b"isAdmin()" not in t:\n    print("admin gate missing here")\n    sys.exit(1)\nprint("ok")\n')
+
+    def _run(self, root: Path, name: str, mutations: str) -> subprocess.CompletedProcess:
+        (root / "guard.php").write_bytes(self.GUARD)
+        (root / "check.py").write_text(self.CHECK, encoding="utf-8")
+        (root / name).write_text(mutations, encoding="utf-8")
+        return subprocess.run([sys.executable, str(Path(__file__).with_name("falsify.py")),
+                               "--suite", f'"{sys.executable}" check.py',
+                               "--mutations", str(root / name), "--cwd", str(root)],
+                              capture_output=True, text=True, encoding="utf-8")
+
+    def test_spec_blocks_carry_their_own_name_and_expect(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            spec = ("@@@ guard.php\nname: admin gate\nexpect: admin gate missing here\n"
+                    "<<<<<<< OLD\nif ($user->isAdmin()) {\n    $path = 'C:\\data';\n"
+                    "======= NEW\nif (true) {\n    $path = 'C:\\data';\n>>>>>>> END\n\n"
+                    "<<<<<<< OLD\n// note\n======= NEW\n// changed\n>>>>>>> END\n")
+            r = self._run(root, "m.txt", spec)
+            self.assertEqual(r.returncode, 1, r.stdout + r.stderr)
+            self.assertRegex(r.stdout, r"RED +admin gate +for the right reason \('admin gate missing here'\)",
+                             "a multi-line LF anchor with a backslash matched the CRLF file")
+            self.assertRegex(r.stdout, r"GREEN +mutation 2 +<-- VACUOUS", "an unnamed block inherits nothing")
+            self.assertIn("falsified 1/2", r.stdout)
+            self.assertEqual((root / "guard.php").read_bytes(), self.GUARD, "restored byte-exactly")
+
+    def test_repeat_count_refused_and_json_still_accepted(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            r = self._run(root, "m.txt", "@@@ guard.php\n<<<<<<< OLD x2\nnote\n======= NEW\n>>>>>>> END\n")
+            self.assertNotEqual(r.returncode, 0)
+            self.assertIn("must be unique", r.stderr)
+            r = self._run(root, "m.json", json.dumps([{"name": "gate", "file": "guard.php",
+                                                       "old": "isAdmin()", "new": "isUser()",
+                                                       "expect": "admin gate missing here"}]))
+            self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+            self.assertIn("falsified 1/1", r.stdout)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
