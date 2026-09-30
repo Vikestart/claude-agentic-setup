@@ -108,6 +108,15 @@ class SettingsMerge(unittest.TestCase):
         self.assertEqual(merged["workflowSizeGuideline"], "large")
         self.assertIn("updated workflowSizeGuideline", changes)
 
+    def test_unset_removes_only_the_value_the_setup_wrote(self):
+        fragment = {"unset": {"autoCompactWindow": 400000}}
+        merged, changes, _ = install.merge_settings({"autoCompactWindow": 400000, "theme": "dark"}, fragment, {})
+        self.assertEqual(merged, {"theme": "dark"})
+        self.assertIn("unset autoCompactWindow", changes)
+        mine, changes2, _ = install.merge_settings({"autoCompactWindow": 700000}, fragment, {})
+        self.assertEqual(mine, {"autoCompactWindow": 700000}, "a personal value must stay")
+        self.assertEqual(changes2, [])
+
     def test_a_hook_already_there_in_another_spelling_is_not_added_twice(self):
         mine = {"hooks": {"PreToolUse": [{"matcher": "Bash", "hooks": [
             {"type": "command", "command": 'python "C:/Users/p/.claude/hooks/guard_credentials.py"'}]}]}}

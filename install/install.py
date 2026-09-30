@@ -222,6 +222,17 @@ def merge_settings(settings: dict, fragment: dict, last: dict) -> tuple[dict, li
         else:
             overrides.append(f"{key} is {node[leaf]!r} here; the shared value is {value!r}")
 
+    # A key the setup once set and no longer wants. Removed only while it still holds the value the
+    # setup wrote, so a person's own value for the same key is theirs and stays.
+    for key, value in fragment.get("unset", {}).items():
+        *parents, leaf = key.split(".")
+        node = s
+        for part in parents:
+            node = node.get(part) if isinstance(node, dict) else None
+        if isinstance(node, dict) and leaf in node and node[leaf] == value:
+            del node[leaf]
+            changes.append(f"unset {key}")
+
     for section, sign in (("add", 1), ("retire", -1)):
         for key, entries in fragment.get(section, {}).items():
             if key == "hooks":

@@ -453,6 +453,19 @@ class PatchTests(unittest.TestCase):
             self.assertEqual(self._run(root, twice).returncode, 0)
             self.assertEqual((root / "c.css").read_text(encoding="utf-8"), "a{color:blue}\nb{color:blue}\n")
 
+    def test_deleting_whole_lines_leaves_no_empty_line(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "g.txt").write_bytes(b"keep1\r\ndrop1\r\ndrop2\r\nkeep2\r\nxdrop1\r\n")
+            spec = "@@@ g.txt\n<<<<<<< OLD\ndrop1\ndrop2\n======= NEW\n>>>>>>> END\n"
+            self.assertEqual(self._run(root, spec).returncode, 0)
+            self.assertEqual((root / "g.txt").read_bytes(), b"keep1\r\nkeep2\r\nxdrop1\r\n",
+                             "whole lines go with their line break")
+            mid = "@@@ g.txt\n<<<<<<< OLD\ndrop1\n======= NEW\n>>>>>>> END\n"
+            self.assertEqual(self._run(root, mid).returncode, 0)
+            self.assertEqual((root / "g.txt").read_bytes(), b"keep1\r\nkeep2\r\nx\r\n",
+                             "text ending mid-line keeps the line break")
+
     def test_a_malformed_spec_is_refused(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

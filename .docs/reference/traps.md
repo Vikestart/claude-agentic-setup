@@ -56,8 +56,10 @@ allowlist in `settings.json` named a retired path for two days while the check p
 reload live and do not list it as restart-only. Tested 2026-09-30 at ~220k: `get_usage` reported
 auto-compaction at 97% of 1M both before and after setting 150k in the project's
 `settings.local.json`, and no compaction followed; the 400k user-level value, set mid-session, did
-not apply either. Unknown yet: whether a NEW session picks it up. → Measure, never assume: a fresh
-session's first `get_usage` shows `autoCompactsAtPercent` (40 = the 400k cap holds).
+not apply either. → The cap was removed (the owner's `/compact` on the context hook's question
+replaces it). To read where a session will compact, `get_usage` reports `autoCompactsAtPercent`.
+A model cannot trigger compaction: no tool does it, `send_message` refuses the current session, and
+`clear_session("self")` is `/clear` (no summary), refused for a session serving Remote Control.
 
 **A stale path in a permission rule fails silently.**
 `Bash(python ~/.claude/scripts/audit_all.py *)` did not error when that directory stopped existing —

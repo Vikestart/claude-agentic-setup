@@ -1,11 +1,13 @@
 {
-  "_about": "What the shared setup owns in each person's ~/.claude/settings.json. install.py merges it: 'set' values are written when absent or still equal to what was last applied (a deliberate personal override is kept); 'add' entries are appended when missing; 'retire' entries are removed where present. Edit this file, never the merge by hand.",
+  "_about": "What the shared setup owns in each person's ~/.claude/settings.json. install.py merges it: 'set' values are written when absent or still equal to what was last applied (a deliberate personal override is kept); 'unset' keys are removed while they still hold the value given here; 'add' entries are appended when missing; 'retire' entries are removed where present. Edit this file, never the merge by hand.",
   "set": {
-    "autoCompactWindow": 400000,
     "env.CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS": "10",
     "env.CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH": "1",
     "subagentPromptCacheTtl": "1h",
     "workflowSizeGuideline": "medium"
+  },
+  "unset": {
+    "autoCompactWindow": 400000
   },
   "add": {
     "permissions.allow": [
@@ -22,8 +24,7 @@
       "Bash(python ~/.claude/skills/asdev-web-audit/scripts/harness_parity.py *)",
       "Bash(python ~/.claude/skills/asdev-web-audit/scripts/audit_delta.py *)",
       "Bash(python ~/.claude/skills/asdev-web-audit/scripts/agent_audit.py *)",
-      "Bash(python ~/.claude/skills/asdev-web-audit/scripts/self_test.py *)",
-      "Bash(python ~/.claude/hooks/context_window.py *)"
+      "Bash(python ~/.claude/skills/asdev-web-audit/scripts/self_test.py *)"
     ],
     "permissions.deny": [
       "Read(~/.claude/.credentials.json)"
@@ -42,7 +43,15 @@
           "command": "python \"$HOME/.claude/hooks/context_guard.py\"",
           "timeout": 5
         }
-      ],
+      ]
+    }
+  },
+  "retire": {
+    "permissions.allow": [
+      "Bash(python ~/.claude/hooks/context_window.py *)"
+    ],
+    "permissions.deny": [],
+    "hooks": {
       "SessionStart": [
         {
           "matcher": "*",
@@ -58,10 +67,5 @@
         }
       ]
     }
-  },
-  "retire": {
-    "permissions.allow": [],
-    "permissions.deny": [],
-    "hooks": {}
   }
 }

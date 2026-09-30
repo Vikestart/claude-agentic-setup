@@ -69,6 +69,22 @@ main2 = root / "proj" / "sess2.jsonl"
 write(main2, [300000], partial_last=True)
 check("half-written newest line: skipped, last complete record read", "300k" in call(main2))
 
+main3 = root / "proj" / "sess3c.jsonl"
+write(main3, [405000])
+check("past 400k: ask the owner about /compact", "/compact" in call(main3))
+write(main3, [405000, 455000])
+later = call(main3)
+check("under 100k more: no second /compact question", "/compact" not in later)
+write(main3, [405000, 455000, 510000])
+check("another 100k: ask again", "/compact" in call(main3))
+write(main3, [510000, 60000])
+call(main3)  # the hook runs on every tool call, so it sees the drop before the regrowth
+write(main3, [510000, 60000, 410000])
+check("after a compaction: asked again at 400k", "/compact" in call(main3))
+agent2 = main3.with_suffix("") / "subagents" / "agent-def456.jsonl"
+write(agent2, [450000])
+check("subagent past 400k: hand back, never /compact", "/compact" not in call(main3, "def456"))
+
 check("missing transcript: silent, exit 0", call(root / "nope" / "x.jsonl") == "")
 
 bad = subprocess.run([sys.executable, str(hook)], input=json.dumps(

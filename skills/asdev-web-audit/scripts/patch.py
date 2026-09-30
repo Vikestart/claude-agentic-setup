@@ -28,7 +28,8 @@ is escaped: every character between the markers is taken literally.
 
   * `@@@ PATH` starts a file (relative to --root, default the current directory); any number of
     OLD/NEW blocks follow, applied in order, each seeing the previous one's result.
-  * `OLD` must occur exactly once; `OLD xN` exactly N times, all replaced. An empty NEW deletes.
+  * `OLD` must occur exactly once; `OLD xN` exactly N times, all replaced. An empty NEW deletes;
+    when OLD is whole lines, their line break goes with them.
   * A block is its lines joined by newlines, with no trailing newline added, so an anchor can
     end mid-line. Text outside blocks is ignored and may be used for notes.
   * Marker lines are exactly `<<<<<<< OLD`, `======= NEW`, `>>>>>>> END`; content may not
@@ -111,6 +112,14 @@ def where(text: str, old: str) -> str:
     return f"its first line occurs at line(s) {shown} — the difference is further down"
 
 
+def _starts(text: str, sub: str) -> list[int]:
+    out, i = [], text.find(sub)
+    while i != -1:
+        out.append(i)
+        i = text.find(sub, i + len(sub))
+    return out
+
+
 def apply(files, root: Path) -> tuple[dict[Path, bytes], list[str], list[str]]:
     out: dict[Path, bytes] = {}
     done: list[str] = []
@@ -143,7 +152,13 @@ def apply(files, root: Path) -> tuple[dict[Path, bytes], list[str], list[str]]:
                         else "make the anchor longer" if found > count else "fewer than expected")
                 errors.append(f"{rel} (spec line {line}): expected {count}x, found {found}x; {hint}")
                 continue
-            text = text.replace(old.replace("\n", style), new.replace("\n", style))
+            o, n = old.replace("\n", style), new.replace("\n", style)
+            # Deleting whole lines takes their line break too; otherwise an empty line is left
+            # where they were (it happened on the first real deletion).
+            if not n and text.count(o + style) == count and all(
+                    i == 0 or text[i - 1] == "\n" for i in _starts(text, o + style)):
+                o += style
+            text = text.replace(o, n)
             label = " (CRLF)" if style == "\r\n" else ""
             done.append(f"{rel}: {count} replacement{'s' if count > 1 else ''}{label} (spec line {line})")
         out[path] = text.encode("utf-8")

@@ -77,12 +77,9 @@ small, short-lived context matters more. The rules below keep it small.
   sequential builders with disjoint files, each starting from the previous one's hand-back.
 - **Context ceiling ~250k.** An agent past it finishes its current step and hands back what is
   done, what is left, and the exact next step (the context hook tells it when). Start a fresh agent
-  for the rest from that hand-back. Behind it, a hard backstop: the shared `autoCompactWindow`
-  (400k) compacts any session or agent that ignores the hook — a summary loses detail, so it is a
-  net, not the plan. Unverified in the desktop app: a running session ignores a changed value
-  (`reference/traps.md`), so `context_window.py raise` does not help the session that runs it;
-  whether the cap holds from session start is still being measured. Agents never raise it; they
-  hand back.
+  for the rest from that hand-back. There is no automatic compaction cap: past ~400k the hook tells
+  the main chat to ask the owner once whether to `/compact` (a model cannot compact itself), and
+  the owner's "keep going" stands until the next +100k. Agents never compact; they hand back.
 - **Approval covers the continuations.** An approved roster covers fresh continuation and
   correction agents for its roles (same definition, same files); say one line when you start one.
   They count toward the 10-agent cap, so a roster for a large phase states how many it expects,
