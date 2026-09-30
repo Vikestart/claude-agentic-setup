@@ -9,7 +9,7 @@ CLAUDE.md §6 holds the rules that always apply: work directly by default, get t
 before delegating, the effort floor and ceiling, the 10-agent cap, falsification, and the meaning of
 "sensitive". This skill is how to carry them out once agents or reviews are involved.
 
-**You are the orchestrator.** Synthesis, scope, integration and release stay with you (a phase lead integrates its own phase). Use the
+**You are the orchestrator.** Synthesis, scope, integration and release stay with you. Use the
 smallest useful roster, and give each agent concrete work that can be checked on its own.
 
 ## Is it worth an agent?
@@ -97,44 +97,11 @@ small, short-lived context matters more. The rules below keep it small.
   or polling loop: each wake re-reads the whole context for nothing (a ~220k Tilspire builder woke
   every ~10 minutes through a 14-run falsify batch). Only a background agent — the default — is
   woken. A foreground agent's end of turn is its final report and kills its background commands,
-  so never spawn one for a long run; a phase lead's foreground roster waits in the foreground.
+  so never spawn one for a long run.
 - **In a planned phase you stay the orchestrator.** Long build/test loops and large writes go to a
   builder in the approved roster, not into your thread. Write the brief from the plan and the
   reference docs — reading the code first means it is read twice. Outside a plan, "directly by
   default" still governs.
-  In a run of two or more phases, a phase lead takes this role for its phase (next section).
-
-## Multi-phase runs: phase leads
-
-A plan of two or more phases that each need a roster of their own gives each phase a lead — `opus-medium-lead`, or `opus-high-lead` when
-the phase touches anything sensitive — and an agent budget; the lead picks its roster within it and
-runs the phase to a verified local commit. You keep scope across phases, the owner's questions,
-verification, the phase-completion routine and release.
-
-- **Why from two phases (trial, 2026-09-30).** A lead cold-starts at ~53k; a whole small-phase lead
-  cost ~94k price-weighted, and its hand-back grew the main session by ~4k. A main session that runs
-  a phase itself keeps ~100k of it (Tilspire: 88k → 504k over four or five phases; Framvis: 99k →
-  193k for one) and re-reads it on each of the ~95 turns of every later phase: ~0.95M per later
-  phase. Over n phases leads save ~0.95M × n(n−1)/2 and cost ~0.14M × n (a lead, plus your spawn and
-  check): break-even is under two phases. That holds for builder-sized phases only: at two phases a
-  lead pays when a phase's residue × its turns reaches ~2.8M (100k × 28 turns, 30k × 95). A phase
-  that needs no roster runs as before, and so does a one-phase session. The baseline predates the
-  same-day context rules, which should shrink residue; the first real run with leads is compared
-  against these figures and can move the default (roadmap, "Re-measure").
-- **One lead at a time,** spawned in the background with the phase's plan section, the budget and
-  the number of agents the phase has spawned so far.
-- **A lead spawns its roster in the foreground.** A background child's result never reaches a lead:
-  the harness makes the lead hand back and the child reports to you. If that happens, pass the
-  child's result to a resumed lead (the resume conditions below) or a continuation lead — do not
-  finish the phase yourself. Its roster runs long commands in the foreground (up to the shell's
-  10-minute timeout): a foreground agent's background command dies with its turn.
-- **Check each phase yourself:** `audit_all.py --since <phase base>` and `git log`; the lead's
-  verdicts are claims.
-- **A lead that hands back at ~250k** gets a continuation lead, briefed with the hand-back and the
-  number of agents spawned so far. An owner's answer goes to a fresh continuation lead too, unless a
-  resume is cheap: under ~150k and inside the cache hour.
-- **Budget:** the 10-agent cap counts a lead, its roster and its continuations, per phase. The
-  concurrent cap looks session-wide, so a lead's roster shares it with you.
 
 ## Proposing a roster
 
@@ -155,8 +122,7 @@ verification, the phase-completion routine and release.
 - **A session opened before a definition existed** may not be offered it, and still runs the old CLAUDE.md
   (on 2026-09-30 one running session was offered two new definitions; `traps.md`). Where the Agent
   tool does not offer the definition, spawn `general-purpose` (executor) or `Plan` (reviewer; no edit or spawn tools) with the
-  definition's model and its rules in the brief. Both inherit the session's effort. A phase lead has no stand-in: without the lead definitions, run
-  the phases as before.
+  definition's model and its rules in the brief. Both inherit the session's effort.
 - **Wherever effort is inherited rather than set**, the floor is a precondition: before spawning for
   sensitive work, check the session's effort; below `high`, say so and wait — only the owner can
   change it in the app.
@@ -173,8 +139,7 @@ verification, the phase-completion routine and release.
 - **The 10-agent cap counts in total** per task, phase or workflow run, workflow agents included;
   a queue, batching or ultracode does not lift it. `settings.json` enforces part of it
   (`CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS=10` refuses an eleventh concurrent spawn,
-  `CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH=2` allows a lead's roster and nothing deeper; only the
-  definitions' frontmatter keeps other agents from spawning). Nothing caps a
+  `CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH=1` stops subagents spawning their own). Nothing caps a
   workflow's total, and an approved wave above 10 at once also needs that setting raised first.
 - **Never run suites that share a disposable database concurrently** — two agents resetting one
   instance corrupt both runs and produce failures that look like real regressions.
@@ -191,11 +156,9 @@ and the verification to run and quote.
   agent reads repeated another agent's).
 - **Always include:** the project's quiet runner by name (or `quiet.py` from the audit suite), the
   context ceiling, a report cap (executors ~900 words, reviewers ~1,200), and for any run
-  longer than a few minutes "start it in the background and end your turn" (for a foreground
-  roster agent: "run it in the foreground, up to 10 minutes") — never "keep working"
+  longer than a few minutes "start it in the background and end your turn" — never "keep working"
   unless the brief names the independent work to do meanwhile.
-- Subagents inherit your authority, never spawn further agents (a phase lead excepted, within its
-  budget), and return a concise result,
+- Subagents inherit your authority, never spawn further agents, and return a concise result,
   blocker or correction request.
 
 ## While they work
@@ -220,7 +183,7 @@ and the verification to run and quote.
   `agent_audit.py` (turns, peak context, price-weighted total), so drift shows up.
 - Checkpoints never replace final verification: recheck the actual diff and evidence yourself, and
   ask the owner only about material decisions or blockers.
-- **You own** (a phase lead, for its phase) the `APP_VERSION`/`CACHE_NAME` bump, the commit, the docs, and any cross-cutting fix
+- **You own** the `APP_VERSION`/`CACHE_NAME` bump, the commit, the docs, and any cross-cutting fix
   an agent reported but did not own.
 
 ## Reviews

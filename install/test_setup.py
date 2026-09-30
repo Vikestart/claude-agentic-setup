@@ -145,8 +145,8 @@ class SettingsMerge(unittest.TestCase):
 
 
 class AgentDefinitions(unittest.TestCase):
-    # At spawn depth 2 the depth limit no longer stops an executor or reviewer from nesting; only its
-    # own frontmatter does, and an agent spawned that way counts against no phase budget.
+    # At spawn depth 1 the harness stops nesting anyway. This keeps the frontmatter honest for the day
+    # the depth rises again (phase leads, rolled back 2026-09-30): then only the frontmatter stops it.
     def test_only_phase_leads_keep_the_agent_tool(self):
         defs = sorted((REPO / "agents").glob("*.md"))
         self.assertTrue(any(p.name.endswith("-lead.md") for p in defs), "no lead definitions found")

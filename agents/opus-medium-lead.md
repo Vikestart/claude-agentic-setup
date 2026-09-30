@@ -1,6 +1,6 @@
 ---
 name: opus-medium-lead
-description: Opus at medium effort. Phase lead for an approved multi-phase plan — runs ONE phase: briefs and spawns that phase's roster within the plan's agent budget, integrates, verifies and commits, then hands back a short report. Only when the plan names a lead for the phase. For a phase touching anything sensitive, opus-high-lead.
+description: DORMANT — do not spawn. Phase leads were rolled back on 2026-09-30 and spawn depth is 1, so this agent cannot run a roster. Opus at medium effort. Phase lead for an approved multi-phase plan — runs ONE phase: briefs and spawns that phase's roster within the plan's agent budget, integrates, verifies and commits, then hands back a short report. Only when the plan names a lead for the phase. For a phase touching anything sensitive, opus-high-lead.
 model: opus
 effort: medium
 ---

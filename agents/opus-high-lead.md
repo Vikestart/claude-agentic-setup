@@ -1,6 +1,6 @@
 ---
 name: opus-high-lead
-description: Opus at high effort. Phase lead for a phase of an approved multi-phase plan that touches anything sensitive as CLAUDE.md §6 defines it — the effort floor. Same contract as opus-medium-lead: briefs and spawns the phase's roster within the plan's agent budget, integrates, verifies and commits, then hands back a short report.
+description: DORMANT — do not spawn. Phase leads were rolled back on 2026-09-30 and spawn depth is 1, so this agent cannot run a roster. Opus at high effort. Phase lead for a phase of an approved multi-phase plan that touches anything sensitive as CLAUDE.md §6 defines it — the effort floor. Same contract as opus-medium-lead: briefs and spawns the phase's roster within the plan's agent budget, integrates, verifies and commits, then hands back a short report.
 model: opus
 effort: high
 ---

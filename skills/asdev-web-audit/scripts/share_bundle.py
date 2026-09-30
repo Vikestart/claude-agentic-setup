@@ -87,9 +87,8 @@ enforce the parts it can, add these to `~/.claude/settings.json` (a new session 
 "workflowSizeGuideline": "medium"
 ```
 
-The first refuses an eleventh subagent running at once, the second sets how deep agents may spawn
-agents (at "2", a phase lead — `agents/*-lead.md` — runs its own roster, and no agent below it can
-spawn), and the third tells Claude to keep workflows under 10 agents and warns you when one goes past that.
+The first refuses an eleventh subagent running at once, the second stops subagents spawning their own,
+and the third tells Claude to keep workflows under 10 agents and warns you when one goes past that.
 
 ## What is here
 

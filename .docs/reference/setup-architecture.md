@@ -11,7 +11,7 @@ how the shared repo, its installer and the links work is in [`setup-repo.md`](se
 | `CLAUDE.md` | A one-line stub importing `claude-agentic-setup/CLAUDE.shared.md`: the global instructions, a ~15 kB **core** of rules that must apply before any skill loads. Everything procedural lives in a skill, named by path. |
 | `CLAUDE.personal.md` | Each person's machine and hosting bullets (local dev, browser, production), imported by the shared rules in §2. Private; never in the repo. |
 | `skills/asdev-*` | The seven in-house skills (below), *linked* one junction each. Every other folder in `skills/` is third-party and stays outside the repo. |
-| `agents/*.md` | *Linked.* Fourteen subagent definitions (`opus-*`, `fable-*`), each fixing model AND effort in its frontmatter; the two `*-lead` definitions alone may spawn agents (a setup test guards that). A person's own agents sit in the same folder, untracked. |
+| `agents/*.md` | *Linked.* Fourteen subagent definitions (`opus-*`, `fable-*`), each fixing model AND effort in its frontmatter; the two `*-lead` definitions are dormant (see the decision below) and are the only ones that keep the Agent tool, which a setup test guards. A person's own agents sit in the same folder, untracked. |
 | `hooks/guard_credentials.py` | `PreToolUse` guard for Bash and PowerShell (see Credentials); tests in `hooks/test_guard_credentials.py`. |
 | `hooks/context_guard.py` | `PostToolUse` hook: past ~250k context, adds one notice telling the main chat to propose a handover or a subagent to hand back (finds an agent's own transcript from `agent_id`). Past ~400k it tells the main chat instead to ask the owner once whether to `/compact`, again every +100k; agents never get that question. The settings also cap sessions at `autoCompactWindow` 400k (restored 2026-09-30 at the owner's request); a session already running when it was set ignores it (`traps.md`), and for that case the owner's word on this question is the override. `CONTEXT_GUARD_LIMIT` / `_STEP` / `_COMPACT` / `_COMPACT_STEP` tune it; tests in `hooks/test_context_guard.py`. |
 | `settings.json` | Private. The installer merges into it what the setup owns (`settings/shared-settings.json` in the repo): subagent caps, the 1-hour agent cache (`subagentPromptCacheTtl`), `workflowSizeGuideline`, the scanner allow rules, the credentials deny rule, and both hooks. `setup-state.json` records what it last applied. |
@@ -84,10 +84,15 @@ The roster is in CLAUDE.md §6 and `agents/`; these are the reasons behind it, s
   session below the floor hands the change to `opus-high-executor` without asking.
 - **At most 10 subagents in total per task, phase or workflow run.** A queue was rejected: the point
   is not spawning many agents, and asking first when more seem needed.
-- **Phase leads, one level deep (owner, 2026-09-30).** The stand-in for self-started sessions: each
-  phase of a multi-phase run goes to a lead, so the main session keeps ~4k per phase instead of
-  ~100k. Measured break-even is under two phases (figures in `asdev-orchestrator`). Depth is 2, not
-  more, and a lead spawns its own roster in the foreground (`traps.md`, Nested agents).
+- **Phase leads: built, trialled, rolled back (owner, 2026-09-30).** Each phase of a multi-phase run
+  would go to a lead, so the main session keeps ~4k per phase instead of ~100k. The trial measured a
+  lead's start-up at ~53k and ~4k per hand-back, with break-even under two phases, but only against
+  a ~100k-per-phase baseline recorded before that day's context rules. Rolled back because the 400k
+  cap and the handover cadence already bound a long session, and most sessions run one phase. Depth
+  2 also removed the harness's own stop on nesting for every agent, and the nested mechanics are
+  undocumented and fragile (`traps.md`, Nested agents). The definitions stay, dormant. Revive them
+  only if the re-measure (roadmap) shows main sessions still keeping ~100k per phase. Revert the
+  rollback commit and set the depth to 2.
 
 ## How the cost figures were measured
 

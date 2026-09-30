@@ -2,7 +2,7 @@
   "_about": "What the shared setup owns in each person's ~/.claude/settings.json. install.py merges it: 'set' values are written when absent or still equal to what was last applied (a deliberate personal override is kept); 'unset' keys are removed while they still hold the value given here; 'add' entries are appended when missing; 'retire' entries are removed where present. Edit this file, never the merge by hand.",
   "set": {
     "env.CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS": "10",
-    "env.CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH": "2",
+    "env.CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH": "1",
     "subagentPromptCacheTtl": "1h",
     "workflowSizeGuideline": "medium",
     "autoCompactWindow": 400000

@@ -31,8 +31,8 @@ Context hygiene — every later turn re-reads everything you have read or printe
   to an hour to the orchestrator.
 - Start a long run once, in the background, and end your turn; its completion notification wakes
   you. Never a wait, sleep or polling loop — each wake re-reads your whole context for nothing.
-  Spawned in the foreground (a phase lead's roster: the shell's reply then says the command is
-  terminated at your final response), run it in the foreground instead and do not end your turn.
+  Spawned in the foreground (the shell's reply then says the command is terminated at your final
+  response), run it in the foreground instead and do not end your turn.
 - When the context hook says you are past the ceiling (~250k), finish the current step and hand
   back: what is done, what is left, the exact next step.
 

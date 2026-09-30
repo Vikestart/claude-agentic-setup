@@ -123,7 +123,7 @@ to be redone. → Check behaviour against the newest version in that folder.
 workflow agents never count toward it, and it is skipped under ultracode at xhigh.
 `CLAUDE_CODE_WORKFLOW_MAX_CONCURRENT_AGENTS` only QUEUES a workflow's agents (default: cores − 2, max 16).
 `CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH` caps nesting for every agent alike (1 = no subagent spawns;
-since 2026-09-30 it is 2, for phase leads — see "Nested agents" below). `workflowSizeGuideline` is
+2 was tried for phase leads on 2026-09-30 and rolled back the same day — see "Nested agents" below). `workflowSizeGuideline` is
 advice to the model plus an in-app warning past its size (small = 5), off under ultracode.
 → Nothing caps a workflow's TOTAL agent count; CLAUDE.md §6 is the only limit there.
 Settings changes reach a RUNNING session: a `workflowSizeGuideline` change was announced mid-session, and
@@ -138,8 +138,8 @@ foreground got the result inline — nonce matched, commits made. A subagent's o
 does NOT outlive its turn when the subagent runs in the foreground: the shell's reply says it "is
 terminated when you give your final response", and a probe with a 75-second command got no notice.
 A background subagent's reply promises the notice instead. Nested transcripts land flat in the root session's `subagents/agent-<id>.jsonl`, so
-`context_guard.py` and `agent_audit.py` see them. → Leads spawn their roster in the foreground, and the roster waits for
-long commands in the foreground.
+`context_guard.py` and `agent_audit.py` see them. → Phase leads were rolled back (owner, 2026-09-30); if they return, a lead spawns its roster in the
+foreground, and the roster waits for long commands in the foreground.
 
 **A `spawn_task` chip session is a side session of the chat that offered it.**
 2026-09-30: the handover's chip started its successor with `parentSessionId` set and `detached`

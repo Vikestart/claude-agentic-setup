@@ -2,7 +2,7 @@
 
 > **Done since (2026-09-30, the verification session):** the plan's verification, steps 4–5 and the
 > detached review are complete and pushed; see [`walkthrough.md`](walkthrough.md). "State" and "Next" item 1
-> below are history. The open owner questions still stand.
+> below are history. The open owner questions still stand, and the phase leads were then rolled back (see `walkthrough.md`).
 
 ## State
 - Repo `~/.claude/claude-agentic-setup`, branch `main`, **ahead of origin on purpose**: `0454fc9`

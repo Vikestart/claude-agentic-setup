@@ -1,5 +1,10 @@
 # Walkthrough — phase leads and the 400k cap (2026-09-30)
 
+> **Rolled back the same evening (owner's decision).** Spawn depth is 1 again and the lead rules are
+> gone. The lead definitions stay, dormant. Kept: the 400k cap, the traps entries, the executors'
+> foreground-shell note and the tightened agent-definition test. Why, and how to revive it:
+> `reference/setup-architecture.md`, "Phase leads".
+
 ## What was built
 
 - **Cap:** `autoCompactWindow` 400000 is back in `settings/shared-settings.json`. A session started
