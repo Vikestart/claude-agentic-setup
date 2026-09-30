@@ -71,8 +71,10 @@ itself and report 2 false blocking findings (reproduced by the plan review).
   login-token file, which the guard must refuse.
 - **`--check`** reports drift and changes nothing; a second run changes nothing.
 - **`--uninstall`** removes links with `os.rmdir`/unlink (never a recursive delete: PowerShell's
-  `Remove-Item -Recurse` on a junction deletes the repo's files), restores the backups and
-  `settings.json`, and puts the original CLAUDE.md back.
+  `Remove-Item -Recurse` on a junction deletes the repo's files) and replaces each with a real copy
+  of what it shows, so no edit made since install is lost; CLAUDE.md gets the shared text back. The
+  pre-install originals stay in the backup folder. *(Changed while building, 2026-09-30: restoring the
+  backups would have thrown away every edit made through the links since install.)*
 
 ## Steps
 

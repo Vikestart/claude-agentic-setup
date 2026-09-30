@@ -1,22 +1,23 @@
 # Global setup — architecture and decisions
 
 How `~/.claude` is put together, and why. Traps that cost real time are in [`traps.md`](traps.md);
-the owner's reasons for the agent model and effort policy are also in the htdocs memory
-`agent-model-effort-policy`.
+how the shared repo, its installer and the links work is in [`setup-repo.md`](setup-repo.md).
 
 ## Layout
 
 | Path | What it is |
 |---|---|
-| `CLAUDE.md` | The global instructions — a ~15 kB **core** of rules that must apply before any skill loads. Everything procedural lives in a skill, named by path. |
-| `skills/asdev-*` | The seven in-house skills (below). Every other folder in `skills/` is third-party. |
-| `agents/*.md` | Twelve subagent definitions, each fixing model AND effort in its frontmatter. |
+| `claude-agentic-setup/` | The private shared repo (`Vikestart/claude-agentic-setup`). Everything below marked *linked* is a junction into it; see [`setup-repo.md`](setup-repo.md). |
+| `CLAUDE.md` | A one-line stub importing `claude-agentic-setup/CLAUDE.shared.md`: the global instructions, a ~15 kB **core** of rules that must apply before any skill loads. Everything procedural lives in a skill, named by path. |
+| `CLAUDE.personal.md` | Each person's machine and hosting bullets (local dev, browser, production), imported by the shared rules in §2. Private; never in the repo. |
+| `skills/asdev-*` | The seven in-house skills (below), *linked* one junction each. Every other folder in `skills/` is third-party and stays outside the repo. |
+| `agents/*.md` | *Linked.* Twelve subagent definitions (`opus-*`, `fable-*`), each fixing model AND effort in its frontmatter. A person's own agents sit in the same folder, untracked. |
 | `hooks/guard_credentials.py` | `PreToolUse` guard for Bash and PowerShell (see Credentials); tests in `hooks/test_guard_credentials.py`. |
 | `hooks/context_guard.py` | `PostToolUse` hook: past ~250k context, adds one notice telling the main chat to propose a handover or a subagent to hand back (finds an agent's own transcript from `agent_id`). `CONTEXT_GUARD_LIMIT` / `_STEP` tune it; tests in `hooks/test_context_guard.py`. |
-| `settings.json` | Subagent caps, the 1-hour agent cache (`subagentPromptCacheTtl`), the scanner allow rules, the credentials deny rule, and both hooks. |
-| `~/.codex/AGENTS.md` | **Generated** from `CLAUDE.md` by `sync_agents_md.py`; never edited directly. |
-| `.docs/` | This setup's own working documents. `~/.claude` is **not a git repository**; backups are OneDrive, `backups/`, and the share bundles in `~/Downloads/`. |
-| `proposals/` | Drafted plans not yet approved, e.g. `setup-repo-migration.md`. |
+| `settings.json` | Private. The installer merges into it what the setup owns (`settings/shared-settings.json` in the repo): subagent caps, the 1-hour agent cache (`subagentPromptCacheTtl`), `workflowSizeGuideline`, the scanner allow rules, the credentials deny rule, and both hooks. `setup-state.json` records what it last applied. |
+| `~/.codex/AGENTS.md` | **Generated** from `CLAUDE.md` and its imports by `sync_agents_md.py`; never edited directly. |
+| `.docs/` | *Linked.* This setup's own working documents, shared by both maintainers. `backups/` (private) holds what each install replaced. |
+| `proposals/` | Private drafts not yet approved. |
 
 ## The in-house skills
 
@@ -52,7 +53,7 @@ skill must still work without it.
   cost ≈ context size × turns plus re-caches after pauses. Hence a ~250k context ceiling (agents hand
   back, the main chat proposes a handover), fresh agents for corrections, one role per agent, split
   builds, quiet tools, and the 1-hour agent cache (`subagentPromptCacheTtl`). Rules in
-  `asdev-orchestrator`; evidence in the htdocs memory `measuring-agent-cost`.
+  `asdev-orchestrator`; how the figures were measured is below.
 - **The main chat runs at `medium`, `high` for sensitive work, never `max`** (2026-09-30); the owner
   sets it in the app.
 - **Reviews:** Opus between rounds; one Fable review for sensitive material, after all planned work
@@ -63,6 +64,33 @@ skill must still work without it.
 - **`AGENTS.md` is generated.** `CANONICAL` in `sync_agents_md.py` is the single source for the model
   mapping and the banner; model names stay version-free so a `.1` release cannot make them stale.
 - **Shareable by default:** all in-house skills go in the bundle; private content stays in `local/`.
+- **A shared private repo, reached through links** (2026-09-30). The owner and their partner
+  co-maintain the setup; links rather than copies mean every edit a session makes is already a git
+  change, and the repo sits in its own folder so the login tokens, memory and transcripts are never
+  inside a git working tree at all. Junctions and a CLAUDE.md import stub need no admin rights or
+  Developer Mode on Windows. Details in [`setup-repo.md`](setup-repo.md).
+
+## Agent policy — the owner's reasons (2026-09-25 to 09-30)
+
+The roster is in CLAUDE.md §6 and `agents/`; these are the reasons behind it, so no session drifts back.
+
+- **Nothing below Opus.** Sonnet and Haiku are retired: Opus 5.5 is better and cheaper, so Opus at `low`
+  is the bottom tier.
+- **`medium` is the default effort:** on the benchmarks Opus at `medium` keeps very high intelligence at
+  low cost. `low` only for obviously easy work, `high` for very complex work.
+- **The sensitive floor is `high`, not `max`:** the models are strong enough, and sessions kept stopping
+  to ask the owner to raise the effort. Interruptions are a cost to the owner — which is also why a
+  session below the floor hands the change to `opus-high-executor` without asking.
+- **At most 10 subagents in total per task, phase or workflow run.** A queue was rejected: the point
+  is not spawning many agents, and asking first when more seem needed.
+
+## How the cost figures were measured
+
+Regenerate rather than trusting old numbers: `agent_audit.py --summary` (it dedupes transcript `usage`
+by `requestId`; see `traps.md`, Measurement). On 2026-09-01, of one main session's ~1M output tokens,
+~65% was reasoning (only effort moves it), ~29% tool-call JSON (`Write` ~1,283 tokens a call against
+`Edit` ~236 — hence "emit only what changes") and ~6% prose. Output is the small part of the bill:
+context size × turns dominates, as measured on 2026-09-30 (figures in `asdev-orchestrator`).
 
 ## Credentials
 
@@ -77,5 +105,3 @@ deny would be the airtight option, at the cost of sandboxing every shell command
   not an append, since Sol moves from Fable to Opus. Recorded in `sync_agents_md.py`.
 - **No further coordination tooling:** the remaining output-token levers are already rules (effort;
   emit only what changes), and each new tool costs a review round.
-- **Setup under git:** no longer deferred — queued 2026-09-30 as the next phase, shared with the
-  owner's partner as co-maintainer (see the roadmap).

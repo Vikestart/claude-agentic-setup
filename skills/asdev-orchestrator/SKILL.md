@@ -66,7 +66,7 @@ Measured 2026-09-30 (price-weighted: cache read 0.1, cache write 2, output 5):
   reads, gate runs and diffs, not the agents' reports, filled it. Builders cost 2–5M per phase.
 
 Effort mainly moves the *output* share — ~65% of a session's output is reasoning, ~29% tool-call
-JSON, ~6% prose (method in the htdocs memory `measuring-agent-cost`) — so it still matters, but a
+JSON, ~6% prose (method in `~/.claude/.docs/reference/setup-architecture.md`) — so it still matters, but a
 small, short-lived context matters more. The rules below keep it small.
 
 ## Keeping contexts small

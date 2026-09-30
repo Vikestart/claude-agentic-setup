@@ -130,6 +130,38 @@ side effects have already happened.
 → `sys.stdout.reconfigure(encoding="utf-8", errors="replace")` at the top of any script that prints
 file or transcript content.
 
+**Deleting a linked folder recursively deletes the repo's files.**
+`~/.claude/agents`, `hooks`, `.docs` and each `skills/asdev-*` are junctions into
+`~/.claude/claude-agentic-setup` (since 2026-09-30). PowerShell `Remove-Item -Recurse`, `rm -rf` on the
+link, or Python `shutil.rmtree` walk through the junction and delete the shared files themselves.
+→ `os.rmdir` (or `cmd /c rmdir`, no `/s`) removes only the link; `install.py --uninstall` turns every
+link back into a real folder.
+
+**A hook whose script is missing blocks every tool call.**
+`python "<missing script>"` exits 2, and Claude Code reads exit 2 from a `PreToolUse` hook as "block" —
+including the shell call you would use to repair it. → The installer swaps `hooks/` under a temporary
+link name and puts the original back on any error, and refuses to merge a shared hook whose script
+does not exist.
+
+**`python` in Git Bash can be the Microsoft Store stub.**
+On a fresh Windows machine the App execution alias answers `python` with a stub that exits 9009, and a
+hook that fails that way is a non-blocking error: the credentials guard silently never runs.
+→ `install.py` checks `python --version` inside Git Bash before installing, and afterwards runs the
+guard exactly as Claude Code would and requires a refusal.
+
+**Inside a git hook, `git.exe` is three folders deeper.**
+Git for Windows puts `mingw64/libexec/git-core` first on PATH for hooks, so anything that finds Git's
+root from `shutil.which("git")` by a fixed number of `parent` steps works in a terminal and fails in a
+hook. It made every apply-on-pull hook stop with "Git Bash was not found"; the fresh-machine rehearsal
+caught it. → Walk all `parents` looking for `bin/bash.exe`.
+
+**Paths through a junction have two spellings.**
+`Path(__file__).resolve()` follows the junction into the repo, while `os.path.abspath` keeps the
+`~/.claude/...` spelling. `harness_parity.py` located `~/.claude` from its resolved path (it would have
+checked the repo instead), and `security_audit.py` compared the two spellings to exempt its own
+folder (it flagged its own patterns: 2 false blocking findings). → Find `~/.claude` from `Path.home()`,
+and compare paths with `realpath` on both sides.
+
 **Never archive with PowerShell `Compress-Archive`.**
 It silently omits every dot-path — `.git/`, `.docs/`, `.env.example`, `.htaccess` all vanish with no
 error while the entry count still looks plausible (62 of 183 files).
@@ -187,4 +219,4 @@ them. Keep new procedures in a skill and give CLAUDE.md one line saying when to 
 - [`setup-architecture.md`](setup-architecture.md) — the layout of `~/.claude`, the in-house skills, and the decisions with their reasons.
 - `~/.claude/.docs/handover.md` — current state and next steps; links here rather than repeating.
 - `asdev-web-audit` skill — the scanner inventory, suite-running rules and the CRLF tool.
-- Memory: `measuring-agent-cost`, `global-claude-setup` (htdocs project scope).
+- [`setup-repo.md`](setup-repo.md) — the shared repo, the installer, the links and the settings merge.
