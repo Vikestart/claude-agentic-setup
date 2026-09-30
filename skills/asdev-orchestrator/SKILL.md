@@ -77,7 +77,13 @@ small, short-lived context matters more. The rules below keep it small.
   sequential builders with disjoint files, each starting from the previous one's hand-back.
 - **Context ceiling ~250k.** An agent past it finishes its current step and hands back what is
   done, what is left, and the exact next step (the context hook tells it when). Start a fresh agent
-  for the rest from that hand-back.
+  for the rest from that hand-back. Behind it, a hard backstop: the shared `autoCompactWindow`
+  (400k) compacts any session or agent that ignores the hook — a summary loses detail, so it is a
+  net, not the plan. When the owner agrees a session truly needs more, raise it for that session
+  only: `claude --autocompact 1M` at launch, or `autoCompactWindow` in the project's
+  `.claude/settings.local.json`, removed afterwards. Never `/autocompact` (it saves to user
+  settings, and the merge then keeps it as a personal override) or the environment variable (it
+  outranks every per-session override).
 - **Approval covers the continuations.** An approved roster covers fresh continuation and
   correction agents for its roles (same definition, same files); say one line when you start one.
   They count toward the 10-agent cap, so a roster for a large phase states how many it expects,
