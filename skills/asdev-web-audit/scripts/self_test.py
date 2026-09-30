@@ -19,6 +19,7 @@ from unittest.mock import patch
 import agent_audit
 import audit_all
 import automation_mine
+import context_override
 import convention_audit
 import handover
 import lint_rules
@@ -517,6 +518,70 @@ class FalsifyTests(unittest.TestCase):
                                                        "expect": "admin gate missing here"}]))
             self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
             self.assertIn("falsified 1/1", r.stdout)
+
+
+class ContextOverrideTests(unittest.TestCase):
+    """context_override.py — only an override it set itself is ever changed or removed."""
+
+    def _run(self, root: Path, *args: str) -> tuple[int, str]:
+        out = io.StringIO()
+        with redirect_stdout(out):
+            code = context_override.main([*args, "--project", str(root / "proj"),
+                                          "--ledger", str(root / "ledger.json")])
+        return code, out.getvalue()
+
+    def _settings(self, root: Path) -> Path:
+        return root / "proj" / ".claude" / "settings.local.json"
+
+    def test_set_and_clear_keep_other_keys_and_line_endings(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self._settings(root).parent.mkdir(parents=True)
+            self._settings(root).write_bytes(b'{\r\n  "model": "opus"\r\n}\r\n')
+            self.assertEqual(self._run(root, "set", "600000", "--reason", "big phase")[0], 0)
+            data = json.loads(self._settings(root).read_bytes())
+            self.assertEqual(data, {"model": "opus", "autoCompactWindow": 600000})
+            self.assertNotIn(b"\n", self._settings(root).read_bytes().replace(b"\r\n", b""), "a CRLF file must stay CRLF")
+            self.assertIn("temporary: 600000", self._run(root, "status")[1])
+            self.assertEqual(self._run(root, "clear")[0], 0)
+            self.assertEqual(json.loads(self._settings(root).read_bytes()), {"model": "opus"})
+            self.assertFalse((root / "ledger.json").exists(), "an empty ledger is removed")
+
+    def test_a_file_it_created_goes_with_the_override(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self._run(root, "set", "700000", "--reason", "big phase")
+            self._run(root, "set", "800000", "--reason", "bigger")
+            self._run(root, "clear")
+            self.assertFalse(self._settings(root).exists(), "re-setting must not forget who made the file")
+
+    def test_a_deliberate_setting_is_never_touched(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self._settings(root).parent.mkdir(parents=True)
+            self._settings(root).write_text('{"autoCompactWindow": 500000}\n', encoding="utf-8")
+            code, out = self._run(root, "set", "600000", "--reason", "big phase")
+            self.assertEqual((code, "refused" in out), (1, True), "a deliberate value must be refused")
+            self.assertIn("deliberate: 500000", self._run(root, "status")[1])
+            self._run(root, "clear")
+            self.assertIn("500000", self._settings(root).read_text(encoding="utf-8"))
+
+    def test_a_value_changed_by_hand_since_stays(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self._run(root, "set", "600000", "--reason", "big phase")
+            self._settings(root).write_text('{"autoCompactWindow": 650000}\n', encoding="utf-8")
+            self.assertIn("changed by hand", self._run(root, "clear")[1], "a hand-changed value must stay")
+            self.assertIn("650000", self._settings(root).read_text(encoding="utf-8"))
+            self.assertFalse((root / "ledger.json").exists())
+
+    def test_values_at_or_below_the_shared_cap_are_refused(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            cap = str(context_override.shared_cap())
+            self.assertEqual(self._run(root, "set", cap, "--reason", "no-op")[0], 1, "a value at the shared cap must be refused")
+            self.assertEqual(self._run(root, "set", "1000001", "--reason", "too big")[0], 1)
+            self.assertFalse(self._settings(root).exists())
 
 
 if __name__ == "__main__":

@@ -116,6 +116,10 @@ assessed inside the active Git scope. Standalone scanners intentionally show raw
 - `falsify.py` — `--suite "<cmd>" --mutations <spec>`. The spec is `patch.py`'s block format with `name:` and `expect:` lines above each block, written with the Write tool; a `.json` list still works. Reverts each guard one at a time and proves it goes RED *for the right reason*. Refuses to start unless the suite is GREEN on a clean tree (otherwise "went red" may mean "could not run"), refuses a non-unique anchor, restores byte-exactly and verifies by SHA-256, and reports a guard that stays GREEN as **VACUOUS**.
 
 **Writers — never part of the gate:**
+- `context_override.py` — `status | set <N> --reason "…" | clear`, from a project root. Sets a
+  temporary `autoCompactWindow` in the project's `.claude/settings.local.json` for the next session,
+  and clears only what it set itself. A private ledger, `~/.claude/context-overrides.json`, tells
+  its own value from a deliberate one. The handover skill (step 4b) is its caller.
 - `patch.py` — `patch.py SPEC [--root DIR] [--check]`. Exact, all-or-nothing replacements across files from a spec that needs no escaping: `@@@ path`, then blocks of `<<<<<<< OLD` (or `OLD xN` for exactly N occurrences) / `======= NEW` / `>>>>>>> END`. Write the spec with the Write tool, never a heredoc (a heredoc can halve backslashes). Every anchor is checked in memory first, so one miss writes no file, and a miss says where the anchor's first line does occur; CRLF files are matched and written in CRLF, bytes outside the replaced spans (a BOM included) are untouched. Exists because ~4,300 hand-written patch scripts in one month cost ~2.4M output tokens and failed ~120 times on exactly those traps.
 - `optimize_images.py` — PNG→**lossless** WebP, JPEG→WebP at `--quality` (default 82). **Dry run by default; `--apply` writes.** Originals are kept and references are not rewritten, so update the markup yourself. Skips favicons/apple-touch-icons (platform requires PNG) and any conversion that comes out larger.
 

@@ -58,7 +58,10 @@ auto-compaction at 97% of 1M both before and after setting 150k in the project's
 `settings.local.json`, and no compaction followed; the 400k user-level value, set mid-session, did
 not apply either. → The cap was removed that day, then restored at the owner's request the same
 evening. A session started after it DOES obey: `get_usage` reported `contextWindow` 400000 at 92%
-(~368k), 2026-09-30, app Claude Code 2.1.284. To
+(~368k), 2026-09-30, app Claude Code 2.1.284. A project-level value in
+`<project>/.claude/settings.local.json` also reaches a NEW session there, in either direction: 600000
+reported 95% (~570k) the same evening. Compaction sits ~30k below the window at both sizes. The
+handover sets and clears such overrides through `context_override.py` (handover skill, step 4b). To
 read where a session will compact, `get_usage` reports `contextWindow` and `autoCompactsAtPercent`;
 their product is the compaction point.
 Subagents get their own model's window (1M for Opus and Fable), not the parent's; no setting caps

@@ -104,6 +104,7 @@ Short, and linking rather than repeating:
 ## State
 - Branch: <branch>, <in sync with origin | ahead/behind>; uncommitted: <none | files>
 - Deployment: local <…> · staging <…> · production <…> (how each was verified)
+- Next session's context limit: <shared cap | override <N> — <reason>> (step 4b)
 
 ## Since the last handover
 - <one line per shipped phase or fix, linking changelog/reference>
@@ -121,6 +122,28 @@ Short, and linking rather than repeating:
 ## Read first
 - `implementation_plan.md`, `reference/<file>.md`, …
 ```
+
+## 4b. The next session's context limit
+
+Every main session compacts at the shared `autoCompactWindow` cap (400k, compacting ~30k below it).
+A project may get a temporary override for the next session only. It must be set now, because
+settings load at session start. Run from the project root, with
+`S=$HOME/.claude/skills/asdev-web-audit/scripts`:
+
+1. `python $S/context_override.py status`.
+   - `temporary`: an earlier handover set it for this session. Clear it
+     (`python $S/context_override.py clear`), unless point 2 sets it again.
+   - `deliberate`: leave it alone.
+2. Decide the next session's limit. The default is the shared cap. Raise it when:
+   - the owner asks for it (use their number, or size it as below); or
+   - the next phase must hold more than ~370k in the main session with no natural split point, for
+     example this session hit compaction mid-phase, or the plan's next phase is large and cannot be
+     split.
+   Size it at the expected peak plus ~30k, rounded up to 50k, at most 1,000,000.
+   Set it with `python $S/context_override.py set <N> --reason "<phase, why>"`. The script refuses a
+   value at or below the cap, and never overwrites a deliberate setting.
+3. Record the result on the handover's "Next session's context limit" line, and in the paste-ready
+   message when it is raised.
 
 ## 5. The paste-ready message
 
