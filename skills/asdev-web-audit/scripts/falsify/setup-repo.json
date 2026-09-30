@@ -68,5 +68,19 @@
     "old": "    for root in Path(git).parents if git else ():",
     "new": "    for root in (Path(git).parent.parent, Path(git).parent.parent.parent) if git else ():",
     "expect": "Git Bash not found from a hook's git.exe"
+  },
+  {
+    "name": "a hook in another spelling is added a second time",
+    "file": "install/install.py",
+    "old": "    if any(_hook_key(h.get(\"command\", \"\")) == key for g",
+    "new": "    if any(h.get(\"command\", \"\") == item[\"command\"] for g",
+    "expect": "guard added twice"
+  },
+  {
+    "name": "an unreadable hook command skips the missing-script check",
+    "file": "install/install.py",
+    "old": "                raise Stop(f'A shared hook must run",
+    "new": "                continue; Stop(f'A shared hook must run",
+    "expect": "unreadable hook form was not refused"
   }
 ]

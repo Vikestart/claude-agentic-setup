@@ -247,8 +247,15 @@ def merge_settings(settings: dict, fragment: dict, last: dict) -> tuple[dict, li
     return s, changes, overrides
 
 
+def _hook_key(command: str) -> str:
+    """The script a hook runs, by file name: the same guard spelled with another path is still it."""
+    m = re.search(r"([\w.-]+\.py)\b", command)
+    return m.group(1) if m else command
+
+
 def _add_hook(groups: list, event: str, item: dict) -> list[str]:
-    if any(h.get("command") == item["command"] for g in groups for h in g.get("hooks", [])):
+    key = _hook_key(item["command"])
+    if any(_hook_key(h.get("command", "")) == key for g in groups for h in g.get("hooks", [])):
         return []
     group = next((g for g in groups if g.get("matcher") == item["matcher"]), None)
     if group is None:
@@ -275,8 +282,9 @@ def hook_scripts(fragment: dict) -> list[Path]:
     for items in fragment.get("add", {}).get("hooks", {}).values():
         for item in items:
             m = re.search(r'"\$HOME/([^"]+)"', item["command"])
-            if m:
-                out.append(Path.home() / m.group(1))
+            if not m:  # fail closed: an unreadable form would skip the missing-script check
+                raise Stop(f'A shared hook must run a script as "$HOME/...": {item["command"]}')
+            out.append(Path.home() / m.group(1))
     return out
 
 

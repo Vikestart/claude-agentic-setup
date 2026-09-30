@@ -47,5 +47,7 @@ Start a new Claude Code session afterwards: a running one keeps the instructions
 - Delete a linked folder with PowerShell `Remove-Item -Recurse` or `rm -rf` on the link: it deletes the
   repo's files. `python install/install.py --uninstall` turns every link back into a real folder.
 - Commit `CLAUDE.personal.md`, `settings.json`, memory (`projects/`) or anything under `local/`.
+- Run `git clean -x` / `-X` or `git stash --all` here: your own agents, hooks and skill `local/`
+  folders live in this folder as ignored files, and those commands delete them.
 
 How it fits together, and why: `.docs/reference/setup-repo.md`.

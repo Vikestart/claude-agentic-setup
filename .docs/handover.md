@@ -1,7 +1,7 @@
 # Handover — `~/.claude` global setup — 2026-09-30
 
 ## State
-- Not a git repository; backups are OneDrive, `~/.claude/backups/` (latest: `CLAUDE-pre-context-2026-09-30.md`
+- Since 2026-09-30 in the shared repo `~/.claude/claude-agentic-setup` (see `reference/setup-repo.md`); before that not a git repository; backups are OneDrive, `~/.claude/backups/` (latest: `CLAUDE-pre-context-2026-09-30.md`
   and `context-rules-2026-09-30/`) and the share bundles in `~/Downloads/`.
 - Checks, run 2026-09-30 after the last change: `asdev-web-audit` self-test 24 OK · `asdev-blueprints`
   self-test 98 GREEN · `harness_parity.py` clean · `sync_agents_md.py --check` in sync (76 lines) ·

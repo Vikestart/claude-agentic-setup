@@ -108,6 +108,19 @@ class SettingsMerge(unittest.TestCase):
         self.assertEqual(merged["workflowSizeGuideline"], "large")
         self.assertIn("updated workflowSizeGuideline", changes)
 
+    def test_a_hook_already_there_in_another_spelling_is_not_added_twice(self):
+        mine = {"hooks": {"PreToolUse": [{"matcher": "Bash", "hooks": [
+            {"type": "command", "command": 'python "C:/Users/p/.claude/hooks/guard_credentials.py"'}]}]}}
+        merged, _, _ = install.merge_settings(mine, FRAGMENT, {})
+        commands = [h["command"] for g in merged["hooks"]["PreToolUse"] for h in g["hooks"]]
+        self.assertEqual(sum("guard_credentials.py" in c for c in commands), 1, f"guard added twice: {commands}")
+
+    def test_an_unreadable_hook_command_fails_closed(self):
+        fragment = {"add": {"hooks": {"PreToolUse": [{"matcher": "*", "command": "python ~/.claude/hooks/x.py",
+                                                     "timeout": 5}]}}}
+        with self.assertRaises(install.Stop, msg="unreadable hook form was not refused"):
+            install.hook_scripts(fragment)
+
     def test_retire_removes_only_what_it_names(self):
         base, _, _ = install.merge_settings({}, FRAGMENT, {})
         base["permissions"]["allow"].append("Bash(mine)")

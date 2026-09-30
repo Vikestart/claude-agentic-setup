@@ -162,6 +162,11 @@ checked the repo instead), and `security_audit.py` compared the two spellings to
 folder (it flagged its own patterns: 2 false blocking findings). → Find `~/.claude` from `Path.home()`,
 and compare paths with `realpath` on both sides.
 
+**Git commands that touch ignored files delete a person's private files.**
+Own agents, own hooks and every skill `local/` overlay live inside the repo folder, kept only by
+`.gitignore`. `git clean -x`/`-X` and `git stash --all` remove them, and the install backup holds only
+the pre-install originals, not later edits. → Never run those in the setup repo (README, "Never").
+
 **Never archive with PowerShell `Compress-Archive`.**
 It silently omits every dot-path — `.git/`, `.docs/`, `.env.example`, `.htaccess` all vanish with no
 error while the entry count still looks plausible (62 of 183 files).
