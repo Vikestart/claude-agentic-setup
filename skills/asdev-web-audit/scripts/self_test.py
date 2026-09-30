@@ -408,5 +408,59 @@ class AutomationMineTests(unittest.TestCase):
         self.assertEqual(h("python -X utf8 C:\\s\\falsify.py --suite x"), "python falsify.py")
 
 
+class PatchTests(unittest.TestCase):
+    """patch.py — every way the hand-written patch scripts failed must be impossible here."""
+
+    def _run(self, root: Path, spec: str, *extra: str) -> subprocess.CompletedProcess:
+        (root / "spec.txt").write_text(spec, encoding="utf-8")
+        return subprocess.run([sys.executable, str(Path(__file__).with_name("patch.py")),
+                               str(root / "spec.txt"), "--root", str(root), *extra],
+                              capture_output=True, text=True, encoding="utf-8")
+
+    def test_crlf_bom_and_backslashes_survive_byte_exactly(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "a.php").write_bytes(b"\xef\xbb\xbf<?php\r\n$p = 'C:\\\\x\\n';\r\n$q = 1;\r\n")
+            spec = "@@@ a.php\n<<<<<<< OLD\n$p = 'C:\\\\x\\n';\n$q = 1\n======= NEW\n$p = 'D:\\\\y\\t';\n$q = 2\n>>>>>>> END\n"
+            r = self._run(root, spec)
+            self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+            self.assertEqual((root / "a.php").read_bytes(),
+                             b"\xef\xbb\xbf<?php\r\n$p = 'D:\\\\y\\t';\r\n$q = 2;\r\n", "CRLF, BOM, backslashes kept")
+
+    def test_one_missing_anchor_writes_no_file_at_all(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "a.txt").write_text("alpha\n", encoding="utf-8")
+            (root / "b.txt").write_text("beta\ngamma\n", encoding="utf-8")
+            spec = ("@@@ a.txt\n<<<<<<< OLD\nalpha\n======= NEW\nALPHA\n>>>>>>> END\n"
+                    "@@@ b.txt\n<<<<<<< OLD\nbeta\ndelta\n======= NEW\nx\n>>>>>>> END\n")
+            r = self._run(root, spec)
+            self.assertEqual(r.returncode, 1, "a missing anchor must fail")
+            self.assertEqual((root / "a.txt").read_text(encoding="utf-8"), "alpha\n", "all or nothing")
+            self.assertIn("occurs at line(s) 1", r.stdout, "the miss says where")
+
+    def test_counts_are_exact_and_check_writes_nothing(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "c.css").write_text("a{color:red}\nb{color:red}\n", encoding="utf-8")
+            once = "@@@ c.css\n<<<<<<< OLD\ncolor:red\n======= NEW\ncolor:blue\n>>>>>>> END\n"
+            r = self._run(root, once)
+            self.assertEqual(r.returncode, 1, "a double anchor must be refused")
+            self.assertIn("expected 1x, found 2x", r.stdout)
+            twice = once.replace("<<<<<<< OLD\n", "<<<<<<< OLD x2\n")
+            self.assertEqual(self._run(root, twice, "--check").returncode, 0)
+            self.assertIn("red", (root / "c.css").read_text(encoding="utf-8"), "--check wrote the file")
+            self.assertEqual(self._run(root, twice).returncode, 0)
+            self.assertEqual((root / "c.css").read_text(encoding="utf-8"), "a{color:blue}\nb{color:blue}\n")
+
+    def test_a_malformed_spec_is_refused(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "a.txt").write_text("x\n", encoding="utf-8")
+            r = self._run(root, "@@@ a.txt\n<<<<<<< OLD\nx\n>>>>>>> END\n")
+            self.assertEqual(r.returncode, 2, "a malformed spec exits 2")
+            self.assertIn("has no", r.stderr)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

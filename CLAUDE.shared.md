@@ -8,7 +8,7 @@
 - **Never re-read what you hold:** this file and anything in context are free to quote and expensive to `Read` again (CLAUDE.md was once re-read 7× at ~4.9k tokens each). When `Edit` needs a prior read, read only that slice with `offset`/`limit`.
 - **Emit only what changes** — output costs several times input and is never cached (`Write` averaged ~1,283 output tokens a call, `Edit` ~236). Never `Write` an existing file unless most of it changes; `Edit` the part that moves, or splice with a script.
 - **Anchor an `Edit` on a short unique substring** — 7% of edits failed on "String to replace not found" because wrapping, whitespace or quotes drifted. When unsure it matches byte-for-byte, grep first.
-- **Multi-line content goes through the Write tool, never a shell heredoc** (quoting and escape traps); commit messages via `git commit -F <file>`.
+- **Multi-line content goes through the Write tool, never a shell heredoc** (quoting and escape traps); commit messages via `git commit -F <file>`. Several exact replacements at once go through the audit suite's `patch.py` (a spec written with Write, all-or-nothing), never a hand-written patch script.
 - **A procedure done twice becomes a script.** The second time the same throwaway script or manual sequence is needed, make it a project script with one pass/fail verdict and one line per step. Reasoning is for designing and judging, not for driving a known procedure.
 
 # 1. Core Workflow & Planning

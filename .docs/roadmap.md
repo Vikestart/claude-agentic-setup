@@ -6,8 +6,8 @@ Outcomes and order only; active work goes in `implementation_plan.md` when a pha
 
 1. **Build the scripts the mining justifies** — `automation_mine.py` exists (2026-09-30); its
    September ranking, by tokens the model wrote:
-   - **`patch.py`** — all-or-nothing exact replacements, CRLF-safe, unique anchors: ~4,300 runs in
-     ~350 transcripts across 7 projects, ~2.4M tokens, ~120 failed runs. First, by far.
+   - ~~`patch.py`~~ — built 2026-09-30 (~4,300 runs, ~2.4M tokens, ~120 failures in September);
+     CLAUDE.md §0 points at it. Rerun the miner in a few weeks to see the habit actually moved.
    - **falsify mutations without a hand-written JSON file** — 138 runs build one; "inline python →
      falsify.py" is the most common command sequence (96 transcripts).
    - **Nebulingo's test-database preamble** (`PHASE98_TEST_*` exports, 171 runs) — a project
