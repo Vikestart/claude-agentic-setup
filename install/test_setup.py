@@ -122,6 +122,21 @@ class SettingsMerge(unittest.TestCase):
         self.assertNotIn(hook["command"], commands)
 
 
+class GitBash(unittest.TestCase):
+    def test_found_from_the_git_a_hook_sees(self):
+        root = Path(tempfile.mkdtemp(prefix="setup-gitbash-"))
+        self.addCleanup(shutil.rmtree, root, ignore_errors=True)
+        git = root / "Git" / "mingw64" / "libexec" / "git-core" / "git.exe"
+        bash = root / "Git" / "bin" / "bash.exe"
+        for f in (git, bash):
+            f.parent.mkdir(parents=True, exist_ok=True)
+            f.write_bytes(b"")
+        env = {k: v for k, v in os.environ.items() if k != "CLAUDE_CODE_GIT_BASH_PATH"}
+        with mock.patch.dict(os.environ, env, clear=True), mock.patch.object(install.os, "name", "nt"), \
+                mock.patch.object(install.shutil, "which", return_value=str(git)):
+            self.assertEqual(install.find_bash(), str(bash), "Git Bash not found from a hook's git.exe")
+
+
 class PreCommit(unittest.TestCase):
     def setUp(self):
         self.repo = Path(tempfile.mkdtemp(prefix="setup-precommit-"))

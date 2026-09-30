@@ -61,5 +61,12 @@
     "old": "if os.path.realpath(path).startswith(SELF_DIR + os.sep):",
     "new": "if os.path.abspath(path).startswith(SELF_DIR + os.sep):",
     "expect": "the scanner flagged its own folder"
+  },
+  {
+    "name": "Git Bash lookup stops two levels above git.exe again",
+    "file": "install/install.py",
+    "old": "    for root in Path(git).parents if git else ():",
+    "new": "    for root in (Path(git).parent.parent, Path(git).parent.parent.parent) if git else ():",
+    "expect": "Git Bash not found from a hook's git.exe"
   }
 ]

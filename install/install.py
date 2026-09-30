@@ -302,10 +302,11 @@ def find_bash() -> str | None:
     if os.name != "nt":
         return shutil.which("bash")
     git = shutil.which("git")
-    if git:
-        for root in (Path(git).parent.parent, Path(git).parent.parent.parent):
-            if (root / "bin" / "bash.exe").is_file():
-                return str(root / "bin" / "bash.exe")
+    # Climb from git.exe to Git's root: from a terminal PATH gives Git\cmd\git.exe, but inside a
+    # git hook it gives Git\mingw64\libexec\git-core\git.exe, three levels further down.
+    for root in Path(git).parents if git else ():
+        if (root / "bin" / "bash.exe").is_file():
+            return str(root / "bin" / "bash.exe")
     return None
 
 
