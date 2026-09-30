@@ -144,6 +144,15 @@ Waiting on the owner: whether the old export stays after launch.
   start, keep following them, hand the old text to their subagents, and cannot spawn an agent
   definition added since. State the new rules plainly, as information rather than tasks.
 - Report one line per step (what changed, what was retired), then the paste-ready block.
+- **Start the successor**, so the owner does not have to paste:
+  - `ToolSearch` `select:mcp__ccd_session__hand_off_to_session`. If it loads, hand off with a fresh
+    context (not a fork) and the paste-ready message as the prompt, then report where the successor
+    started. If it started on a new branch in a project bound to `main`/`staging`, say so.
+  - Otherwise, if the session folder is **not** a git repository, offer the successor as a
+    `spawn_task` chip: title "Continue: <project> handover", the paste-ready message as the prompt.
+    One click from the owner starts it.
+  - Otherwise, the paste-ready block is the hand-off. A chip in a git project starts its session in
+    a new worktree branch, which breaks the branch rule.
 
 ## Failures seen before
 

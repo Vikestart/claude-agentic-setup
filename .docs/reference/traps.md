@@ -123,6 +123,15 @@ Settings changes reach a RUNNING session: a `workflowSizeGuideline` change was a
 new Bash commands saw changed `env` values at once. Whether the spawn check itself sees an `env` change
 without a restart is unverified — start a new session when it has to be certain.
 
+**`start_session` / `hand_off_to_session` sit behind a server-side rollout gate, not a setting.**
+Found 2026-09-30 in app 2.16120: one feature gate adds both tools to `ccd_session`, and `spawn_task`
+is offered only while that gate is off. No setting or app version enables them. Auto mode also
+refuses reading how the app evaluates the gate, and that is right: overriding a vendor rollout is
+off the table.
+→ Wait for the rollout; the handover skill checks with `ToolSearch` at every handover. Until then,
+`spawn_task` is the one-click fallback, but only outside git repositories. In a repo, a chip starts
+its session in a new worktree branch, while the owner's sessions run in the main checkout.
+
 ---
 
 ## Windows and shell

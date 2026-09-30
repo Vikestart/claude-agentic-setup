@@ -4,19 +4,15 @@ Outcomes and order only; active work goes in `implementation_plan.md` when a pha
 
 ## Next, in order (queued 2026-09-30)
 
-1. **Self-started fresh sessions** (owner request 2026-09-30) — a session that hits the handover
-   point writes the handover and continues in a fresh session itself, without the owner starting
-   one. Found 2026-09-30: the app's session tools refer to `start_session` and `hand_off_to_session`,
-   but neither is offered in this session (find out what enables them — app version, a setting or a
-   rollout). What is offered today: `clear_session("self")` empties the context once the turn ends
-   but then waits idle for the owner's next message; `send_message` reaches only sessions that
-   already exist; a one-time scheduled task (`fireAt`) starts a fresh unattended session with a
-   prompt, but each one is a stored task file, it runs only while the app is open, and unattended
-   sessions cannot message back. Outcome: the handover skill ends by starting the successor itself,
-   with the paste-ready message as its first prompt. Also found 2026-09-30: `clear_session` is
-   refused for a session serving Remote Control, and every session here has Remote Control on;
-   `get_usage` (session tools) reads any running session's context size; the newer `SendMessage`
-   tool supersedes `send_message`. Check `ToolSearch` for `start_session` first — the app updates.
+1. **Self-started fresh sessions** (owner request 2026-09-30) — waiting on the vendor. Found
+   2026-09-30: `start_session` / `hand_off_to_session` are behind a server-side rollout gate in the
+   app (→ `reference/traps.md`, Config and permissions). No setting or version enables them, and
+   the gate is not ours to override. Done meanwhile: the handover skill's Finish step hands off by
+   itself once the tool appears. Outside git repositories it offers a one-click `spawn_task` chip
+   instead. In a repo the paste-ready block stays. Ruled out: `clear_session("self")` (refused
+   under Remote Control, then waits idle) and one-time scheduled tasks (unattended, cannot message
+   back). Nothing to build until the gate opens; then check once where a hand-off starts in a git
+   project (branch or main checkout).
 
 2. **Build the scripts the mining justifies** — `automation_mine.py` exists (2026-09-30); its
    September ranking, by tokens the model wrote:
