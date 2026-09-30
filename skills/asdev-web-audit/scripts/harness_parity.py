@@ -40,7 +40,7 @@ SCANNERS = [
     "link_checker.py", "lint_rules.py", "optimize_images.py",
     "security_audit.py", "syntax_check.py", "token_analyzer.py",
     "unused_css_detector.py", "audit_delta.py", "crlf.py", "falsify.py",
-    "agent_audit.py", "handover.py",
+    "agent_audit.py", "handover.py", "automation_mine.py",
 ]
 HOOK_LAUNCHERS = ["run_audit.sh", "run_audit.ps1"]
 

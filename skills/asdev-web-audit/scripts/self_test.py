@@ -18,6 +18,7 @@ from unittest.mock import patch
 
 import agent_audit
 import audit_all
+import automation_mine
 import convention_audit
 import handover
 import lint_rules
@@ -361,6 +362,50 @@ class QuietRunnerTests(unittest.TestCase):
         rc, out, _ = self._run("import sys; sys.stdout.buffer.write(b'caf\\xe9 ok\\n')")
         self.assertEqual(rc, 0)
         self.assertIn("ok", out)
+
+
+class AutomationMineTests(unittest.TestCase):
+    """automation_mine — the ranking a new script is chosen from must group and count honestly."""
+
+    PATCH = ("python - <<'PY'\nimport io\np = '{p}'\ns = io.open(p, encoding='utf-8', newline='').read()\n"
+             "old = '{o}'\nassert s.count(old) == 1\ns = s.replace(old, 'x')\n"
+             "io.open(p, 'w', encoding='utf-8', newline='').write(s)\nPY")
+
+    def _use(self, tid, name, inp):
+        return json.dumps({"message": {"role": "assistant", "content": [
+            {"type": "tool_use", "id": tid, "name": name, "input": inp}]}})
+
+    def test_same_habit_groups_across_paths_and_a_failure_is_counted(self):
+        lines = [self._use(f"t{i}", "Bash", {"command": self.PATCH.format(p=p, o=o)})
+                 for i, (p, o) in enumerate([("a.php", "foo"), ("b/c.js", "bar(1)"), ("d.css", "x:y")])]
+        # The second patch run failed: its result is an error, and only that one may be flagged.
+        lines.append(json.dumps({"message": {"role": "user", "content": [
+            {"type": "tool_result", "tool_use_id": "t1", "is_error": True, "content": "Exit code 1"}]}}))
+        # Two json runs: a group of two is what the second, merging pass may wrongly fold in.
+        for tid in ("t8", "t9"):
+            lines.append(self._use(tid, "Bash", {"command": "python -c \"import json, sys; "
+                                   "d = json.load(open(sys.argv[1])); json.dump(d, sys.stdout)\" x.json"}))
+        lines.append(self._use("t10", "Bash", {"command": "grep -n foo a.php"}))
+        lines.append(self._use("t11", "Write", {"file_path": "C:/x/scratchpad/p.py", "content": "print(1)"}))
+        lines.append(self._use("t12", "Write", {"file_path": "C:/proj/app.py", "content": "print(1)"}))
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "s.jsonl"
+            path.write_text("\n".join(lines), encoding="utf-8")
+            runs, heads = automation_mine.read_transcript(path)
+        self.assertEqual(sorted(r["kind"] for r in runs), ["inline"] * 5 + ["scratch"])
+        self.assertEqual([r["fail"] for r in runs[:3]], [0, 1, 0], "only the failed run is flagged")
+        groups = automation_mine.cluster(runs)
+        patch_group = next(g for g in groups if len(g) >= 3)
+        self.assertEqual(len(patch_group), 3, "the three patch runs are one habit, the json runs are not")
+        self.assertIn(2, [len(g) for g in groups], "the json runs are their own habit")
+        self.assertNotIn("grep", " ".join(heads), "reading is not a procedure")
+
+    def test_head_names_the_procedure_not_its_arguments(self):
+        h = automation_mine.head
+        self.assertEqual(h("python install/verify.py --gate ."), "python verify.py")
+        self.assertEqual(h("cd /c/repo && git status -sb"), "git status")
+        self.assertEqual(h("python - <<'PY'\nprint(1)\nPY"), "python (inline)")
+        self.assertEqual(h("python -X utf8 C:\\s\\falsify.py --suite x"), "python falsify.py")
 
 
 if __name__ == "__main__":

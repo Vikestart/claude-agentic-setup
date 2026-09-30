@@ -4,13 +4,16 @@ Outcomes and order only; active work goes in `implementation_plan.md` when a pha
 
 ## Next, in order (queued 2026-09-30)
 
-1. **Automation mining** — a suite script that mines transcripts for repeated throwaway scripts
-   (inline `python -`/`-c`, scripts written to temp/scratch folders) and repeated command sequences,
-   ranked by frequency × tokens; then build the scripts it justifies. Already visible: `patch.py`
-   (all-or-nothing exact replacements, CRLF-safe, unique anchors — improvised ~10× on 2026-09-30,
-   failing 3× on backslashes and line endings), a version/cache-key bump-and-check, a safe
-   `settings.json` merge, backup-before-editing `~/.claude`, always-loaded-text measurement. Fold in
-   the "Generalise the suite helpers" item below if the mining ranks them.
+1. **Build the scripts the mining justifies** — `automation_mine.py` exists (2026-09-30); its
+   September ranking, by tokens the model wrote:
+   - **`patch.py`** — all-or-nothing exact replacements, CRLF-safe, unique anchors: ~4,300 runs in
+     ~350 transcripts across 7 projects, ~2.4M tokens, ~120 failed runs. First, by far.
+   - **falsify mutations without a hand-written JSON file** — 138 runs build one; "inline python →
+     falsify.py" is the most common command sequence (96 transcripts).
+   - **Nebulingo's test-database preamble** (`PHASE98_TEST_*` exports, 171 runs) — a project
+     script, for that project's own roadmap.
+   - Smaller: JSON config writes (~100 runs), a `git diff --numstat` check (~200 runs). Rerun the
+     miner after `patch.py` lands; fold in "Generalise the suite helpers" below if it ranks them.
 
 2. **Self-started fresh sessions** (owner request 2026-09-30) — a session that hits the handover
    point writes the handover and continues in a fresh session itself, without the owner starting
