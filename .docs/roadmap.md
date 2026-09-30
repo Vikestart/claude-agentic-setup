@@ -29,7 +29,6 @@ Outcomes and order only; active work goes in `implementation_plan.md` when a pha
 
 
 - **Project AGENTS.md files stop repeating the scanner path** — xampp-pulse and tilspire-com (both had uncommitted AGENTS.md edits on 2026-09-29). xampp-pulse still points at the retired `~/.codex/skills/web-audit` copy: replace the path with a pointer to the global audit rule, at each project's next session.
-- **Confirm Fable really runs at `xhigh`** — the first time a `fable-xhigh-*` agent runs, read its effort with `agent_audit.py --agent <id>`. A model without `xhigh` silently runs at `high`, which would make those two definitions mislabelled.
 - **Re-measure after the context rules** (from 2026-09-30) — once each of Nebulingo, Framvis and Tilspire has run two or three phases under the new rules, compare with `agent_audit.py` (peak context, gap re-caches, weighted total) against the 2026-09-30 figures in the orchestrator skill; adjust the ~250k ceiling and the ~150-tool-call split if they miss.
 - **Generalise the suite helpers** — Nebulingo's `neighbour_suites.py` / `battery_gate.py` and Tilspire's slice runner into the audit suite with a small per-project config; when a third project needs one.
 - **Project follow-ups (unverified since 2026-09-01; belong in each project's own roadmap):** nebulingo — add `.tmp/` and `.docs/proofs/` to `.auditignore` and a `.token-limits.json` for `scripts/` (242 advisory findings → ~80); nebulingo — `includes/lesson_authoring.php` (819 KB, read 309 times by agents) is the costliest file to work near.

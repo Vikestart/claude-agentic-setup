@@ -46,6 +46,7 @@ skill must still work without it.
   global instructions. Repeated paths had already rotted in two projects.
 - **`xhigh` is the highest effort proposed, for Opus and Fable** (2026-09-28). `max` spent more than
   twice the tokens of `xhigh` for next to no gain; the four `max` agents stay for owner overrides.
+- **Fable runs at `xhigh`** (confirmed 2026-09-30 with `agent_audit.py`: the first `fable-xhigh-reviewer` recorded `xhigh`), so the `fable-xhigh-*` definitions are labelled truthfully.
 - **Effort is fixed by the agent definition**, because the Agent tool takes no effort and built-in
   types inherit the session's. The floor for a significant sensitive change is `high` (it was `max`
   until 2026-09-25).
