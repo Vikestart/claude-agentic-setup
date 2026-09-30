@@ -9,16 +9,15 @@ Outcomes and order only; active work goes in `implementation_plan.md` when a pha
    app (→ `reference/traps.md`, Config and permissions). No setting or version enables them, and
    the gate is not ours to override. Done meanwhile: the handover skill's Finish step hands off by
    itself once the tool appears. Outside git repositories it offers a one-click `spawn_task` chip
-   instead. In a repo the paste-ready block stays. **Proven 2026-09-30 without the gate: the
-   spare-session relay** (→ `reference/traps.md`, "A cleared session wakes only on a message"). The
-   old session sends the kickoff to an idle, empty spare in the same folder, which starts fresh at
-   once; the old session then turns Remote Control off and clears itself, becoming the next spare.
-   One spare per project, made once. Open before building: the woken spare turning Remote Control
-   back on was refused by auto mode (request came from another session) — owner decides between an
-   allow rule for `set_remote_control` and flipping the switch. Ruled out: hooks and `CronCreate`
-   after a clear (no process runs until a message arrives), one-time scheduled tasks (unattended:
-   no questions, no Remote Control), deep links (only fill the prompt box), cloud sessions (no
-   local XAMPP).
+   instead. In a repo the paste-ready block stays. **Workarounds tried and rolled back
+   2026-09-30** (owner decision; → `reference/traps.md`, "A cleared session wakes only on a
+   message"): a relay session that sends the kickoff after the old session clears itself worked end
+   to end, but the next handover stops on an app prompt (Remote Control that Claude turned on cannot
+   be turned off silently), and the owner wants no extra sessions. A detached script or headless
+   `claude -p` sending the kickoff was refused by auto mode as an unsafe agent — not to be retried.
+   Also ruled out: hooks and `CronCreate` after a clear, scheduled tasks and Dispatch (unattended),
+   deep links (only fill the prompt box), cloud sessions (no local XAMPP). Only lead left if ever
+   revisited: whether the app's Remote Control default reconnects a cleared session by itself.
 
 2. **Build the scripts the mining justifies** — `automation_mine.py` exists (2026-09-30); its
    September ranking, by tokens the model wrote:

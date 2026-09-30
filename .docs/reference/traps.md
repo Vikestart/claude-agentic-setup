@@ -164,10 +164,14 @@ and none starts until a message arrives. So no `SessionStart` hook fires after t
 earlier `startup` was logged), an `asyncRewake` hook never gets the chance, and `CronCreate` jobs are
 in-memory and die with the process. What does work: `send_message` from another attended session
 to the idle cleared one starts a turn with an empty context. Remote Control must be off before a
-self-clear, and a woken session turning it back on because another session asked was refused by
-auto mode. Scheduled-task runs are "unattended": no `AskUserQuestion`, no Remote Control, and
-`send_message` can neither leave nor reach them.
-→ The spare-session relay (roadmap item 1) builds on the one path that works.
+self-clear. Turning it off is silent when the app turned it on (new-session default), but the app
+asks first ("a Remote Control connection you set up") when Claude turned it on with
+`set_remote_control` — whoever requests the change, and an allow rule does not cover it. A
+terminal `claude` sees desktop sessions in `ListAgents` and messages them by name, not `local_` id.
+Scheduled-task runs are "unattended": no `AskUserQuestion`, no Remote Control, and `send_message`
+can neither leave nor reach them.
+→ Waiting on `start_session`; the relay built on this was rolled back (roadmap item 1).
+
 
 ---
 
