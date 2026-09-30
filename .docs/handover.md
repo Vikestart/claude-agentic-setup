@@ -1,48 +1,45 @@
-# Handover — `~/.claude` global setup — 2026-09-30 (night)
+# Handover — `~/.claude` global setup — 2026-09-30 (late)
 
 ## State
-- Repo `~/.claude/claude-agentic-setup`, branch `main`, in sync with origin (`git fetch` just before
-  this handover); tree clean apart from this handover's docs, committed and pushed at its end.
-- Checks after the last code change: `install/verify.py --gate .` 16/16 (web-audit self-test 31/31,
-  context guard 15/15, credentials guard 25/25, setup tests incl. the new `unset`, parity, AGENTS.md in
-  sync, audit gate 0 blocking) · `install.py --check` in place · every guard added today falsified.
-- Deployment: n/a (tooling; live on write here, on the partner's machine at their next pull, where
-  the post-merge installer also retires the removed hooks and the `autoCompactWindow` key).
-- No project repository under htdocs was changed.
+- Repo `~/.claude/claude-agentic-setup`, branch `main`, **ahead of origin on purpose**: `0454fc9`
+  (phase leads steps 1–3) and this handover are held back until the next session's checks pass.
+  Pushed earlier today: `7224c55` (handover starts its successor), `440a9d9` (falsify reads a block spec).
+- Checks after the last change: `install/verify.py --gate .` 16/16, `install.py --check` in place,
+  the new agent-definition test falsified 3/3.
+- Applied on this machine: `autoCompactWindow` 400000, `CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH` 2,
+  and the two lead definitions (live through the junctions). The partner gets nothing until the push.
+- Setup backups moved to the Recycle Bin (owner's word). Claude Code's own `.claude.json.backup.*`
+  files stay.
 
 ## Since the last handover
-- Agents start a long run once in the background and end the turn; the completion notice wakes
-  them (orchestrator skill + all executor definitions). Only background agents are woken.
-- `automation_mine.py` (audit suite): ranks throwaway scripts and repeated command sequences from the
-  transcripts by the tokens spent writing them. September baseline in `roadmap.md` item 2.
-- `patch.py` (audit suite): exact, all-or-nothing replacements from an unescaped spec; CLAUDE.md §0
-  points at it. Built because patch scripts topped the ranking (~4,300 runs, ~2.4M tokens).
-- Context: no automatic compaction cap. Past ~400k the context hook tells the main chat to ask the
-  owner once whether to `/compact` (again every +100k). A cap and a self-raising script were built,
-  proven inert in a running desktop session, and removed. → `reference/traps.md`,
-  `reference/setup-architecture.md` (context_guard row).
-- Installer: `unset` section in `settings/shared-settings.json` removes a key only while it holds the
-  value the setup wrote (`reference/setup-repo.md`, settings merge).
+- Roadmap item 1: `start_session` / `hand_off_to_session` sit behind a vendor rollout gate
+  (→ `reference/traps.md`). The handover skill now starts its successor once that tool appears, and
+  meanwhile offers a `spawn_task` chip outside git repositories.
+- Roadmap item 2: `falsify.py --mutations` takes `patch.py`'s unescaped block spec.
+- The owner's alternative to item 1: **phase leads**, i.e. two-level orchestration, plus the 400k cap
+  back. Planned, reviewed, and half built: [`implementation_plan.md`](implementation_plan.md).
 
 ## Decisions
-- No compaction cap; the owner's word on the hook's question is the override — a running app
-  session ignores `autoCompactWindow`, and a model cannot compact itself (→ `traps.md`).
-- The owner wants self-managing mechanisms, not admin tasks; owner input shrinks to one word asked
-  once (memory `self-managing-not-admin`).
+- A plan gives each phase a lead and an agent budget, and the lead picks its roster within it
+  (owner, 2026-09-30).
+- Leads must be **shown to be efficient**, not only to work (owner, 2026-09-30). The plan's
+  "Efficiency trial" fixes the decision rule before the numbers come in.
 
 ## Next
-1. **Self-started fresh sessions** — roadmap item 1, with today's findings in it. Start with
-   `ToolSearch` for `start_session` / `hand_off_to_session`; if still absent, find what enables them,
-   then weigh the fallbacks listed there. Goal: this handover skill ends by starting its successor.
-2. **The next mined script** — roadmap item 2: falsify runs without a hand-written mutation file.
+1. `implementation_plan.md`, from "Verification":
+   - the cap check (`get_usage` on this new session);
+   - the efficiency trial, which carries the nesting probe;
+   - then steps 4–5 and the detached review;
+   - push only once all of that passes.
+   The rule text in step 4 is core architecture: at `high` effort, or hand it to `opus-high-executor`.
+2. After that, roadmap "Later" items. The remaining mined scripts are Nebulingo's (its own roadmap).
 
 ## Open questions for the owner
 - Add the partner as a collaborator on GitHub (owner action).
-- Whether the backups can go: `~/.claude/backups/pre-install-20260930-*` (four folders now, one per
-  settings apply today) and the older dated files beside them.
 - The terminal `claude` CLI login is still expired (`claude /login`); headless probes need it.
 - Disable connectors a project never uses (owner action; ~16k of MCP tool text per turn here).
 
 ## Read first
-- [`roadmap.md`](roadmap.md), [`reference/setup-architecture.md`](reference/setup-architecture.md),
-  [`reference/traps.md`](reference/traps.md), [`reference/setup-repo.md`](reference/setup-repo.md)
+- [`implementation_plan.md`](implementation_plan.md), [`roadmap.md`](roadmap.md),
+  [`reference/traps.md`](reference/traps.md), [`reference/setup-architecture.md`](reference/setup-architecture.md),
+  [`reference/setup-repo.md`](reference/setup-repo.md)
