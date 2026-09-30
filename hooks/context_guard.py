@@ -91,10 +91,7 @@ def message(tokens, is_agent, first):
                 "fresh chat (CLAUDE.md §1, Handover).")
     # The rule is to ask ONCE: a repeat is information, never a second question.
     return (f"Context guard: context now {k} tokens. If the owner already declined a handover, do "
-            "not ask again; keep reads small and finish the current phase. Auto-compaction will "
-            "summarise this session at the shared cap; if this work would not survive a summary, "
-            "raise the window yourself with `python ~/.claude/hooks/context_window.py raise` and say "
-            "so in one line — it is restored when the session ends.")
+            "not ask again; keep reads small and finish the current phase.")
 
 
 def main():

@@ -79,12 +79,10 @@ small, short-lived context matters more. The rules below keep it small.
   done, what is left, and the exact next step (the context hook tells it when). Start a fresh agent
   for the rest from that hand-back. Behind it, a hard backstop: the shared `autoCompactWindow`
   (400k) compacts any session or agent that ignores the hook — a summary loses detail, so it is a
-  net, not the plan. A main session that truly needs more (the owner declined a handover and the
-  work would not survive a summary) raises it itself, without asking: `python
-  ~/.claude/hooks/context_window.py raise`, reported in one line. It covers the whole project while
-  it lasts, and a hook restores it when the session ends. Agents never raise it; they hand back.
-  Never `/autocompact` (it saves to user settings, which the merge then keeps as a personal
-  override) or the environment variable (it outranks every override).
+  net, not the plan. Unverified in the desktop app: a running session ignores a changed value
+  (`reference/traps.md`), so `context_window.py raise` does not help the session that runs it;
+  whether the cap holds from session start is still being measured. Agents never raise it; they
+  hand back.
 - **Approval covers the continuations.** An approved roster covers fresh continuation and
   correction agents for its roles (same definition, same files); say one line when you start one.
   They count toward the 10-agent cap, so a roster for a large phase states how many it expects,

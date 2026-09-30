@@ -52,6 +52,13 @@ allowlist in `settings.json` named a retired path for two days while the check p
 
 ## Config and permissions
 
+**`autoCompactWindow` does not reach a running desktop-app session**, although the docs say settings
+reload live and do not list it as restart-only. Tested 2026-09-30 at ~220k: `get_usage` reported
+auto-compaction at 97% of 1M both before and after setting 150k in the project's
+`settings.local.json`, and no compaction followed; the 400k user-level value, set mid-session, did
+not apply either. Unknown yet: whether a NEW session picks it up. → Measure, never assume: a fresh
+session's first `get_usage` shows `autoCompactsAtPercent` (40 = the 400k cap holds).
+
 **A stale path in a permission rule fails silently.**
 `Bash(python ~/.claude/scripts/audit_all.py *)` did not error when that directory stopped existing —
 the rule simply never matched, so every scanner run fell through to a prompt. That reads as ordinary
