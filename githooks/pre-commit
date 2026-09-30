@@ -1,0 +1,3 @@
+#!/bin/sh
+# Refuses private paths and credential-shaped content before they reach the shared repo.
+exec python "$(git rev-parse --show-toplevel)/install/precommit.py"

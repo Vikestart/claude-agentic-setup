@@ -1,0 +1,3 @@
+#!/bin/sh
+# A pull brought the other person's changes: apply them (links, settings, AGENTS.md) at once.
+python "$(git rev-parse --show-toplevel)/install/install.py" --from-hook

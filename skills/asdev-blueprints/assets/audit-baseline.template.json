@@ -1,0 +1,5 @@
+{
+    "$schema_note": "Reviewed, accepted audit findings that are BY DESIGN. One entry per finding; no wildcards. Every entry carries a written reason; `line` is informational and matching uses scanner + rule + file + context. Never add an entry to make a gate pass — add it because the finding was reviewed and the behaviour is intended.",
+    "generated": "<YYYY-MM-DD>",
+    "entries": []
+}

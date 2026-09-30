@@ -1,0 +1,51 @@
+{
+  "_about": "What the shared setup owns in each person's ~/.claude/settings.json. install.py merges it: 'set' values are written when absent or still equal to what was last applied (a deliberate personal override is kept); 'add' entries are appended when missing; 'retire' entries are removed where present. Edit this file, never the merge by hand.",
+  "set": {
+    "env.CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS": "10",
+    "env.CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH": "1",
+    "subagentPromptCacheTtl": "1h",
+    "workflowSizeGuideline": "medium"
+  },
+  "add": {
+    "permissions.allow": [
+      "Bash(python ~/.claude/skills/asdev-web-audit/scripts/audit_all.py *)",
+      "Bash(python ~/.claude/skills/asdev-web-audit/scripts/lint_rules.py *)",
+      "Bash(python ~/.claude/skills/asdev-web-audit/scripts/security_audit.py *)",
+      "Bash(python ~/.claude/skills/asdev-web-audit/scripts/syntax_check.py *)",
+      "Bash(python ~/.claude/skills/asdev-web-audit/scripts/convention_audit.py *)",
+      "Bash(python ~/.claude/skills/asdev-web-audit/scripts/a11y_audit.py *)",
+      "Bash(python ~/.claude/skills/asdev-web-audit/scripts/link_checker.py *)",
+      "Bash(python ~/.claude/skills/asdev-web-audit/scripts/token_analyzer.py *)",
+      "Bash(python ~/.claude/skills/asdev-web-audit/scripts/doc_hygiene.py *)",
+      "Bash(python ~/.claude/skills/asdev-web-audit/scripts/unused_css_detector.py *)",
+      "Bash(python ~/.claude/skills/asdev-web-audit/scripts/harness_parity.py *)",
+      "Bash(python ~/.claude/skills/asdev-web-audit/scripts/audit_delta.py *)",
+      "Bash(python ~/.claude/skills/asdev-web-audit/scripts/agent_audit.py *)",
+      "Bash(python ~/.claude/skills/asdev-web-audit/scripts/self_test.py *)"
+    ],
+    "permissions.deny": [
+      "Read(~/.claude/.credentials.json)"
+    ],
+    "hooks": {
+      "PreToolUse": [
+        {
+          "matcher": "Bash|PowerShell",
+          "command": "python \"$HOME/.claude/hooks/guard_credentials.py\"",
+          "timeout": 10
+        }
+      ],
+      "PostToolUse": [
+        {
+          "matcher": "*",
+          "command": "python \"$HOME/.claude/hooks/context_guard.py\"",
+          "timeout": 5
+        }
+      ]
+    }
+  },
+  "retire": {
+    "permissions.allow": [],
+    "permissions.deny": [],
+    "hooks": {}
+  }
+}

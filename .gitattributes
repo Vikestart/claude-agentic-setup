@@ -1,0 +1,3 @@
+# Store every file byte for byte: no line-ending conversion, whatever core.autocrlf says.
+# CLAUDE.md and several scripts are CRLF, the git hooks must stay LF.
+* -text

@@ -1,0 +1,4 @@
+#!/bin/sh
+# A fast-forward pull in rebase mode rewrites nothing, so neither hook above runs; this one does.
+[ "$1" != "$2" ] || exit 0
+python "$(git rev-parse --show-toplevel)/install/install.py" --from-hook

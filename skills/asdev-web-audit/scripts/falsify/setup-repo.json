@@ -1,0 +1,65 @@
+[
+  {
+    "name": "a missing import crashes without the guard's message",
+    "file": "skills/asdev-web-audit/scripts/sync_agents_md.py",
+    "old": "        if not target.is_file():\n            hint",
+    "new": "        if False:\n            hint",
+    "expect": "no guard message, got FileNotFoundError"
+  },
+  {
+    "name": "pre-commit stops recognising GitHub tokens",
+    "file": "install/precommit.py",
+    "old": "(\"GitHub token\", r\"",
+    "new": "(\"GitHub token\", r\"(?!)",
+    "expect": "0 != 1 : precommit: 1 file(s) scanned, 0 problem(s)"
+  },
+  {
+    "name": "pre-commit lets a local/ overlay through",
+    "file": "install/precommit.py",
+    "old": "FORBIDDEN_PARTS = {\"local\", ",
+    "new": "FORBIDDEN_PARTS = {",
+    "expect": "0 != 1 : precommit: 1 file(s) scanned, 0 problem(s)"
+  },
+  {
+    "name": "the settings merge overwrites a personal override",
+    "file": "install/install.py",
+    "old": "        elif key in last and node[leaf] == last[key]:",
+    "new": "        elif True:",
+    "expect": "AssertionError: 'medium' != 'large'"
+  },
+  {
+    "name": "a failed swap does not put the original back",
+    "file": "install/install.py",
+    "old": "        os.replace(backup, link)\n",
+    "new": "",
+    "expect": "agents folder was not put back"
+  },
+  {
+    "name": "foreign files no longer stop the install",
+    "file": "install/install.py",
+    "old": "            if (extra or differ) and not force:",
+    "new": "            if False:",
+    "expect": "0 != 1 : link  agents -> repo"
+  },
+  {
+    "name": "harness_parity finds ~/.claude from its resolved path again",
+    "file": "skills/asdev-web-audit/scripts/harness_parity.py",
+    "old": "HOME_ROOT = Path.home() / \".claude\"",
+    "new": "HOME_ROOT = Path(__file__).resolve().parent.parent.parent.parent",
+    "expect": "harness_parity looks in the wrong home"
+  },
+  {
+    "name": "security_audit exempts its own folder by path spelling again (script side)",
+    "file": "skills/asdev-web-audit/scripts/security_audit.py",
+    "old": "SELF_DIR = os.path.dirname(os.path.realpath(__file__))",
+    "new": "SELF_DIR = os.path.dirname(os.path.abspath(__file__))",
+    "expect": "the scanner flagged its own folder"
+  },
+  {
+    "name": "security_audit exempts its own folder by path spelling again (scanned side)",
+    "file": "skills/asdev-web-audit/scripts/security_audit.py",
+    "old": "if os.path.realpath(path).startswith(SELF_DIR + os.sep):",
+    "new": "if os.path.abspath(path).startswith(SELF_DIR + os.sep):",
+    "expect": "the scanner flagged its own folder"
+  }
+]

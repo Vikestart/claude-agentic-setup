@@ -1,0 +1,195 @@
+# asdev-blueprints: test.battery — the three-job CI workflow. Copy to .github/workflows/ci.yml and
+# replace every <PLACEHOLDER>. The contract and the reasoning are in references/foundation.md
+# (§2 test.battery, invariants 11-14 and 28, decision points 8-9); this file is the shape.
+#
+# THREE JOBS, and why:
+#   scope     decides from CHANGED PATHS whether the expensive job is needed. Reads paths, never
+#             commit subjects, and never scopes the release path.
+#   gate      syntax sweep + the hermetic suites, across every supported PHP version.
+#   database  the database-bearing suites against a disposable server. ~85% of the minutes, which
+#             is why `scope` exists.
+#
+# RUNNER PLACEMENT — hosted or self-hosted (decision point 9):
+#   Hosted:       runs-on: ubuntu-latest
+#   Self-hosted:  runs-on: [self-hosted, linux, <PROJECT>-ci]
+#   Switch the three `runs-on:` lines and nothing else — the toolchain steps already branch on
+#   `runner.environment`. Self-hosted is worth it when hosted minutes are the constraint, or when the
+#   gate should run on the SAME PHP build production runs.
+#   Before wiring a self-hosted runner, the operational rules (foundation.md §2 test.battery):
+#     · one runner registered PER REPOSITORY; a rootless container daemon may be shared between them
+#     · never add the runner user to the `docker` group — that is root-equivalence on the host
+#     · keep the runner's `_work` OUTSIDE any vhost root, or a checkout can walk up to a real `.env`
+#     · give each project its OWN published database port (two projects on one port collide)
+#     · prune the image cache on a schedule from day one (rootless cannot cap block-I/O)
+#
+# ⚠️ `runner.*` is NOT available in a job-level `env:` block. `${{ runner.temp }}` there parses
+# cleanly and then GitHub rejects the whole workflow at dispatch with no line number. Set such paths
+# from a STEP, via $RUNNER_TEMP and $GITHUB_ENV.
+
+name: CI
+
+on:
+  push:
+    branches: [main, staging]
+  pull_request:
+    branches: [main, staging]
+
+concurrency:
+  # ⚠️ A quick follow-up push CANCELS the run you care about, and the next commit's tick may be a
+  # docs-only skip — so a green tick can belong to a commit that never ran the gate. Set this to
+  # false if that trade is wrong for the project.
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  scope:
+    runs-on: ubuntu-latest          # ← or [self-hosted, linux, <PROJECT>-ci]
+    timeout-minutes: 5
+    outputs:
+      database: ${{ steps.decide.outputs.database }}
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+
+      - name: Decide whether the database job is needed
+        id: decide
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # The release path is NEVER scoped: a push to main, or a PR into it, is the gate that
+          # actually guards production.
+          if [ "${{ github.ref }}" = "refs/heads/main" ] || [ -n "${{ github.event.pull_request.number || '' }}" ]; then
+            echo "database=true" >> "$GITHUB_OUTPUT"; echo "Release path - running everything."; exit 0
+          fi
+
+          BASE="${{ github.event.before || '' }}"
+          if [ -z "$BASE" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ] || ! git cat-file -e "$BASE^{commit}" 2>/dev/null; then
+            echo "database=true" >> "$GITHUB_OUTPUT"; echo "No usable base commit - running everything."; exit 0
+          fi
+
+          CHANGED="$(git diff --name-only -z "$BASE" "${{ github.sha }}" | tr '\0' '\n' | sed '/^$/d')"
+          if [ -z "$CHANGED" ]; then
+            echo "database=true" >> "$GITHUB_OUTPUT"; echo "Empty diff - running everything rather than guessing."; exit 0
+          fi
+          echo "Changed files:"; echo "$CHANGED" | sed 's/^/  /'
+
+          # INERT = cannot reach PHP at runtime. Keep this list SHORT: the question is "can this
+          # reach the runtime", never "did it touch the schema". Anything not listed runs the job.
+          # ⚠️ Do not blanket-exclude a vendor/asset directory without checking whether a suite reads
+          # files from it.
+          NEEDS_DB=false
+          while IFS= read -r f; do
+            case "$f" in
+              .docs/*|*.md|assets/img/*|assets/fonts/*) ;;
+              *) NEEDS_DB=true; echo "  -> '$f' can reach PHP; the database job is required."; break ;;
+            esac
+          done <<< "$CHANGED"
+          echo "database=$NEEDS_DB" >> "$GITHUB_OUTPUT"
+
+  gate:
+    runs-on: ubuntu-latest          # ← or [self-hosted, linux, <PROJECT>-ci]
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['<PHP_MIN>', '<PHP_MAX>']     # e.g. '8.2', '8.3' — the versions production may run
+    steps:
+      - uses: actions/checkout@v4
+
+      # Hosted only: setup-php installs via apt and needs sudo, which a self-hosted runner user
+      # deliberately does not have.
+      - uses: shivammathur/setup-php@v2
+        if: runner.environment == 'github-hosted'
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: pdo_mysql, mbstring, curl, openssl, zip
+          coverage: none
+
+      # Self-hosted: use the host's own PHP — but PROVE it has the driver first. A host commonly
+      # carries a second PHP build WITHOUT pdo_mysql, and its failure reads exactly like a database
+      # credentials problem. Resolve from ${{ matrix.php }}, never a hardcoded version, or both
+      # matrix legs silently run the same build while the file claims to test two.
+      - name: Host toolchain (self-hosted)
+        if: runner.environment == 'self-hosted'
+        shell: bash
+        run: |
+          set -euo pipefail
+          php_bin="<HOST_PHP_PREFIX>/${{ matrix.php }}/bin"     # e.g. /opt/plesk/php
+          test -x "$php_bin/php" || { echo "::error::no PHP at $php_bin"; exit 1; }
+          "$php_bin/php" -r 'exit(extension_loaded("pdo_mysql") ? 0 : 1);' \
+            || { echo "::error::$php_bin/php lacks pdo_mysql"; exit 1; }
+          echo "$php_bin" >> "$GITHUB_PATH"
+
+      # BOTH runner types: setup-node unpacks a tarball into the tool cache and needs no sudo.
+      - uses: actions/setup-node@v4
+        with: { node-version: '<NODE_VERSION>' }
+
+      - name: Secret scan (runs FIRST — a committed secret is a value no pattern-scanner can match)
+        run: <SECRETS_TEST_COMMAND>
+
+      - name: Syntax sweep
+        run: <SYNTAX_CHECK_COMMAND>
+
+      - name: Hermetic suites
+        run: <HERMETIC_BATTERY_COMMAND>          # must print its own scope in its summary
+
+  database:
+    needs: scope
+    if: needs.scope.outputs.database == 'true'
+    runs-on: ubuntu-latest          # ← or [self-hosted, linux, <PROJECT>-ci]
+    timeout-minutes: 30
+    services:
+      db:
+        # Pin an EXACT version, and the same one the local disposable rig uses. A rehearsal is
+        # evidence only about the version it rehearsed on; bump both together.
+        image: mariadb:<DB_VERSION>
+        env:
+          MARIADB_ALLOW_EMPTY_ROOT_PASSWORD: "yes"
+          MARIADB_DATABASE: <PROJECT>_ci
+        # ⚠️ Publish on a PROJECT-SPECIFIC port. The host's own database holds 3306, and two
+        # projects sharing a published port collide the moment their jobs overlap.
+        ports: ['<DB_PORT>:3306']
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=10s --health-timeout=5s --health-retries=10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        if: runner.environment == 'github-hosted'
+        with: { php-version: '<PHP_MAX>', extensions: pdo_mysql, mbstring, curl, openssl, zip, coverage: none }
+
+      - name: Host toolchain (self-hosted)
+        if: runner.environment == 'self-hosted'
+        shell: bash
+        run: |
+          set -euo pipefail
+          php_bin="<HOST_PHP_PREFIX>/<PHP_MAX>/bin"
+          test -x "$php_bin/php" || { echo "::error::no PHP at $php_bin"; exit 1; }
+          "$php_bin/php" -r 'exit(extension_loaded("pdo_mysql") ? 0 : 1);' \
+            || { echo "::error::$php_bin/php lacks pdo_mysql"; exit 1; }
+          echo "$php_bin" >> "$GITHUB_PATH"
+
+      - uses: actions/setup-node@v4
+        with: { node-version: '<NODE_VERSION>' }
+
+      - name: Build the application schema
+        # A CI database loaded from the baseline has EVERY migration pending, so a runner that
+        # refuses a data-risky batch refuses the whole thing. Grant the allowance HERE only — the
+        # production control is that the deploy hook never passes it. Never `--baseline`: it records
+        # files as applied WITHOUT running them, so a migration added in the PR under review would
+        # never execute.
+        run: <SCHEMA_BUILD_COMMAND>
+
+      - name: Database-bearing suites
+        # ⚠️ A container ships STRICT_TRANS_TABLES; a value silently truncated on a laptop for
+        # months becomes a real error here. Those are bugs the gate caught, not CI noise.
+        run: <DATABASE_BATTERY_COMMAND>
+
+# BRANCH PROTECTION: require the `database` job specifically, not the overall run — a docs-only push
+# legitimately skips it and still reports success.
+#
+# NOT COVERED BY THIS WORKFLOW, and never to be reported as passing: the Python asdev-web-audit gate (its
+# canonical copy is not vendored into any project), the live-`.env` half of the secret scan, and any
+# manual browser corpus. State them as inconclusive.

@@ -1,0 +1,15 @@
+# Each person's own material lives beside the shared files but is never committed.
+skills/*/local/
+skills/*/.sandbox/
+__pycache__/
+*.pyc
+
+# Only the in-house definitions and hooks are shared; a person's own sit here untracked.
+agents/*
+!agents/opus-*.md
+!agents/fable-*.md
+hooks/*
+!hooks/guard_credentials.py
+!hooks/test_guard_credentials.py
+!hooks/context_guard.py
+!hooks/test_context_guard.py

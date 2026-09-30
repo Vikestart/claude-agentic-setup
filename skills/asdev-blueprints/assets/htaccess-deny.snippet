@@ -1,0 +1,86 @@
+# asdev-blueprints: http.deny — the repository-side deny layers. Adapt the directory list to the
+# project; keep the reasoning.
+#
+# Why two layers here and a third outside the repo: the SPA/front-controller reroute only catches
+# MISSING paths, so anything that exists on disk is served as a plain file unless denied. Layer 1 is
+# a rewrite (evaporates silently if mod_rewrite is off); layer 2 is per-directory `Require all denied`
+# (ignored if AllowOverride is None). Layer 3 — server-level nginx/Apache directives in the Plesk panel
+# — depends on neither and stops the request before Apache or PHP see it. Layer 3 is an OWNER ACTION;
+# record it in platform-manifest.md under "Owner actions pending" until verified with ONE request
+# (a burst of 403 probes against production has triggered fail2ban before).
+
+# ---- Layer 1: dotfiles and VCS artefacts (.env, .git/, .docs/, .claude/) — except ACME challenges ----
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+  RewriteCond %{REQUEST_URI} !^/\.well-known/
+  RewriteCond %{REQUEST_URI} (^|/)\. [NC]
+  RewriteRule ^ - [F,L]
+</IfModule>
+
+# ---- Layer 2: the same, for when mod_rewrite is unavailable (Apache 2.4 syntax) ----
+<FilesMatch "^\.">
+  Require all denied
+</FilesMatch>
+<FilesMatch "\.(env|sql|sqlite|log|bak|orig|ini|sh|lock|dist)$">
+  Require all denied
+</FilesMatch>
+# Markdown is never served: AGENTS.md, CLAUDE.md and .docs/ are tracked (they reach the server via the
+# pull webhook) but carry architecture notes, internal addresses and schema detail.
+<FilesMatch "\.md$">
+  Require all denied
+</FilesMatch>
+
+# ---- Non-public application code: CLI tooling, shared libraries, reference clients ----
+# /scripts/ and /includes/ are written for a trusted CLI caller and open a database connection at
+# require time; /clients/ is client SOURCE the running app never fetches. Adjust the list to the
+# project's layout (for a front-controller layout, one working approach is to deny every .php under
+# /api and grant index.php back). Do NOT deny a directory that is served on purpose — the public
+# machine-API contract (an /openapi/ directory) is the usual example.
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+  RewriteCond %{REQUEST_URI} ^/(scripts|includes|clients)(/|$) [NC]
+  RewriteRule ^ - [F,L]
+</IfModule>
+# CLI-only runners get a clean 403 from Apache instead of spinning up PHP to hit their SAPI guard.
+<FilesMatch "^(migrate|backup|retention)\.php$">
+  Require all denied
+</FilesMatch>
+
+# ---- Staging is never indexed ----
+# Keyed on the exact staging Host so production is untouched. BOTH spellings are required: an
+# error/auth response is an internal redirect, and Apache renames every environment variable with a
+# REDIRECT_ prefix across that boundary — the plain condition silently stops matching on exactly the
+# 401/503s a crawler meets first. "always" so the header rides error responses too.
+<IfModule mod_setenvif.c>
+  SetEnvIfNoCase Host ^staging\.<domain>$ PROJECT_STAGING
+</IfModule>
+<IfModule mod_headers.c>
+  Header always set X-Robots-Tag "noindex, nofollow, noarchive" env=PROJECT_STAGING
+  Header always set X-Robots-Tag "noindex, nofollow, noarchive" env=REDIRECT_PROJECT_STAGING
+  # JS/CSS must always revalidate — heuristic caching otherwise serves day-old modules after a deploy.
+  # Do NOT add a blanket .php Cache-Control rule: header-table ordering makes `set`/`setifempty`
+  # APPEND to what PHP already sent, so every PHP entry point must send its own Cache-Control.
+  <FilesMatch "\.(js|css)$">
+    Header set Cache-Control "no-cache"
+  </FilesMatch>
+</IfModule>
+
+# ---- Machine-API bearer forwarding ----
+# Apache withholds Authorization from the CGI environment, so under FPM PHP never sees the bearer.
+# Republish it; the server side additionally accepts an alternative header and requires every present
+# copy to agree (machine-api.md in the skill).
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteCond %{HTTP:Authorization} .
+  RewriteRule ^ - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+</IfModule>
+
+# ---- Layer 3 (OWNER ACTION, Plesk → Domains → <domain> → Apache & nginx Settings) ----
+# nginx "Additional nginx directives" — apply to staging as well; its tailnet lock is access
+# control, not a substitute:
+#   location ~ ^/(scripts|includes|clients)(/|$) { deny all; return 403; }
+# Apache "Additional Apache directives" (only if nginx proxying is ever turned off):
+#   <LocationMatch "^/(scripts|includes|clients)(/|$)"> Require all denied </LocationMatch>
+# Verify with ONE request: curl -s -o /dev/null -w '%{http_code}\n' https://<domain>/scripts/  → 403

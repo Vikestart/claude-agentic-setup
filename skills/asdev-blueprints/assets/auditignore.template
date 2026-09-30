@@ -1,0 +1,7 @@
+# Audit-suite exclusions (read by ~/.claude/skills/asdev-web-audit/scripts/_common.py). Keep this list
+# short: an exclusion
+# is a file the scanners never see, so it must be something that cannot ship — scratch verification
+# files (also gitignored), never application code.
+_t*.html
+_test*.html
+*.scratch.*

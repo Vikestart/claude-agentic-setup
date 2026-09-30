@@ -1,0 +1,3 @@
+- **Local dev:** <your local stack and web root, e.g. Windows XAMPP (`C:\xampp\htdocs\`)>. Windows absolute paths in the terminal; relative web paths / `__DIR__` in code, for portability.
+- **Browser:** <your daily browser, and which one has the Claude browser extension, if any>.
+- **Production:** <your hosting and what triggers a deploy, e.g. a Plesk-managed VPS where merging `staging` into `main` triggers the pull webhook>.

@@ -1,0 +1,4 @@
+#!/bin/sh
+# `git pull --rebase` runs this instead of post-merge. An amend is a local edit, not a pull.
+[ "$1" = "rebase" ] || exit 0
+python "$(git rev-parse --show-toplevel)/install/install.py" --from-hook
