@@ -385,9 +385,6 @@ def check() -> int:
     drift += [f"settings.json: not yet {c}" for c in changes]
     if (REPO / ".git").exists() and run(["git", "-C", str(REPO), "config", "core.hooksPath"]).stdout.strip() != "githooks":
         drift.append("git core.hooksPath is not githooks")
-    sync = run([sys.executable, str(AUDIT / "sync_agents_md.py"), "--check"])
-    if sync.returncode:
-        drift.append("AGENTS.md: " + (sync.stdout.strip().splitlines() or ["check failed"])[0])
     for o in overrides:
         print(f"note  personal override kept: {o}")
     for d in drift:
@@ -463,9 +460,6 @@ def install(force: bool, from_hook: bool) -> int:
             print("git   core.hooksPath -> githooks (pre-commit scan, apply-on-pull)")
 
     problems = []
-    sync = run([sys.executable, str(AUDIT / "sync_agents_md.py")])
-    if sync.returncode:
-        problems.append("AGENTS.md: " + (sync.stdout + sync.stderr).strip()[-300:])
     if not from_hook:
         parity = run([sys.executable, str(AUDIT / "harness_parity.py")])
         if parity.returncode:

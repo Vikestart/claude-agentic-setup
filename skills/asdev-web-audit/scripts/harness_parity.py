@@ -122,7 +122,7 @@ def check_hooks() -> None:
 
 def check_global_routing() -> None:
     """The global config must route audits at the canonical suite, not a retired shim path."""
-    for cfg in (HOME_ROOT / "CLAUDE.md", Path.home() / ".codex" / "AGENTS.md"):
+    for cfg in (HOME_ROOT / "CLAUDE.md",):
         if not cfg.is_file():
             continue
         # CLAUDE.md is a stub whose rules arrive by import; checking its own text would check nothing.

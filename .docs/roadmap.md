@@ -41,5 +41,9 @@ Outcomes and order only; active work goes in `implementation_plan.md` when a pha
   context growth per phase. If it is still ~100k under the new rules, revisit phase leads (built and
   rolled back 2026-09-30, `reference/setup-architecture.md`). Also judge compaction instead of fresh chats (2026-09-30): do compacted
   sessions lose decisions or repeat work after a compaction? If so, tighten the summary rule.
+  Leaner agents (2026-10-01): run `session_cost.py` on the next two Nebulingo/Tilspire nights against
+  the baseline in `walkthrough.md` — start-up should sit near 27k; check agents use `code_map.py` /
+  `code_show.py` on big files (else firmer wording in the definitions) and whether any agent reports
+  a dropped tool it needed.
 - **Generalise the suite helpers** — Nebulingo's `neighbour_suites.py` / `battery_gate.py` and Tilspire's slice runner into the audit suite with a small per-project config; when a third project needs one.
 - **Project follow-ups (unverified since 2026-09-01; belong in each project's own roadmap):** nebulingo — add `.tmp/` and `.docs/proofs/` to `.auditignore` and a `.token-limits.json` for `scripts/` (242 advisory findings → ~80); nebulingo — `includes/lesson_authoring.php` (819 KB, read 309 times by agents) is the costliest file to work near.

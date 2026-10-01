@@ -1,6 +1,6 @@
 # claude-agentic-setup
 
-The shared global setup for Claude Code (and Codex): the instructions every session starts with, the
+The shared global setup for Claude Code: the instructions every session starts with, the
 subagent definitions, two safety hooks, the seven `asdev-*` skills and the settings they rely on.
 Private and co-maintained: each of us clones it into `~/.claude`, and a `git pull` brings the other's
 changes into every new session.
@@ -22,7 +22,7 @@ Then double-click `install-setup.cmd` in that folder (or run `python install/ins
   and keep there what is yours: your machine, browser and hosting (see `CLAUDE.personal.example.md`);
 - merges `settings/shared-settings.json` into your `~/.claude/settings.json`, adding only what the
   setup owns; a value you have set differently is kept and reported;
-- regenerates `~/.codex/AGENTS.md`, and checks that the credentials guard really runs.
+- checks that the credentials guard really runs.
 
 Nothing is deleted: whatever a link replaces goes to `~/.claude/backups/pre-install-<time>/`. Your own
 agents, hooks and skill `local/` folders move into the linked folders, where git ignores them. If a

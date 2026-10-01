@@ -1,5 +1,6 @@
 """Checks the post-compaction hook (after_compact.py): it names exactly the working docs present,
-a general reminder without them, and silence for other starts and bad input.
+a general reminder without them, silence for other starts and bad input, and the session's last
+message before the compaction restored verbatim.
 Run after any change to the hook: python test_after_compact.py"""
 import atexit, json, shutil, subprocess, sys, tempfile, pathlib
 hook = pathlib.Path(__file__).with_name("after_compact.py")
@@ -14,8 +15,27 @@ def call(raw):
     return json.loads(r.stdout)["hookSpecificOutput"]["additionalContext"] if r.stdout.strip() else ""
 
 
-def event(cwd, source="compact"):
-    return json.dumps({"hook_event_name": "SessionStart", "source": source, "cwd": str(cwd)})
+def event(cwd, source="compact", transcript=None):
+    data = {"hook_event_name": "SessionStart", "source": source, "cwd": str(cwd)}
+    if transcript is not None:
+        data["transcript_path"] = str(transcript)
+    return json.dumps(data)
+
+
+def say(mid, *blocks, sidechain=False, stop="end_turn"):
+    content = [{"type": "text", "text": b} if isinstance(b, str) else b for b in blocks]
+    return {"type": "assistant", "isSidechain": sidechain,
+            "message": {"id": mid, "content": content, "stop_reason": stop}}
+
+
+def transcript(name, records, filler=0):
+    path = root / name
+    with path.open("w", encoding="utf-8", newline="\n") as fh:
+        for rec in records:
+            fh.write(json.dumps(rec) + "\n")
+        for _ in range(filler):  # user lines after the reply push it out of the tail window
+            fh.write(json.dumps({"type": "user", "message": {"content": "x" * 1000}}) + "\n")
+    return path
 
 
 results = []
@@ -43,6 +63,42 @@ empty = root / "empty"
 check("empty .docs folder: general reminder", call(event(empty)) == general)
 check("malformed input: silent, exit 0", call("{not json") == "")
 check("missing cwd: silent, exit 0", call(json.dumps({"source": "compact"})) == "")
+
+tool = {"type": "tool_use", "id": "t", "name": "Bash", "input": {}}
+convo = transcript("convo.jsonl", [
+    {"type": "user", "message": {"content": "go"}},
+    say("m1", "OLD REPLY"),
+    say("m2", tool),
+    say("m4", "FINAL ONE"), say("m4", tool), say("m4", "  "), say("m4", "FINAL TWO"),
+    say("m5", "AGENT TEXT", sidechain=True),
+    {"type": "user", "message": {"content": "next request"}},
+    say("m6", "MID NARRATION", stop="tool_use"), say("m6", tool, stop="tool_use"),
+    {"type": "system", "subtype": "compact_boundary"},
+    {"type": "user", "isCompactSummary": True, "message": {"content": "summary"}},
+])
+got = call(event(proj, transcript=convo))
+check("last reply: every text block of the last message, in order",
+      "FINAL ONE\n\nFINAL TWO" in got and present[0] in got)
+check("last reply: an earlier message and a subagent's text are left out",
+      "OLD REPLY" not in got and "AGENT TEXT" not in got)
+check("last reply: narration in an unfinished turn is not the reply", "MID NARRATION" not in got)
+check("startup with a transcript: still silent", call(event(proj, "startup", convo)) == "")
+
+far = transcript("far.jsonl", [say("m1", "EARLY REPLY")], filler=2200)
+check("last reply beyond the tail window: found by the full read",
+      "EARLY REPLY" in call(event(proj, transcript=far)))
+
+long = transcript("long.jsonl", [say("m1", "y" * 7000)])
+cut = call(event(proj, transcript=long))
+check("a reply over the cap is cut and says so", "y" * 6000 in cut and "y" * 6001 not in cut and "cut at" in cut)
+
+docs_only = call(event(proj))
+check("no transcript path: the docs notice alone", call(event(proj, transcript=root / "missing.jsonl")) == docs_only
+      and "verbatim" not in docs_only)
+check("a transcript with no reply: the docs notice alone",
+      call(event(proj, transcript=transcript("none.jsonl", [say("m1", tool)]))) == docs_only)
+check("only mid-turn text: the docs notice alone", call(event(proj, transcript=transcript(
+      "mid.jsonl", [say("m1", "NARRATION", stop="tool_use")]))) == docs_only)
 
 print(f"{sum(results)}/{len(results)} ok")
 sys.exit(0 if all(results) else 1)

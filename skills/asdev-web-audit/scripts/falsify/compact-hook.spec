@@ -19,8 +19,10 @@ name: the notice is built but never printed
 expect: FAIL after a compaction: names exactly the docs present
 <<<<<<< OLD
         if text:
+            print(
 ======= NEW
         if False:
+            print(
 >>>>>>> END
 
 name: a session outside a project gets no reminder

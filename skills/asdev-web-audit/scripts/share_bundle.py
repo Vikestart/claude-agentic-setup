@@ -24,7 +24,7 @@ import sys
 import zipfile
 from pathlib import Path
 
-from sync_agents_md import PERSONAL, PERSONAL_EXAMPLE, expand_imports, render
+from sync_agents_md import PERSONAL, PERSONAL_EXAMPLE, expand_imports
 
 CLAUDE_HOME = Path.home() / ".claude"
 SKILLS = CLAUDE_HOME / "skills"
@@ -37,7 +37,7 @@ EXCLUDED_SUFFIXES = {".pyc", ".pyo"}
 # Subagent definitions ride with the config: CLAUDE.md §6 routes every spawn through them. Only the
 # in-house ones: a person's own agents live untracked in the same linked folder and stay private.
 AGENT_DEFS = CLAUDE_HOME / "agents"
-AGENT_PATTERNS = ("opus-*.md", "fable-*.md")
+AGENT_PATTERNS = ("opus-*.md", "fable-*.md", "sonnet-*.md")
 # The README quotes the depth the setup itself applies, so the two cannot drift apart.
 SHARED_SETTINGS = Path(__file__).resolve().parents[3] / "settings" / "shared-settings.json"
 
@@ -47,8 +47,7 @@ def spawn_depth() -> str:
 
 README = """# Shared agent setup
 
-Seven skills, the global instruction files and a subagent roster from one developer's Claude Code /
-Codex setup.
+Seven skills, the global instructions and a subagent roster from one developer's Claude Code setup.
 
 ## Install
 
@@ -65,15 +64,11 @@ that is already running cannot see agent definitions added after it started.
 Then look at `config/CLAUDE.md`. It is one person's working agreement with their agent — proportionality,
 planning gates, git and deploy topology, verification discipline, multi-agent orchestration. **Section 2's
 machine and hosting bullets (local dev, browser, production) are example placeholders**; replace those
-with yours. `config/AGENTS.md` is
-the Codex copy: it is GENERATED from `CLAUDE.md` and differs only in model names, which is how the two are
-kept from drifting apart (`asdev-web-audit/scripts/sync_agents_md.py`, `--check` reports drift).
+with yours.
 
 When it reads right for you, install it: copy `config/CLAUDE.md` to `~/.claude/CLAUDE.md`, where Claude
 Code loads it into every session. If you already have one there, merge the two rather than overwriting
-yours. For Codex, regenerate `~/.codex/AGENTS.md` from your edited copy with
-`python ~/.claude/skills/asdev-web-audit/scripts/sync_agents_md.py` instead of copying `config/AGENTS.md`, so
-your edits carry over. Start a new session afterwards: a running one keeps the instructions it started
+yours. Start a new session afterwards: a running one keeps the instructions it started
 with.
 
 `config/CLAUDE.md` §6 allows at most 10 subagents per piece of work without approval. To have Claude Code
@@ -195,10 +190,10 @@ def main() -> int:
     dangling: list = []
     if not args.no_config:
         # Built from CLAUDE.md and its imports with the example standing in for the personal file,
-        # so the author's machine and hosting never ship; AGENTS.md is rendered from that same text
-        # rather than copied, because the author's own AGENTS.md inlines their personal file.
+        # so the author's machine and hosting never ship. No Codex AGENTS.md since 2026-10-01
+        # (Codex decoupled).
         shared = expand_imports(CLAUDE_HOME / "CLAUDE.md", substitute={PERSONAL: PERSONAL_EXAMPLE})
-        for text, arc in ((shared, "config/CLAUDE.md"), (render(shared), "config/AGENTS.md")):
+        for text, arc in ((shared, "config/CLAUDE.md"),):
             missing = dangling_skills(text, args.skills)
             if missing:
                 dangling = sorted(set(dangling) | set(missing))

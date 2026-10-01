@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate ~/.codex/AGENTS.md from ~/.claude/CLAUDE.md.
+"""Generate ~/.codex/AGENTS.md from ~/.claude/CLAUDE.md. PAUSED since 2026-10-01 (see CANONICAL).
 
 The two global instruction files must say the SAME THING. They were maintained as separate documents
 "in each file's own idiom" until 2026-08-30, and the drift that invites is exactly what the mirroring
@@ -89,8 +89,9 @@ def expand_imports(path: Path, substitute: dict[Path, Path] | None = None,
 # alone would have emitted two mappings at once — bare "Opus"->"Sol" beside "Opus 5 Max"->"Terra 5
 # Max" — while `--check` still reported "in sync".
 #
-# Sonnet and Haiku were dropped 2026-09-25: CLAUDE.md uses no tier below Opus, so their mappings
-# could only ever rename text that should no longer exist.
+# PAUSED 2026-10-01: the owner decoupled Codex. Neither the installer nor the gate runs this file
+# any more; `expand_imports` is still used by harness_parity.py and share_bundle.py. Before
+# resuming, add a Codex pair for Sonnet (back since 2026-10-01 as `sonnet-medium-executor`).
 #
 # Anticipated: when Astra ships the aliases re-rank to track TIER rather than keeping today's
 # pairings — Fable->Astra, Opus->Sol. Sol moves from Fable to Opus, so that is a re-ranking, not

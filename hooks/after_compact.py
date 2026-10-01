@@ -7,6 +7,13 @@ one notice naming the working documents that exist in the session's `.docs/`, th
 session would read after a handover; without a `.docs/` in the session folder, a general reminder.
 Silent for any other start.
 
+It also restores, verbatim, the session's last message written before the compaction (owner,
+2026-10-01): the summary paraphrases or drops it, and it is usually the state the owner is reacting
+to. Nothing the session writes lands after the compaction marker before this hook runs, so it is in
+the transcript. Only a message that ENDED a turn counts (`stop_reason` "end_turn"): automatic
+compaction mostly lands mid-turn (64 of 76 real ones), where the last text is narration before tool
+calls that already ran ("Let me first remove…"), which would read as an open question to the owner.
+
 It must never break a session start: any failure exits 0 silently.
 """
 import json
@@ -14,6 +21,47 @@ import sys
 from pathlib import Path
 
 DOCS = ("implementation_plan.md", "task.md", "handover.md", "roadmap.md")
+# Final messages measured 2026-10-01: median ~700 characters, longest 3,260.
+REPLY_CAP = 6000
+# Transcripts reach tens of MB; the last reply is almost always in the final stretch.
+TAIL_BYTES = 2_000_000
+
+
+def last_reply(transcript):
+    """Text of the last main-chat message that ended a turn, or None. Its blocks share one id."""
+    path = Path(transcript)
+    size = path.stat().st_size
+    for start in (max(0, size - TAIL_BYTES), 0):
+        with path.open("rb") as fh:
+            fh.seek(start)
+            lines = fh.read().decode("utf-8", "replace").splitlines()
+        if start:
+            lines = lines[1:]  # the first line of a tail may be cut in half
+        reply_id, texts = None, []
+        for line in lines:
+            if '"assistant"' not in line:
+                continue
+            try:
+                rec = json.loads(line)
+            except ValueError:
+                continue
+            if rec.get("type") != "assistant" or rec.get("isSidechain"):
+                continue
+            msg = rec.get("message") or {}
+            if msg.get("stop_reason") != "end_turn":
+                continue
+            parts = [c.get("text", "") for c in msg.get("content") or []
+                     if isinstance(c, dict) and c.get("type") == "text" and c.get("text", "").strip()]
+            if not parts:
+                continue
+            if msg.get("id") != reply_id:
+                reply_id, texts = msg.get("id"), []
+            texts += parts
+        if texts:
+            return "\n\n".join(texts)
+        if not start:
+            return None
+    return None
 
 
 def notice(event):
@@ -31,9 +79,25 @@ def notice(event):
             + " — the files are the record; where they and the summary disagree, the files win.")
 
 
+def with_reply(text, event):
+    try:
+        reply = last_reply(event["transcript_path"])
+    except Exception:  # no transcript, unreadable or odd: the docs notice still stands
+        return text
+    if not reply:
+        return text
+    if len(reply) > REPLY_CAP:
+        reply = reply[:REPLY_CAP] + f"\n[… cut at {REPLY_CAP} characters]"
+    return (text + "\n\nYour last message to the owner before the compaction, verbatim — the owner "
+            "may be replying to it:\n<<<\n" + reply + "\n>>>")
+
+
 def main():
     try:
-        text = notice(json.load(sys.stdin))
+        event = json.load(sys.stdin)
+        text = notice(event)
+        if text:
+            text = with_reply(text, event)
         if text:
             print(json.dumps({"hookSpecificOutput": {"hookEventName": "SessionStart",
                                                      "additionalContext": text}}))

@@ -20,7 +20,8 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from _common import Report, ReadError, cli, iter_files, read_text  # noqa: E402
 
 IMG_TAG = re.compile(r"<img\b([^>]*)>", re.IGNORECASE)
-HTML_TAG = re.compile(r"<html\b([^>]*)>", re.IGNORECASE)
+# Not after another `<`: a PHP heredoc opener `<<<HTML` is no tag (it flagged a fixture, 2026-10-01).
+HTML_TAG = re.compile(r"(?<!<)<html\b([^>]*)>", re.IGNORECASE)
 ANCHOR = re.compile(r"<a\b([^>]*)>(.*?)</a>", re.IGNORECASE | re.DOTALL)
 BUTTON = re.compile(r"<button\b([^>]*)>(.*?)</button>", re.IGNORECASE | re.DOTALL)
 INPUT_TAG = re.compile(r"<input\b([^>]*)>", re.IGNORECASE)

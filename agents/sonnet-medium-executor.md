@@ -1,8 +1,8 @@
 ---
-name: opus-high-executor
-description: Opus at high effort. For very complex work (debugging that has already resisted one attempt, real design decisions) and for every significant change to anything sensitive as CLAUDE.md §6 defines it — the effort floor for sensitive work.
-model: opus
-effort: high
+name: sonnet-medium-executor
+description: Sonnet at medium effort. For trivial work inside work that already clears the delegation threshold — running a suite, a doc update, a well-specified mechanical fix alongside other agents. Replaces opus-low-executor for that role. A sweep or rename on its own is a script or done inline, never an agent. Not for anything sensitive or needing judgement; when in doubt use opus-medium-executor.
+model: sonnet
+effort: medium
 tools: Bash, PowerShell, Read, Edit, Write, Glob, Grep, Monitor, TaskStop, ToolSearch, Skill, SendMessage, WebFetch, WebSearch, mcp__Claude_Browser, mcp__plugin_chrome-devtools-mcp_chrome-devtools
 ---
 

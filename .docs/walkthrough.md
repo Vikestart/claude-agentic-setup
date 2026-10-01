@@ -1,34 +1,43 @@
-# Walkthrough — compaction instead of fresh chats (2026-09-30)
+# Walkthrough — leaner agents (2026-10-01)
 
-**What changed.** Sessions keep going without the owner: they never propose a fresh chat or ask for
-`/compact`. Automatic compaction (92% of the 400k window) handles their size; the working docs carry
-the state across it. The owner can still ask for a handover (another machine, the partner, a break).
-Why, and the self-restart routes tried first → `reference/setup-architecture.md` ("Compaction, not
-fresh chats") and `reference/traps.md` ("A cleared session wakes only on a message").
+**Why.** `session_cost.py` on the night of 2026-09-30/10-01 (Nebulingo + Tilspire, 29 agents, ~55M
+price-weighted) put 23–32% of agent cost in start-up context (mostly tool definitions, re-read every
+turn) and 37–45% in growth, of which file dumps were 39–47% and ranged reads 19–26% of the
+tool-result cost — in 10–27k-line files.
 
-**Built**
-- `hooks/after_compact.py` — `SessionStart` hook, matcher `compact`, installed through
-  `settings/shared-settings.json`. Names the `.docs/` working files in the session folder and tells
-  the session they beat the summary; a general reminder where the folder has no `.docs/`.
-- `CLAUDE.shared.md` §1 — "Compaction, not fresh chats" replaces the handover-proposal rule, plus a
-  "When compacting" line telling the summary what to keep. `~/.codex/AGENTS.md` regenerated.
-- `hooks/context_guard.py` — main-chat notices removed (250k handover, 400k `/compact`); the
-  subagent hand-back notice is unchanged.
-- Skills: `asdev-handover` runs only on the owner's request, and its step 4b override is now also
-  cleared by the phase-completion routine (`asdev-planner` step 6), since handovers are rare;
-  `asdev-orchestrator`'s ceiling note updated.
-- `.gitignore` lets the two new hook files into the repo (the reviewer caught that they were
-  ignored, which would have stopped the partner's install).
+**What changed.**
+- **Tool lists.** Every executor and reviewer definition carries an explicit `tools:` list instead of
+  inheriting everything (reviewers: no Edit/Write). Start-up context in the CLI: 46.3k with all
+  tools → 26.8k executor, 26.0k reviewer. Rationale and the kept/dropped groups:
+  [`reference/setup-architecture.md`](reference/setup-architecture.md). Enforced by
+  `install/test_setup.py`, falsified by `falsify/agent-tools.spec` (5/5).
+- **Code navigation.** `code_map.py` (outline with line ranges, check names on test blocks) and
+  `code_show.py` (print named items, several per call) in the audit suite; the definitions and the
+  orchestrator's brief guidance point agents at them for files over ~1,000 lines. 68 fixture tests,
+  `falsify/code-nav.spec` 11/11; run.php maps in 0.7 s, lesson_authoring.php in 0.4 s.
+- **Briefs carry the plan section** an agent needs (`asdev-orchestrator`, "The brief").
+- **Also this phase, at the owner's request:**
+  - `sonnet-medium-executor` takes trivial work instead of `opus-low-executor` (file kept);
+    `.gitignore` admits `agents/sonnet-*.md`.
+  - Codex decoupled: `~/.codex/AGENTS.md` is no longer generated or checked
+    (`sync_agents_md.py` kept for its import expander).
+  - `after_compact.py` restores the session's last message before a compaction, verbatim
+    (`falsify/compact-reply.spec` 5/5).
+- **Found on the way:** `a11y_audit.py` read a PHP heredoc opener `<<<HTML` as an `<html>` tag
+  (regression test in `self_test.py`, `falsify/heredoc-lang.spec`); a Python rewrite turned agent
+  definitions into CRLF, which hid them from the CLI (`reference/traps.md`).
 
-**Verified**
-- `hooks/test_after_compact.py` 8/8, `hooks/test_context_guard.py` 8/8; both run in
-  `install/verify.py --gate .` (passes, 0 blocking).
-- Falsified 4/4: `python skills/asdev-web-audit/scripts/falsify.py --suite "python hooks/test_after_compact.py" --mutations skills/asdev-web-audit/scripts/falsify/compact-hook.spec`
-- Live in the desktop app: a probe session with a 100k window compacted three times and got the
-  hook's notice each time, then re-read its plan. The summary kept task and state and dropped file
-  contents — consistent with the new rule, though a toy session cannot prove the rule caused it.
-- Detached review (`opus-high-reviewer`): four findings, all fixed (ignored hook files, an override
-  outliving its phase, a stale reference line, silence for htdocs-root sessions).
+**Verified.**
+- Gate: `install/verify.py --gate .` 16/16; `install.py --check` in place.
+- Probes from the CLI (fresh definitions): opus-medium-executor 26.8k, sonnet-medium-executor 26.8k
+  on Sonnet 5.5. A fresh executor asked to find one check in `run.php` answered in 3 turns,
+  26.9k → 32k context, with one grep and a 9-line read — no dumps.
+- Detached review: `opus-high-reviewer`.
 
-**Not verified:** how well the summary rule holds up in a long real phase — the roadmap's re-measure
-item covers it.
+**Agent spend.** Builder (`opus-medium-executor`, Opus 5.5 medium): 42 turns, peak 160k, avg 126k,
+~0.83M price-weighted.
+
+**Baseline for the re-measure** (roadmap): 2026-10-01 night — Tilspire 38.8M for 2 phases + review +
+plan; Nebulingo 24.3M for phase 221; agents' fixed share 23–32%, start-up 52–58k. The next two nights
+measured with `session_cost.py --project … --since …` should show start-up near 27k and a smaller
+dump share. Running sessions keep the old definitions until restarted.

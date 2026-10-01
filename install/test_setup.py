@@ -147,8 +147,15 @@ class SettingsMerge(unittest.TestCase):
 class AgentDefinitions(unittest.TestCase):
     # At spawn depth 1 the harness stops nesting anyway. This keeps the frontmatter honest for the day
     # the depth rises again (phase leads, rolled back 2026-09-30): then only the frontmatter stops it.
+    # Only the shared definitions — the prefixes `.gitignore` admits. A person's own agents sit in
+    # the same folder untracked, and must not turn the partner's gate red after a pull.
+    @staticmethod
+    def shared_agents():
+        return [p for p in sorted((REPO / "agents").glob("*.md"))
+                if p.name.startswith(("opus-", "fable-", "sonnet-"))]
+
     def test_only_phase_leads_keep_the_agent_tool(self):
-        defs = sorted((REPO / "agents").glob("*.md"))
+        defs = self.shared_agents()
         self.assertTrue(any(p.name.endswith("-lead.md") for p in defs), "no lead definitions found")
         for path in defs:
             front = path.read_text(encoding="utf-8").split("---")[1]
@@ -162,6 +169,29 @@ class AgentDefinitions(unittest.TestCase):
             with self.subTest(path.name):
                 self.assertEqual(can_spawn, path.name.endswith("-lead.md"),
                                  "only *-lead.md may keep the Agent tool")
+
+    # Every tool definition an agent carries is re-read on every turn: an explicit list cut the
+    # start-up context from ~46k to ~25k (2026-10-01, `reference/setup-architecture.md`). Without
+    # `tools:` an agent inherits everything again, silently.
+    def test_executors_and_reviewers_carry_only_their_tools(self):
+        needed = {"Bash", "Read", "Grep", "Glob", "mcp__Claude_Browser"}
+        never = {"Agent", "Task", "Artifact", "Workflow", "NotebookEdit"}
+        never_prefix = ("mcp__computer-use", "mcp__claude-in-chrome", "mcp__visualize", "mcp__ccd_")
+        defs = [p for p in self.shared_agents() if not p.name.endswith("-lead.md")]
+        self.assertTrue(defs, "no agent definitions found")
+        for path in defs:
+            front = path.read_text(encoding="utf-8").split("---")[1]
+            fields = dict(line.split(":", 1) for line in front.strip().splitlines() if ":" in line)
+            with self.subTest(path.name):
+                self.assertIn("tools", fields, "no explicit tools: list — the agent inherits every tool")
+                tools = {t.strip() for t in fields["tools"].split(",")}
+                self.assertLessEqual(needed, tools, "a core tool is missing")
+                self.assertFalse(tools & never, f"carries {tools & never}")
+                self.assertFalse([t for t in tools if t.startswith(never_prefix)], "carries a dropped MCP group")
+                if "executor" in path.name:
+                    self.assertLessEqual({"Edit", "Write"}, tools, "an executor cannot edit")
+                else:
+                    self.assertFalse({"Edit", "Write"} & tools, "reviewers never edit")
 
 
 class GitBash(unittest.TestCase):

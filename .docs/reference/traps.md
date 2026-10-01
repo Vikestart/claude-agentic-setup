@@ -182,6 +182,16 @@ can neither leave nor reach them.
 → Path rules use `fnmatchcase`. A case-only match is reported as a warning, not a violation, so the
 real thing still fails loudly while the false one stays quiet.
 
+**An agent definition saved with CRLF disappears from the CLI.**
+Python's `write_text` on Windows writes CRLF; `claude -p --agent <name>` then no longer found the
+rewritten definitions (2026-10-01), with no error naming the file.
+→ Write with `newline=""`, or run `crlf.py --fix --lf agents/*.md` after any scripted rewrite.
+
+**A running desktop session keeps the agent definitions it started with.**
+After `tools:` lists were added, an agent spawned from the same session still had every tool.
+→ Measure or test definition changes in a fresh session or the CLI
+(`echo "ok?" | claude -p --agent <name> --output-format json`).
+
 **PowerShell does not expand `~` in a native command's arguments.**
 → All documented commands use `$HOME` with forward slashes, which works in both shells.
 

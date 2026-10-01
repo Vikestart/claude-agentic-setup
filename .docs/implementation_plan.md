@@ -1,4 +1,4 @@
 # Implementation plan
 
-No plan is active. The last phase, "compaction instead of fresh chats", was completed 2026-09-30
-(→ [`walkthrough.md`](walkthrough.md)). The next work is queued in [`roadmap.md`](roadmap.md).
+No plan is active. The last phase (leaner agents, 2026-10-01) is in [`walkthrough.md`](walkthrough.md);
+future work is in [`roadmap.md`](roadmap.md).

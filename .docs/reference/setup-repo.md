@@ -30,9 +30,10 @@ why. Traps it produced are in [`traps.md`](traps.md) (Windows and shell).
 
 ## CLAUDE.md and AGENTS.md
 
-`sync_agents_md.py` inlines every whole-line `@path` import (relative, `~/` or absolute; five levels;
-never inside a code fence or mid-sentence) and fails loudly on a missing one, so AGENTS.md is always
-the complete text Codex needs. `harness_parity.py` checks the expanded text too. The share bundle
+`expand_imports` in `sync_agents_md.py` inlines every whole-line `@path` import (relative, `~/` or
+absolute; five levels; never inside a code fence or mid-sentence) and fails loudly on a missing one.
+`harness_parity.py` checks the expanded text. Generating `~/.codex/AGENTS.md` is paused since
+2026-10-01 (Codex decoupled). The share bundle
 expands with `CLAUDE.personal.example.md` standing in for the personal file, and renders its AGENTS.md
 from that same text, so one person's machine never ships.
 
@@ -51,7 +52,7 @@ from that same text, so one person's machine never ships.
   `setup-state.json` says was last applied — so a change to the fragment lands, and a deliberate
   personal override is kept and reported. `add` entries are appended when missing; `retire` entries are
   removed. A shared hook whose script does not exist is refused.
-- **Afterwards:** regenerates AGENTS.md, runs `harness_parity.py`, and runs the credentials guard
+- **Afterwards:** runs `harness_parity.py`, and runs the credentials guard
   through Git Bash exactly as Claude Code would, requiring a refusal.
 - **`--check`** reports drift; **`--uninstall`** replaces every link with a real copy of what it
   shows (so no edit since install is lost) and CLAUDE.md with the shared text.

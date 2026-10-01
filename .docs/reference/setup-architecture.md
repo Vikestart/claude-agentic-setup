@@ -14,9 +14,9 @@ how the shared repo, its installer and the links work is in [`setup-repo.md`](se
 | `agents/*.md` | *Linked.* Fourteen subagent definitions (`opus-*`, `fable-*`), each fixing model AND effort in its frontmatter; the two `*-lead` definitions are dormant (see the decision below) and are the only ones that keep the Agent tool, which a setup test guards. A person's own agents sit in the same folder, untracked. |
 | `hooks/guard_credentials.py` | `PreToolUse` guard for Bash and PowerShell (see Credentials); tests in `hooks/test_guard_credentials.py`. |
 | `hooks/context_guard.py` | `PostToolUse` hook: past ~250k context, tells a subagent to hand back (finds its own transcript from `agent_id`); again every +50k. Silent for the main chat since 2026-09-30 (see Decisions, "Compaction, not fresh chats"). `CONTEXT_GUARD_LIMIT` / `_STEP` tune it; tests in `hooks/test_context_guard.py`. |
-| `hooks/after_compact.py` | `SessionStart` hook, matcher `compact`: after a compaction, names the working docs present in the session's `.docs/` and tells it to re-read them; a general reminder in a folder without `.docs/` (sessions started at the htdocs root); silent on any other start. Tests in `hooks/test_after_compact.py`, falsified by `falsify/compact-hook.spec`. |
+| `hooks/after_compact.py` | `SessionStart` hook, matcher `compact`: after a compaction, names the working docs present in the session's `.docs/` and tells it to re-read them; a general reminder in a folder without `.docs/` (sessions started at the htdocs root); silent on any other start. Since 2026-10-01 it also restores the session's last message before the compaction, verbatim (from the transcript; capped at 6,000 characters), because the summary paraphrases it and it is usually what the owner is replying to. Tests in `hooks/test_after_compact.py`, falsified by `falsify/compact-hook.spec` and `falsify/compact-reply.spec`. |
 | `settings.json` | Private. The installer merges into it what the setup owns (`settings/shared-settings.json` in the repo): subagent caps, the 1-hour agent cache (`subagentPromptCacheTtl`), `workflowSizeGuideline`, the scanner allow rules, the credentials deny rule, and both hooks. `setup-state.json` records what it last applied. |
-| `~/.codex/AGENTS.md` | **Generated** from `CLAUDE.md` and its imports by `sync_agents_md.py`; never edited directly. |
+| `~/.codex/AGENTS.md` | **Decoupled** (owner, 2026-10-01): no longer generated or checked; the file left there is stale. |
 | `.docs/` | *Linked.* This setup's own working documents, shared by both maintainers. `backups/` (private) holds what each install replaced. |
 | `proposals/` | Private drafts not yet approved. |
 
@@ -65,6 +65,15 @@ skill must still work without it.
   back; the main chat compacts instead since 2026-09-30, see "Compaction, not fresh chats"), fresh agents for corrections, one role per agent, split
   builds, quiet tools, and the 1-hour agent cache (`subagentPromptCacheTtl`). Rules in
   `asdev-orchestrator`; how the figures were measured is below.
+- **Executors and reviewers carry an explicit `tools:` list** (2026-10-01). Start-up context is
+  re-read on every turn, and tool definitions were most of it: 46.3k with every tool, 26.8k for an
+  executor and 26.0k for a reviewer after (CLI, `claude -p --agent`); desktop agents started at
+  52–55k before. Kept by 30 days of use: core tools, the built-in browser (1,039 agent uses, reviewers
+  too), Chrome DevTools (131; ~1k), WebFetch/WebSearch (~0.1k). Dropped: computer use, Claude in
+  Chrome, docs, visualize, Artifact (6 uses), workflows, scheduled tasks, session management.
+  Reviewers have no Edit/Write. `test_setup.py` enforces both; the dormant leads are untouched.
+  An agent that needs a dropped group says so, and the group goes back into that definition.
+  Large files are read through `code_map.py` / `code_show.py` (audit suite) rather than dumps.
 - **The main chat runs at `medium`, `high` for sensitive work, never `max`** (2026-09-30); the owner
   sets it in the app.
 - **Reviews:** Opus between rounds; one Fable review for sensitive material, after all planned work
@@ -72,8 +81,10 @@ skill must still work without it.
   only for a genuinely intricate, sensitive or complex plan.
 - **One scanner copy, never one per harness.** Codex and Claude call the same suite;
   `harness_parity.py` asserts it.
-- **`AGENTS.md` is generated.** `CANONICAL` in `sync_agents_md.py` is the single source for the model
-  mapping and the banner; model names stay version-free so a `.1` release cannot make them stale.
+- **Codex is decoupled** (owner, 2026-10-01: "We won't use it"). `~/.codex/AGENTS.md` was generated
+  from CLAUDE.md by `sync_agents_md.py` and checked by the installer and the gate; both calls are
+  gone. The script stays (its import expander is still used, and the model mapping is there to resume
+  from). Project `AGENTS.md` files are unaffected: they remain each project's canonical instructions.
 - **Shareable by default:** all in-house skills go in the bundle; private content stays in `local/`.
 - **A shared private repo, reached through links** (2026-09-30). The owner and their partner
   co-maintain the setup; links rather than copies mean every edit a session makes is already a git
@@ -85,10 +96,13 @@ skill must still work without it.
 
 The roster is in CLAUDE.md §6 and `agents/`; these are the reasons behind it, so no session drifts back.
 
-- **Nothing below Opus.** Sonnet and Haiku are retired: Opus 5.5 is better and cheaper, so Opus at `low`
-  is the bottom tier.
+- **Nothing below Opus, except Sonnet for trivial work.** Sonnet and Haiku were retired on 2026-09-25
+  (Opus 5.5 better and cheaper). On 2026-10-01 the owner brought Sonnet back for one role:
+  `sonnet-medium-executor` takes the trivial work `opus-low-executor` did (suite runs, doc edits,
+  well-specified mechanical fixes). The Opus `low` file stays but is no longer proposed. Haiku stays
+  retired; nothing sensitive or needing judgement goes below Opus.
 - **`medium` is the default effort:** on the benchmarks Opus at `medium` keeps very high intelligence at
-  low cost. `low` only for obviously easy work, `high` for very complex work.
+  low cost. `high` for very complex work; trivial work goes to Sonnet at `medium` (above).
 - **The sensitive floor is `high`, not `max`:** the models are strong enough, and sessions kept stopping
   to ask the owner to raise the effort. Interruptions are a cost to the owner — which is also why a
   session below the floor hands the change to `opus-high-executor` without asking.

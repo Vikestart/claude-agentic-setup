@@ -16,6 +16,7 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 
+import a11y_audit
 import agent_audit
 import audit_all
 import automation_mine
@@ -216,6 +217,17 @@ class AuditPlumbingTests(unittest.TestCase):
             report = convention_audit.run(SimpleNamespace(path=root))
             rules = {item["rule"] for item in report.items}
             self.assertEqual({"BASE64_IMAGE", "INLINE_SVG"}, rules)
+
+    def test_a_heredoc_opener_is_not_an_html_tag_but_a_bare_html_is(self):
+        with tempfile.TemporaryDirectory() as root:
+            Path(root, "view.php").write_text(
+                "<?php\n$a = <<<HTML\n<div>x</div>\nHTML;\n?>\n<html><body></body></html>\n",
+                encoding="utf-8",
+            )
+            set_scope({"view.php"}, "fixture")
+            report = a11y_audit.run(SimpleNamespace(path=root))
+            lines = [item["line"] for item in report.items if item["rule"] == "HTML_NO_LANG"]
+            self.assertEqual([6], lines)
 
     def test_a_sprite_reference_is_not_inline_svg_but_a_drawing_is(self):
         with tempfile.TemporaryDirectory() as root:

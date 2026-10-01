@@ -8,6 +8,7 @@ __pycache__/
 agents/*
 !agents/opus-*.md
 !agents/fable-*.md
+!agents/sonnet-*.md
 hooks/*
 !hooks/guard_credentials.py
 !hooks/test_guard_credentials.py

@@ -18,7 +18,7 @@ Work directly unless the pieces need independent judgement or real parallelism: 
 subsystems, an exploratory read too wide for one pass, concurrent workstreams. One kind of change
 across many files is still direct, and a mechanical sweep is a script (31 path fixes across 17 files:
 exact, re-runnable, nothing to verify). Measured over 271 runs with `agent_audit.py`, an agent costs
-~50k tokens to cold-start and a median ~285k of fresh input before it can work, plus a ~1,250-token
+~50k tokens to cold-start (~27k since the definitions carry explicit tool lists, 2026-10-01) and a median ~285k of fresh input before it can work, plus a ~1,250-token
 brief, its result and your verification. Never spawn one for a single small task, at any effort —
 the one exception is a significant sensitive change in a session below the effort floor.
 
@@ -30,7 +30,7 @@ all at `high`). Each definition fixes model and effort together.
 
 | Definition | Use it for |
 |---|---|
-| `opus-low-executor` | An obviously easy workstream inside work that already warrants agents: running a suite, a doc edit, a well-specified fix. Never sensitive. |
+| `sonnet-medium-executor` | Trivial work inside work that already warrants agents: running a suite, a doc edit, a well-specified mechanical fix. Never sensitive, never judgement. Replaces `opus-low-executor` (2026-10-01; that file stays, unused). |
 | `opus-medium-executor` | **The default executor:** ordinary implementation, discovery, tests, bounded fixes. |
 | `opus-high-executor` | Very complex work (debugging that resisted one attempt, a real design decision) and every significant sensitive change. |
 | `opus-xhigh-executor` | Work that resists `opus-high-executor`. The highest executor to propose. |
@@ -40,8 +40,9 @@ all at `high`). Each definition fixes model and effort together.
 | `fable-xhigh-reviewer` | The one final review of sensitive material (see Reviews). |
 | `opus-max-executor`, `opus-max-reviewer`, `fable-max-executor`, `fable-max-reviewer` | **Only when the owner names them.** `max` spent more than twice the tokens of `xhigh` for next to no gain (September 2026). |
 
-**Models:** Opus for every executor; Fable only for the final sensitive review or the top of the
-escalation ladder. Nothing runs below Opus at `low`, not even high-volume fan-out.
+**Models:** Opus for every executor except trivial work, which goes to `sonnet-medium-executor`;
+Fable only for the final sensitive review or the top of the escalation ladder. Nothing else runs
+below Opus, not even high-volume fan-out — volume is not triviality.
 
 ## What an agent really costs
 
@@ -126,8 +127,6 @@ small, short-lived context matters more. The rules below keep it small.
 - **Wherever effort is inherited rather than set**, the floor is a precondition: before spawning for
   sensitive work, check the session's effort; below `high`, say so and wait — only the owner can
   change it in the app.
-- **Codex:** its `spawn_agent` takes `model` and `reasoning_effort`, honoured only with `fork_turns`
-  set to `"none"` or a number. Set both on every spawn from this ladder, at the nearest level offered.
 
 ## Splitting the work
 
@@ -154,6 +153,12 @@ and the verification to run and quote.
   rather than setting a search: agents made 2.7× the primary's tool calls, re-finding what you had.
 - **A reference several agents need is read ONCE by you** and excerpted into each brief (73% of
   agent reads repeated another agent's).
+- **Paste the plan section and task lines the agent needs** into the brief; point at
+  `implementation_plan.md` only when it needs the whole plan. Agents re-read the plan 20–39 times a
+  night (2026-10-01), each copy staying in context for the rest of their run.
+- **For large files, hand over names, not ranges:** the function or test names the agent needs, and
+  the instruction to use `code_map.py` / `code_show.py` (audit suite) rather than `sed` slices —
+  file dumps were 39–47% of what agents read (2026-10-01).
 - **Always include:** the project's quiet runner by name (or `quiet.py` from the audit suite), the
   context ceiling, a report cap (executors ~900 words, reviewers ~1,200), and for any run
   longer than a few minutes "start it in the background and end your turn" — never "keep working"
