@@ -21,6 +21,25 @@ import sys
 from pathlib import Path
 
 DOCS = ("implementation_plan.md", "task.md", "handover.md", "roadmap.md")
+# The budgets live in the audit suite's doc_hygiene.py (one source). Oversized working files were
+# re-read for weeks although the lifecycle rules said to prune them (2026-10-01), so every
+# compaction now names them.
+AUDIT = Path.home() / ".claude" / "skills" / "asdev-web-audit" / "scripts"
+
+
+def budget_note(cwd):
+    try:
+        sys.path.insert(0, str(AUDIT))
+        from doc_hygiene import over_budget
+        found = over_budget(str(cwd))
+    except Exception:  # suite missing or broken: the docs notice still stands
+        return ""
+    if not found:
+        return ""
+    lines = "\n".join(f"- {rel}: {over} — {how}" for rel, over, how in found)
+    return ("\n\nOver their size budget, read again and again by you and every agent — trim them at "
+            "the next phase boundary (the phase-completion routine's trim step), not now mid-task:\n"
+            + lines)
 # Final messages measured 2026-10-01: median ~700 characters, longest 3,260.
 REPLY_CAP = 6000
 # Transcripts reach tens of MB; the last reply is almost always in the final stretch.
@@ -76,7 +95,8 @@ def notice(event):
                 "(implementation_plan.md, task.md) of the project you are working in, if it has "
                 "them — where they and the summary disagree, the files win.")
     return ("Context was just compacted. Before continuing, re-read " + ", ".join(present)
-            + " — the files are the record; where they and the summary disagree, the files win.")
+            + " — the files are the record; where they and the summary disagree, the files win."
+            + budget_note(event["cwd"]))
 
 
 def with_reply(text, event):

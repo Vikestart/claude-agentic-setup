@@ -97,6 +97,14 @@ check("no transcript path: the docs notice alone", call(event(proj, transcript=r
       and "verbatim" not in docs_only)
 check("a transcript with no reply: the docs notice alone",
       call(event(proj, transcript=transcript("none.jsonl", [say("m1", tool)]))) == docs_only)
+fat = root / "fat"
+(fat / ".docs").mkdir(parents=True)
+(fat / ".docs" / "task.md").write_text("x" * 40_000, encoding="utf-8")
+(fat / ".docs" / "roadmap.md").write_text("x" * 100, encoding="utf-8")
+fat_msg = call(event(fat))
+check("an oversized working file is named with its trim rule, a lean one is not",
+      ".docs/task.md: 39 kB of 15" in fat_msg and ".docs/roadmap.md:" not in fat_msg)
+check("all files within budget: no budget note", "size budget" not in call(event(proj)))
 check("only mid-turn text: the docs notice alone", call(event(proj, transcript=transcript(
       "mid.jsonl", [say("m1", "NARRATION", stop="tool_use")]))) == docs_only)
 

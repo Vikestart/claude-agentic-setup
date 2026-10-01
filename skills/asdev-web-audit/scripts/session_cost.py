@@ -12,6 +12,12 @@ output 5. Each transcript's cost is split into:
              re-read on every later turn. Shrinks with smaller reads and fewer turns.
   * writes — cache writes; output — tokens written.
 
+Some app builds save a reply's usage before it finishes (2026-10-01: a Nebulingo session's agents
+recorded 6–125 output tokens per request over 111 turns). When a transcript's recorded output is
+below what its visible content alone needs (text and tool calls, ~4 characters a token), its output
+is raised to that estimate and the line is marked `*`. Hidden reasoning is never in the
+transcript, so a marked figure is still a floor.
+
     python $HOME/.claude/skills/asdev-web-audit/scripts/session_cost.py --project tilspire --since 2026-10-01
     python $HOME/.claude/skills/asdev-web-audit/scripts/session_cost.py <main-transcript.jsonl> ...
 
@@ -26,6 +32,7 @@ import sys
 from datetime import datetime, timezone
 
 PARTS = ("fixed", "growth", "writes", "output")
+CHARS_PER_TOKEN = 4
 
 
 def stamp(ts: str) -> datetime:
@@ -36,6 +43,7 @@ def load(path: pathlib.Path):
     reqs: dict[str, tuple[str, dict]] = {}
     compactions = 0
     first_user = ""
+    visible = 0
     for line in path.open(encoding="utf-8", errors="replace"):
         try:
             r = json.loads(line)
@@ -44,15 +52,21 @@ def load(path: pathlib.Path):
         if r.get("isCompactSummary"):
             compactions += 1
         msg = r.get("message") or {}
+        if r.get("type") == "assistant" and isinstance(msg.get("content"), list):
+            for b in msg["content"]:
+                if isinstance(b, dict) and b.get("type") == "text":
+                    visible += len(b.get("text", ""))
+                elif isinstance(b, dict) and b.get("type") == "tool_use":
+                    visible += len(json.dumps(b.get("input") or {}))
         if not first_user and r.get("type") == "user" and isinstance(msg.get("content"), str):
             first_user = " ".join(msg["content"].split())[:60]
         u, rid = msg.get("usage"), r.get("requestId")
         if u and rid:  # the last record of a request carries its final output count
             reqs[rid] = (reqs.get(rid, (r.get("timestamp") or "",))[0], u)
-    return sorted(reqs.values(), key=lambda x: x[0]), compactions, first_user
+    return sorted(reqs.values(), key=lambda x: x[0]), compactions, first_user, visible // CHARS_PER_TOKEN
 
 
-def measure(rows) -> dict:
+def measure(rows, visible_tokens: int = 0) -> dict:
     m = dict.fromkeys(PARTS, 0.0) | {"turns": len(rows), "peak": 0, "ctx_sum": 0, "gaps": 0}
     cold = None
     prev = None
@@ -73,6 +87,9 @@ def measure(rows) -> dict:
             m["gaps"] += 1
         prev = ts or prev
     m["cold"] = cold or 0
+    m["estimated"] = m["output"] < 5 * visible_tokens
+    if m["estimated"]:
+        m["output"] = 5.0 * visible_tokens
     m["cost"] = sum(m[p] for p in PARTS)
     return m
 
@@ -80,23 +97,23 @@ def measure(rows) -> dict:
 def line(label: str, m: dict) -> str:
     avg = m["ctx_sum"] // m["turns"] if m["turns"] else 0
     return (f"  {label:13} turns {m['turns']:>5} | start {m['cold']/1e3:>4.0f}k | peak {m['peak']/1e3:>4.0f}k"
-            f" | avg {avg/1e3:>4.0f}k | {m['cost']/1e6:>6.2f}M | >1h gaps {m['gaps']}")
+            f" | avg {avg/1e3:>4.0f}k | {m['cost']/1e6:>6.2f}M{'*' if m['estimated'] else ' '}| >1h gaps {m['gaps']}")
 
 
 def report(main: pathlib.Path, top: int) -> None:
-    rows, compactions, first_user = load(main)
+    rows, compactions, first_user, visible = load(main)
     if not rows:
         return
-    mm = measure(rows)
+    mm = measure(rows, visible)
     span = f"{rows[0][0][:16]} – {rows[-1][0][:16]} UTC"
     print(f"\n{main.parent.name}/{main.stem[:8]}  {span}  compactions {compactions}  {first_user!r}")
     print(line("main", mm))
     agents = []
     sub = main.with_suffix("") / "subagents"
     for a in sorted(sub.glob("agent-*.jsonl")) if sub.is_dir() else []:
-        arows, _, _ = load(a)
+        arows, _, _, avisible = load(a)
         if arows:
-            agents.append((a.stem[6:13], measure(arows)))
+            agents.append((a.stem[6:13], measure(arows, avisible)))
     for name, am in sorted(agents, key=lambda x: -x[1]["cost"])[:top]:
         print(line(f"agent {name}", am))
     if len(agents) > top:
@@ -107,6 +124,10 @@ def report(main: pathlib.Path, top: int) -> None:
         acost = sum(am["cost"] for _, am in agents) or 1
         split = ", ".join(f"{p} {sum(am[p] for _, am in agents)/acost*100:.0f}%" for p in PARTS)
         print(f"  agents' cost: {split}")
+    marked = sum(1 for m in [mm] + [am for _, am in agents] if m["estimated"])
+    if marked:
+        print(f"  * {marked} transcript(s) recorded less output than their visible content needs: output "
+              f"estimated from that content; reasoning is not recorded, so treat these as floors")
 
 
 def main() -> int:

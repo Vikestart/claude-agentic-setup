@@ -25,6 +25,7 @@ import convention_audit
 import handover
 import lint_rules
 import quiet
+import session_cost
 import token_analyzer
 import unused_css_detector
 from _baseline import apply as apply_baseline
@@ -66,6 +67,26 @@ class CoordinationToolTests(unittest.TestCase):
         self.assertEqual(a["gap_writes"], 40_000)
         # input 30 + read 50,000 x 0.1 + write 91,000 x 2 + output 300 x 5
         self.assertEqual(agent_audit.weighted(a), 30 + 5_000 + 182_000 + 1_500)
+
+    def test_truncated_output_is_raised_to_the_visible_floor_and_marked(self):
+        # 400 characters of tool input need ~100 output tokens; a record of 8 is a truncated one.
+        def rec(rid, out):
+            return json.dumps({"type": "assistant", "requestId": rid, "timestamp": "2026-10-01T10:00:00Z",
+                               "message": {"usage": {"input_tokens": 0, "output_tokens": out,
+                                                     "cache_read_input_tokens": 0, "cache_creation_input_tokens": 0},
+                                           "content": [{"type": "tool_use", "input": {"c": "x" * 390}}]}})
+        with tempfile.TemporaryDirectory() as tmp:
+            low, full = Path(tmp) / "low.jsonl", Path(tmp) / "full.jsonl"
+            low.write_text(rec("r1", 8), encoding="utf-8")
+            full.write_text(rec("r1", 500), encoding="utf-8")
+            rows, _, _, visible = session_cost.load(low)
+            m = session_cost.measure(rows, visible)
+            self.assertTrue(m["estimated"])
+            self.assertEqual(m["output"], 5.0 * visible)
+            rows, _, _, visible = session_cost.load(full)
+            m = session_cost.measure(rows, visible)
+            self.assertFalse(m["estimated"])
+            self.assertEqual(m["output"], 2_500)
 
     def test_forbidden_read_is_caught_through_any_tool_not_just_read(self):
         """Reaching a forbidden path by ANY tool must not report "scope: clean".

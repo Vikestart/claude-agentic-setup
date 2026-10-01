@@ -54,6 +54,10 @@ any staleness as fact.
 
 Create `roadmap.md` if missing; create the others only if the project already uses them.
 
+Then trim to budget: run `python $HOME/.claude/skills/asdev-web-audit/scripts/doc_hygiene.py`
+from the project root and fix every `OVER_BUDGET` line, as in the `asdev-planner` skill's
+phase-completion step "Trim" — move, never delete, anything still open.
+
 ## 2. Any other `.md` directly in `.docs/`
 
 List every `.md` directly in `.docs/` besides the five above and `handover.md`. For each, decide:
@@ -144,7 +148,7 @@ settings load at session start. Run from the project root, with
    Set it with `python $S/context_override.py set <N> --reason "<phase, why>"`. The script refuses a
    value at or below the cap, and never overwrites a deliberate setting. Handovers are rare now
    (only on the owner's request), so the phase-completion routine clears it when the phase it was
-   raised for is done (`asdev-planner`, step 6) — otherwise it would outlive its phase indefinitely.
+   raised for is done (`asdev-planner`, step 7) — otherwise it would outlive its phase indefinitely.
 3. Record the result on the handover's "Next session's context limit" line, and in the paste-ready
    message when it is raised.
 

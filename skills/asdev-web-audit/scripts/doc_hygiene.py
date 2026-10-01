@@ -8,7 +8,9 @@ every turn: a 28KB implementation_plan.md read 15 times in one session is
 Checks:
   * working docs sitting in the project root instead of .docs/
   * .docs/ that is neither ignored nor intentionally tracked
-  * oversized trackers (plan/task) - prune shipped sections per the lifecycle rule
+  * working files over their size BUDGET (plan, task, walkthrough, roadmap, changelog, the
+    project's AGENTS.md / CLAUDE.md) - trimmed at every phase completion and handover; the
+    after-compact hook names them too (`over_budget`, below)
   * shipped/done sections still present in the plan (delete-on-ship drift)
   * changelog entries that have grown from "1-2 concise lines" into paragraphs
 
@@ -38,7 +40,50 @@ TRACKERS = {"implementation_plan.md", "task.md", "walkthrough.md"}
 WORKING = TRACKERS | {"changelog.md", "roadmap.md"}
 WORKING_RE = re.compile(r"^(?:project_audit|.*_design|.*_audit)[\w-]*\.md$", re.I)
 
-TRACKER_MAX_KB = 15.0
+# Size budgets, the one source for this check and the after-compact hook. Measured 2026-10-01:
+# Tilspire's roadmap 101 kB and plan 47 kB, Nebulingo's changelog 112 kB and task 70 kB, xampp-pulse's
+# walkthrough 57 kB — each re-read again and again by the main chat and every agent, though the
+# lifecycle rules already said to prune them; nothing checked.
+BUDGET_KB = {
+    ".docs/implementation_plan.md": 30,  # one phase; cleared at completion
+    ".docs/task.md": 15,                  # that phase's tasks only
+    ".docs/walkthrough.md": 15,           # the last phase only
+    ".docs/roadmap.md": 25,               # outcomes, never tasks or implementation detail
+    ".docs/changelog.md": 25,             # one line per phase; older blocks rotate out
+    "AGENTS.md": 20,                      # re-read on every turn (asdev-conventions)
+    "CLAUDE.md": 20,
+}
+BUDGET_LINES = {".docs/changelog.md": 100, "AGENTS.md": 100, "CLAUDE.md": 100}
+TRIM_HOW = {
+    ".docs/implementation_plan.md": "keep only the active phase; durable facts go to .docs/reference/",
+    ".docs/task.md": "keep only the current phase's tasks; open follow-ups become roadmap outcomes",
+    ".docs/walkthrough.md": "replace it with the last completed phase only",
+    ".docs/roadmap.md": "delete shipped items, merge duplicates, move detail into the plan when promoted",
+    ".docs/changelog.md": "rotate the oldest block into a dated .docs/reference/ archive",
+    "AGENTS.md": "move occasional detail to .docs/reference/ and leave a one-line pointer",
+    "CLAUDE.md": "move occasional detail to .docs/reference/ and leave a one-line pointer",
+}
+
+
+def over_budget(root: str) -> list:
+    """(relative path, what is over, how to trim) for each working file past its budget."""
+    found = []
+    for rel in sorted(set(BUDGET_KB) | set(BUDGET_LINES)):
+        full = os.path.join(root, *rel.split("/"))
+        if not os.path.isfile(full):
+            continue
+        kb = os.path.getsize(full) / 1024.0
+        over = []
+        if rel in BUDGET_KB and kb > BUDGET_KB[rel]:
+            over.append(f"{kb:.0f} kB of {BUDGET_KB[rel]}")
+        if rel in BUDGET_LINES:
+            with open(full, encoding="utf-8", errors="replace") as fh:
+                n = sum(1 for _ in fh)
+            if n > BUDGET_LINES[rel]:
+                over.append(f"{n} lines of {BUDGET_LINES[rel]}")
+        if over:
+            found.append((rel, ", ".join(over), TRIM_HOW[rel]))
+    return found
 CHANGELOG_LINE_MAX = 400          # chars; a "1-2 line summary" is well under this
 SHIPPED = re.compile(
     r"^\s{0,3}#{1,6}.*(?:\bshipped\b|\bcomplete[d]?\b|\bdone\b|✅)|^\s*status:\s*(?:shipped|done|complete)",
@@ -72,6 +117,10 @@ def run(args) -> Report:
             report.add(name, None, "DOC_NOT_IN_DOCS",
                        "working doc in the project root - move it to .docs/ "
                        "(one gitignore rule covers the whole folder)")
+
+    for rel, over, how in over_budget(root):
+        if not scope_active() or in_scope(rel):
+            report.add(rel, None, "OVER_BUDGET", f"{over} - {how}")
 
     if not os.path.isdir(docs):
         return report
@@ -113,11 +162,6 @@ def run(args) -> Report:
                 continue
 
             if name in TRACKERS:
-                kb = os.path.getsize(full) / 1024.0
-                if kb > TRACKER_MAX_KB:
-                    report.add(rel, None, "TRACKER_BLOATED",
-                               f"{kb:.0f}KB - prune shipped sections; this file "
-                               "is re-read constantly")
                 hits = SHIPPED.findall(text)
                 if hits:
                     report.add(rel, None, "SHIPPED_STILL_IN_PLAN",

@@ -102,7 +102,10 @@ assessed inside the active Git scope. Standalone scanners intentionally show raw
 **Advisory** — judgement calls, never fail the run:
 - `token_analyzer.py` — oversized files (JS/PHP >15 KB/300 lines, CSS/views >10 KB/200 lines). Split JS into ES modules, views into partials. Each finding also carries the file's **comment-line share**, which is context for *how* to split it — mostly code means extract modules, mostly prose means move documentation to `.docs/reference/`. It is never a finding on its own: measured across the first-party tree, only ~1.3% of comment lines were mechanically removable, and the longest comments are the ones recording why something is the way it is. Do not delete comments to satisfy a percentage.
 - `doc_hygiene.py` — working docs stranded in the project root, ambiguous `.docs/` tracking policy,
-  oversized trackers, shipped sections still sitting in the plan, and verbose changelog entries.
+  working files over their size budget (`OVER_BUDGET`: plan 30 kB, task, walkthrough 15 kB, roadmap,
+  changelog 25 kB / 100 lines, the project's `AGENTS.md` / `CLAUDE.md` 20 kB / 100 lines — one table,
+  `BUDGET_KB`, also read by the after-compact hook), shipped sections still sitting in the plan, and
+  verbose changelog entries. Phase completion and handover trim until it reports no `OVER_BUDGET`.
   `.docs/reference/` is exempt from size/shipped checks by design.
 - `unused_css_detector.py` — selectors with no visible usage. It reads class attributes and string literals rather than raw text, but classes built at runtime (`'btn-' + kind`) are invisible to it and it says so when it detects them. Verify against the JS before deleting anything.
 

@@ -119,7 +119,17 @@ production path unless the plan or the owner excludes one; don't re-ask at routi
 5. **`changelog.md`:** append one line, `Phase N — …`, linking the reference doc if there is one.
    Near ~100 lines or at a major release or year boundary, rotate the oldest block into a dated
    reference archive. Never delete release or audit history.
-6. **Carry on.** No fresh-chat question: the docs just updated are what a compaction falls back
+6. **Trim.** Run `python $HOME/.claude/skills/asdev-web-audit/scripts/doc_hygiene.py`
+   from the project root and fix every `OVER_BUDGET` line before carrying on — each names the file,
+   its budget and how to trim it. Shipped roadmap items are deleted (the changelog keeps the
+   history), open follow-ups leave `task.md` for the roadmap as outcomes, detail moves to the plan
+   when its item is promoted, the changelog's oldest block rotates into a dated reference archive,
+   and occasional detail in `AGENTS.md` moves to `.docs/reference/` behind a one-line pointer. Never
+   delete a decision, an open question or unshipped work — move it. If something must stay over
+   budget, say why in the walkthrough. Measured 2026-10-01: Tilspire's roadmap had reached 101 kB
+   and Nebulingo's changelog 112 kB, read again and again by every agent, although the rules
+   above already said to prune them.
+7. **Carry on.** No fresh-chat question: the docs just updated are what a compaction falls back
    on (CLAUDE.md §1, "Compaction, not fresh chats"). If a handover raised this project's context
    limit for the phase just finished, clear it: `python $HOME/.claude/skills/asdev-web-audit/scripts/context_override.py status`,
    then `clear` when it reports `temporary` (a deliberate value is never touched). Start the next
