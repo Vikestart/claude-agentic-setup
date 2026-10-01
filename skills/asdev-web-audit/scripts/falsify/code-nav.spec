@@ -87,3 +87,38 @@ expect: FAIL show unknown target lists close names
 ======= NEW
     close = []
 >>>>>>> END
+
+@@@ skills/asdev-web-audit/scripts/code_map.py
+name: md: fenced code is read as headings and items
+expect: FAIL md spurious
+<<<<<<< OLD
+        if fence:
+            continue
+        h = MD_HEADING.match(ln)
+======= NEW
+        h = MD_HEADING.match(ln)
+>>>>>>> END
+
+name: md: a section ends at the next heading of any level
+expect: FAIL md range section Steps
+<<<<<<< OLD
+        end = next((m[3] - 1 for m in marks[n + 1:] if m[1] <= level), len(lines))
+======= NEW
+        end = next((m[3] - 1 for m in marks[n + 1:]), len(lines))
+>>>>>>> END
+
+name: md: closing hashes stay in a heading's name
+expect: FAIL md range section Sub step
+<<<<<<< OLD
+        name = re.sub(r"[ 	]+#+$", "", re.sub(r"<!--.*?-->", "", title).strip()) or "(untitled)"
+======= NEW
+        name = re.sub(r"<!--.*?-->", "", title).strip() or "(untitled)"
+>>>>>>> END
+
+name: md: trailing blank lines stay in a range
+expect: FAIL md range section Goal
+<<<<<<< OLD
+        while end > start and not lines[end - 1].strip():
+            end -= 1
+======= NEW
+>>>>>>> END

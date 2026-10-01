@@ -103,6 +103,14 @@ The roster is in CLAUDE.md §6 and `agents/`; these are the reasons behind it, s
   retired; nothing sensitive or needing judgement goes below Opus.
 - **`medium` is the default effort:** on the benchmarks Opus at `medium` keeps very high intelligence at
   low cost. `high` for very complex work; trivial work goes to Sonnet at `medium` (above).
+- **Effort by role, not by phase** (owner, 2026-10-01): "Opus 5.5 is now really powerful even on
+  Medium and High, so xHigh is overkill in most cases." In a Tilspire session 12 of 13 agents ran
+  at `high`/`xhigh` because the phase was sensitive, and hidden reasoning (output, then re-read every
+  turn) was ~30% of 26.5M. Now: `medium` for implementation, plans, tests and fixes even in a
+  sensitive phase; `high` only for the agent writing the sensitive code, stubborn debugging and real
+  design decisions; every review at `high`; `xhigh` only as a fallback (an executor after `high`
+  failed, the final sensitive review when Fable is unavailable). Sonnet at `medium` takes mechanical
+  work: suite and gate runs, fact collection, doc updates from given facts, exact-spec changes.
 - **The sensitive floor is `high`, not `max`:** the models are strong enough, and sessions kept stopping
   to ask the owner to raise the effort. Interruptions are a cost to the owner — which is also why a
   session below the floor hands the change to `opus-high-executor` without asking.

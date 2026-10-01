@@ -178,6 +178,12 @@ def main() -> int:
     test_ranges("php", php)
     test_ranges("js", js)
     test_ranges("py", py)
+    md = FIX / "sample.md"
+    test_ranges("md", md)
+    code, out = run("code_show.py", str(md), "tool lists")
+    want = line_of(md, "<start:item:Tool lists>"), line_of(md, "<end:item:Tool lists>")
+    check("md show prints a bold item by substring, fences included",
+          code == 0 and f"{md.name}:{want[0]}-{want[1]}" in out and "not a heading inside a fence" in out, out[:300])
     tags = [it.tags for it in code_map.load(php).items if it.name.startswith("Second test paragraph")]
     check("php block collects its check names", tags == [["second check name"]], str(tags))
     test_show(php, js, py)

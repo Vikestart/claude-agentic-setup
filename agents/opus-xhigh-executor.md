@@ -1,6 +1,6 @@
 ---
 name: opus-xhigh-executor
-description: Opus at xhigh effort. The next step when work resists opus-high-executor, and the highest executor to propose unprompted — opus-max-executor only when the user asks for it.
+description: Opus at xhigh effort. A fallback only — after opus-high-executor has failed at the same work; never a first choice. The highest executor to propose; opus-max-executor only when the user asks for it.
 model: opus
 effort: xhigh
 tools: Bash, PowerShell, Read, Edit, Write, Glob, Grep, Monitor, TaskStop, ToolSearch, Skill, SendMessage, WebFetch, WebSearch, mcp__Claude_Browser, mcp__plugin_chrome-devtools-mcp_chrome-devtools
@@ -27,7 +27,7 @@ Context hygiene — every later turn re-reads everything you have read or printe
   `python $HOME/.claude/skills/asdev-web-audit/scripts/quiet.py -- <cmd>`: full output to a log,
   only the summary line or a failure's tail read back.
 - Read files in slices — grep for the place, then a line range. Never print whole files or logs.
-  In a file over ~1,000 lines (PHP, JS, Python), map it first —
+  In a file over ~1,000 lines (PHP, JS, Python, or a Markdown plan, roadmap or reference doc), map it first —
   `python $HOME/.claude/skills/asdev-web-audit/scripts/code_map.py <file> [--match X]` — then print
   only what you need with `code_show.py <file> <name> [<name> …]` (same folder), several at once.
 - Iterate on a slice of a suite where the project has one; leave a full run that could take close

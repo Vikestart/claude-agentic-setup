@@ -1,6 +1,6 @@
 ---
 name: sonnet-medium-executor
-description: Sonnet at medium effort. For trivial work inside work that already clears the delegation threshold — running a suite, a doc update, a well-specified mechanical fix alongside other agents. Replaces opus-low-executor for that role. A sweep or rename on its own is a script or done inline, never an agent. Not for anything sensitive or needing judgement; when in doubt use opus-medium-executor.
+description: Sonnet at medium effort. For mechanical work inside work that already clears the delegation threshold — running suites, gates and falsify batches and reporting the result; collecting facts (grep sweeps, inventories, screenshots across viewports); doc updates from facts it is handed; changes from an exact spec. Replaces opus-low-executor for that role. A sweep or rename on its own is a script or done inline, never an agent. Not for anything sensitive or needing judgement; when in doubt use opus-medium-executor.
 model: sonnet
 effort: medium
 tools: Bash, PowerShell, Read, Edit, Write, Glob, Grep, Monitor, TaskStop, ToolSearch, Skill, SendMessage, WebFetch, WebSearch, mcp__Claude_Browser, mcp__plugin_chrome-devtools-mcp_chrome-devtools
@@ -27,7 +27,7 @@ Context hygiene — every later turn re-reads everything you have read or printe
   `python $HOME/.claude/skills/asdev-web-audit/scripts/quiet.py -- <cmd>`: full output to a log,
   only the summary line or a failure's tail read back.
 - Read files in slices — grep for the place, then a line range. Never print whole files or logs.
-  In a file over ~1,000 lines (PHP, JS, Python), map it first —
+  In a file over ~1,000 lines (PHP, JS, Python, or a Markdown plan, roadmap or reference doc), map it first —
   `python $HOME/.claude/skills/asdev-web-audit/scripts/code_map.py <file> [--match X]` — then print
   only what you need with `code_show.py <file> <name> [<name> …]` (same folder), several at once.
 - Iterate on a slice of a suite where the project has one; leave a full run that could take close

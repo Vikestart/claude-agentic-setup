@@ -82,7 +82,7 @@ definition) and the work is sensitive, check the session's effort first — belo
 ## Plan review — only for an intricate, sensitive or complex plan
 
 Most plans skip this, however long. For one that qualifies, spawn a detached reviewer:
-`opus-high-reviewer`, or `opus-xhigh-reviewer` when the work is sensitive. This is a standing
+`opus-high-reviewer`, sensitive work included. This is a standing
 request from the owner; no separate ask.
 
 - **Give it** the plan's path and its goal, plus the output of any mechanical sweep you ran first

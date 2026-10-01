@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""Outline of a PHP, JS or Python file, with line ranges, so an agent can find what it needs
-without paging through it.
+"""Outline of a PHP, JS, Python or Markdown file, with line ranges, so an agent can find what it
+needs without paging through it.
 
 WHY THIS EXISTS. Measured 2026-10-01: subagents in the owner's PHP projects spent most of their
 context on file dumps while navigating huge files — tilspire `tests/run.php` (27k lines) was read
@@ -15,13 +15,19 @@ a column-0 comment paragraph followed by code starts a BLOCK labelled by its fir
 how run.php separates its tests), and banner comments (`// === Title ===`, `# --- Title`) start a
 BANNER section that runs to the next banner.
 
+Markdown (added 2026-10-01: plans, roadmaps and reference docs were a third of what agents' file
+reads cost in one Tilspire session, read 200–550 lines at a time): every heading is a SECTION
+running to the next heading of the same or a higher level, and a top-level list item that opens
+with bold text (`1. **Step**`, `- **Item**`) is an ITEM running to the next heading or item —
+plans hang most of their structure on those. Fenced code blocks are skipped.
+
     python $HOME/.claude/skills/asdev-web-audit/scripts/code_map.py includes/lesson_authoring.php
     python $HOME/.claude/skills/asdev-web-audit/scripts/code_map.py tests/run.php --match "store audit"
     python $HOME/.claude/skills/asdev-web-audit/scripts/code_map.py assets/js/app.js --min-lines 40
 
 --match searches names, block and banner labels, and the names given to check()/test()/it()/
 describe() calls inside a block. Over 200 items without --match, blocks are counted but not listed.
-Exit 0; 2 for a missing file or an unsupported extension (.php .js .mjs .py). Read-only.
+Exit 0; 2 for a missing file or an unsupported extension (.php .js .mjs .py .md). Read-only.
 """
 from __future__ import annotations
 
@@ -32,14 +38,16 @@ import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 
-LANGS = {".php": "php", ".js": "js", ".mjs": "js", ".py": "py"}
+LANGS = {".php": "php", ".js": "js", ".mjs": "js", ".py": "py", ".md": "md"}
 LIST_LIMIT = 200
 LABEL_MAX = 80
 CLASS_KINDS = ("class", "interface", "trait", "enum")
 CODE_KINDS = CLASS_KINDS + ("function", "method", "closure")
 # Order among items with the same range: the wider concept first, so it becomes the parent.
-KIND_RANK = {"banner": 0, "block": 1, "class": 2, "interface": 2, "trait": 2, "enum": 2,
+KIND_RANK = {"section": 0, "item": 1, "banner": 0, "block": 1, "class": 2, "interface": 2, "trait": 2, "enum": 2,
              "function": 3, "method": 3, "def": 3, "closure": 4}
+# Items named by free text rather than an identifier: quoted in output, matched by substring.
+LABEL_KINDS = ("block", "banner", "section", "item")
 TEST_CALL_RE = re.compile(r"""\b(?:check|test|it|describe)\(\s*(['"])((?:\\.|(?!\1).)*)\1""")
 
 
@@ -516,6 +524,12 @@ def load(path: "str | Path") -> FileMap:
     # newline="" keeps a lone CR from becoming a line break, so line numbers match grep's.
     with path.open(encoding="utf-8", errors="replace", newline="") as fh:
         text = fh.read().lstrip("﻿")
+    if lang == "md":
+        lines = text.split("\n")
+        items = _md_items([ln.rstrip("\r") for ln in lines])
+        _nest(items, key=lambda it: (it.start, it.end))
+        items.sort(key=lambda it: (it.start, -it.end, KIND_RANK[it.kind]))
+        return FileMap(path, lang, lines, items)
     spans = SCANNERS[lang](text)
     cleaned = blank_out(text, spans)
     lines = text.split("\n")
@@ -586,6 +600,41 @@ def load(path: "str | Path") -> FileMap:
     _nest(items, key=lambda it: (it.start, it.end))
     items.sort(key=lambda it: (it.start, -it.end, KIND_RANK[it.kind]))
     return FileMap(path, lang, lines, items)
+
+
+MD_FENCE = re.compile(r" {0,3}(`{3,}|~{3,})")
+MD_HEADING = re.compile(r" {0,3}(#{1,6})[ \t]+(.*?)(?:[ \t]+#+)?[ \t]*$")
+MD_BOLD_ITEM = re.compile(r"(?:[-*+]|\d{1,3}[.)])[ \t]+\*\*(.+?)\*\*")
+MD_ITEM_LEVEL = 7  # below every heading: an item ends at the next heading or item
+
+
+def _md_items(lines: list) -> list:
+    marks, fence = [], ""
+    for i, ln in enumerate(lines, 1):
+        f = MD_FENCE.match(ln)
+        if f:
+            if not fence:
+                fence = f.group(1)
+            elif f.group(1)[0] == fence[0] and len(f.group(1)) >= len(fence):
+                fence = ""
+            continue
+        if fence:
+            continue
+        h = MD_HEADING.match(ln)
+        if h:
+            marks.append(("section", len(h.group(1)), h.group(2), i))
+            continue
+        b = MD_BOLD_ITEM.match(ln)
+        if b:
+            marks.append(("item", MD_ITEM_LEVEL, b.group(1), i))
+    items = []
+    for n, (kind, level, title, start) in enumerate(marks):
+        end = next((m[3] - 1 for m in marks[n + 1:] if m[1] <= level), len(lines))
+        while end > start and not lines[end - 1].strip():
+            end -= 1
+        name = re.sub(r"[ 	]+#+$", "", re.sub(r"<!--.*?-->", "", title).strip()) or "(untitled)"
+        items.append(Item(kind, _label(name), start, end))
+    return items
 
 
 def _nest(items: list, key) -> None:
@@ -741,7 +790,7 @@ def _sections(lang, lines, clines, state, inside, span_col0, top_depth, in_item,
 # ---- output ----
 
 def describe(it: Item) -> str:
-    return f'"{it.name}"' if it.kind in ("block", "banner") else it.name
+    return f'"{it.name}"' if it.kind in LABEL_KINDS else it.name
 
 
 def format_item(it: Item, width: int, note: str = "") -> str:
@@ -753,7 +802,8 @@ def counts_line(fm: FileMap) -> str:
     counts: dict = {}
     for it in fm.items:
         counts[it.kind] = counts.get(it.kind, 0) + 1
-    order = ["class", "interface", "trait", "enum", "function", "method", "closure", "banner", "block"]
+    order = ["section", "item", "class", "interface", "trait", "enum", "function", "method", "closure",
+             "banner", "block"]
     parts = [f"{counts[k]} {k}{'es' if k == 'class' and counts[k] != 1 else ('' if counts[k] == 1 else 's')}"
              for k in order if k in counts]
     return f"{fm.path.name}: {len(fm.lines)} lines; " + (", ".join(parts) if parts else "no items")
@@ -792,10 +842,10 @@ def main() -> int:
         rows.append((it, note))
     print(counts_line(fm))
     if not rx and not a.all and len(rows) > LIST_LIMIT:
-        hidden = sum(1 for it, _ in rows if it.kind in ("block", "closure"))
-        rows = [r for r in rows if r[0].kind not in ("block", "closure")]
+        hidden = sum(1 for it, _ in rows if it.kind in ("block", "closure", "item"))
+        rows = [r for r in rows if r[0].kind not in ("block", "closure", "item")]
         if hidden:
-            print(f"{len(rows) + hidden} items: {hidden} blocks and closures not listed - use "
+            print(f"{len(rows) + hidden} items: {hidden} blocks, closures and list items not listed - use "
                   f"--match REGEX (names, labels, check names), or --all")
     if rx and not rows:
         print(f"nothing matches {a.match!r}")

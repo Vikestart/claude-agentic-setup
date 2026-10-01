@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Print exactly the named functions, methods, blocks or banner sections of a PHP, JS or Python
-file, with line numbers — several in one call.
+file, or the named sections and bold list items of a Markdown file, with line numbers — several in
+one call.
 
 WHY THIS EXISTS. Agents paged through huge files with `sed -n X,Yp` and ranged reads, guessing
 ranges and re-reading to find an end (tilspire `tests/run.php`, 27k lines, 80+ slices in one
@@ -10,12 +11,13 @@ A target is:
   * a name — `func`, `Class::method` or `Class.method` (either separator, any language), or a bare
     method or closure name when only one item has it;
   * a block or banner label substring, or the name given to a check()/test()/it() call inside a
-    block (case-insensitive);
+    block (case-insensitive); in Markdown, a heading or bold list-item substring;
   * `@LINE` — the innermost item containing that line.
 
     python $HOME/.claude/skills/asdev-web-audit/scripts/code_show.py includes/lesson_authoring.php saveLesson Course::load
     python $HOME/.claude/skills/asdev-web-audit/scripts/code_show.py tests/run.php "store audit: two packages" @3012
     python $HOME/.claude/skills/asdev-web-audit/scripts/code_show.py app.js render --all --context 3
+    python $HOME/.claude/skills/asdev-web-audit/scripts/code_show.py .docs/implementation_plan.md "Phase 15" Verification
 
 An unknown target lists the 5 closest names; an ambiguous one lists its candidates (or prints them
 all with --all). Either exits 1 after printing the targets that did resolve. Exit 2 for a missing
@@ -29,7 +31,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from code_map import MapError, describe, load  # noqa: E402
+from code_map import LABEL_KINDS, MapError, describe, load  # noqa: E402
 
 SUGGEST = 5
 CANDIDATES_SHOWN = 20
@@ -53,12 +55,12 @@ def resolve(items: list, target: str) -> list:
     if exact:
         return exact
     short = target.lstrip("$").lower()
-    by_short = [it for it in items if it.kind not in ("block", "banner") and
+    by_short = [it for it in items if it.kind not in LABEL_KINDS and
                 (_short(it.name) == short or _norm(it.name).lower() == _norm(target).lower())]
     if by_short:
         return by_short
     t = target.lower()
-    return [it for it in items if it.kind in ("block", "banner") and
+    return [it for it in items if it.kind in LABEL_KINDS and
             (t in it.name.lower() or any(t in tag.lower() for tag in it.tags))]
 
 

@@ -1,6 +1,6 @@
 ---
 name: opus-xhigh-reviewer
-description: Read-only detached review at Opus xhigh effort. The default for the end of a sensitive, high-impact or cross-cutting wave, and the fallback when fable-max-reviewer is unavailable. Routine reviews go to opus-high-reviewer.
+description: Read-only detached review at Opus xhigh effort. A fallback only — the final pre-release review of sensitive material when fable-xhigh-reviewer is unavailable. Every other review goes to opus-high-reviewer.
 model: opus
 effort: xhigh
 tools: Bash, PowerShell, Read, Glob, Grep, Monitor, TaskStop, ToolSearch, Skill, SendMessage, WebFetch, WebSearch, mcp__Claude_Browser, mcp__plugin_chrome-devtools-mcp_chrome-devtools
@@ -22,7 +22,7 @@ Bash and PowerShell are for reading and running checks only: no file writes, no 
 - If the orchestrator gave you mechanical scan output, use it to avoid re-finding what a grep
   already found, and spend your effort on what a grep cannot see.
 - Read code with grep and line ranges, not whole files. In a file over ~1,000 lines (PHP, JS,
-  Python), map it first — `python $HOME/.claude/skills/asdev-web-audit/scripts/code_map.py <file>
+  Python, or a Markdown plan or doc), map it first — `python $HOME/.claude/skills/asdev-web-audit/scripts/code_map.py <file>
   [--match X]` — then print only what you need with `code_show.py <file> <name> [<name> …]` (same
   folder). Run suites through the quiet runner
   (`quiet.py` in the audit suite) — every later turn re-reads what you print.

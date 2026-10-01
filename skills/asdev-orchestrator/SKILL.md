@@ -30,19 +30,26 @@ all at `high`). Each definition fixes model and effort together.
 
 | Definition | Use it for |
 |---|---|
-| `sonnet-medium-executor` | Trivial work inside work that already warrants agents: running a suite, a doc edit, a well-specified mechanical fix. Never sensitive, never judgement. Replaces `opus-low-executor` (2026-10-01; that file stays, unused). |
-| `opus-medium-executor` | **The default executor:** ordinary implementation, discovery, tests, bounded fixes. |
-| `opus-high-executor` | Very complex work (debugging that resisted one attempt, a real design decision) and every significant sensitive change. |
-| `opus-xhigh-executor` | Work that resists `opus-high-executor`. The highest executor to propose. |
+| `sonnet-medium-executor` | Mechanical work: running suites, gates and falsify batches and reporting the result; collecting facts (grep sweeps, inventories, screenshots across viewports); doc updates from facts you hand it (walkthrough, changelog, reference lines); changes from an exact spec. Never sensitive code, never judgement. Replaces `opus-low-executor` (2026-10-01; that file stays, unused). |
+| `opus-medium-executor` | **The default executor:** implementation, discovery, writing plans, writing tests, fix rounds — inside a sensitive phase too, for everything but the sensitive code itself. |
+| `opus-high-executor` | Writing significant sensitive code (auth, payments, deletion, schema, the machine API and integrations); debugging that resisted a `medium` attempt; a real design decision. |
+| `opus-xhigh-executor` | Only after `opus-high-executor` has failed at the same work. |
 | `fable-xhigh-executor` | Sensitive work that resists `opus-xhigh-executor`, or a genuinely novel sensitive design. |
-| `opus-high-reviewer` | Reviewing challenging work, and plan reviews. |
-| `opus-xhigh-reviewer` | Detached reviews: end of a sensitive, high-impact or cross-cutting wave, and reviews between rounds or phases. |
+| `opus-high-reviewer` | **Every review:** plan attacks, detached reviews between rounds and phases, the end of a sensitive, high-impact or cross-cutting wave. |
+| `opus-xhigh-reviewer` | Only the final pre-release review of sensitive material, when Fable is unavailable. |
 | `fable-xhigh-reviewer` | The one final review of sensitive material (see Reviews). |
 | `opus-max-executor`, `opus-max-reviewer`, `fable-max-executor`, `fable-max-reviewer` | **Only when the owner names them.** `max` spent more than twice the tokens of `xhigh` for next to no gain (September 2026). |
 
-**Models:** Opus for every executor except trivial work, which goes to `sonnet-medium-executor`;
-Fable only for the final sensitive review or the top of the escalation ladder. Nothing else runs
-below Opus, not even high-volume fan-out — volume is not triviality.
+**Models:** Opus for every executor except mechanical work, which goes to `sonnet-medium-executor`;
+Fable only for the final sensitive review or the top of the escalation ladder. Nothing that needs
+judgement runs below Opus, not even high-volume fan-out — volume is not triviality.
+
+**Effort by role, not by phase** (owner, 2026-10-01). A sensitive phase used to put every agent at
+`high` and every review at `xhigh`; in one Tilspire session that was 12 of 13 agents, and hidden
+reasoning — output, then re-read on every later turn — was ~30% of the 26.5M spent. Opus 5.5 is
+strong at `medium` and `high`. So the floor binds only the agent writing the sensitive code; its
+planner, test writer, doc updates and fix rounds for non-sensitive findings run at `medium`, and
+reviews at `high`.
 
 ## What an agent really costs
 
@@ -156,7 +163,7 @@ and the verification to run and quote.
 - **Paste the plan section and task lines the agent needs** into the brief; point at
   `implementation_plan.md` only when it needs the whole plan. Agents re-read the plan 20–39 times a
   night (2026-10-01), each copy staying in context for the rest of their run.
-- **For large files, hand over names, not ranges:** the function or test names the agent needs, and
+- **For large files, hand over names, not ranges:** the function, test or plan-section names the agent needs, and
   the instruction to use `code_map.py` / `code_show.py` (audit suite) rather than `sed` slices —
   file dumps were 39–47% of what agents read (2026-10-01).
 - **Always include:** the project's quiet runner by name (or `quiet.py` from the audit suite), the
@@ -198,10 +205,10 @@ and the verification to run and quote.
 - **Sensitive, high-impact or cross-cutting waves** end with a **detached review**: a fresh
   read-only agent given only the commits and the claimed properties, never your reasoning, told to
   break the claims and above all to find a legitimate user flow the change breaks — that is where the
-  most valuable defects have been. Use `opus-xhigh-reviewer`, including between rounds or phases.
+  most valuable defects have been. Use `opus-high-reviewer`, including between rounds or phases.
 - **Fable, for sensitive material only:** one `fable-xhigh-reviewer` review, **after all planned work
-  is built and before production release** — never between rounds. Fall back to Opus when Fable is
-  unavailable. The trigger for reviewing at all is deliberately broader than Fable's, or Fable would
+  is built and before production release** — never between rounds. Fall back to
+  `opus-xhigh-reviewer` when Fable is unavailable. The trigger for reviewing at all is deliberately broader than Fable's, or Fable would
   become the default.
 - **Run the mechanical sweeps first and give the reviewer their output:** one detached review cost
   829k fresh tokens for four findings while missing a whole class a grep then found in seconds.
