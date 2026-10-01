@@ -89,7 +89,8 @@ Cost ≈ context size × turns, plus a full re-cache after any pause longer than
   detached review and never satisfies an effort rule.
 - **A session opened before a definition existed** may not be offered it (`traps.md`). Then spawn
   `general-purpose` (executor) or `Plan` (reviewer) with the definition's rules in the brief; both
-  inherit the session's effort.
+  inherit the session's model and effort, so a Sonnet or Fable role then runs on the session's
+  model — say so, and never count such a fallback as the final Fable review.
 - **Wherever effort is inherited,** check the session's effort before spawning for sensitive work;
   below `high`, say so and wait — only the owner can change it in the app.
 
@@ -111,6 +112,7 @@ A compact handoff: objective and acceptance criteria, the steps in order, mandat
 database and environment constraints, files owned vs forbidden, invariants, "do not commit", and the
 verification to run and quote.
 
+- **Never "keep working"** unless the brief names the independent work to do meanwhile.
 - **Hand over what you already know** — exact paths, function names, excerpts, a diff or a hash —
   rather than setting a search. A reference several agents need is read once by you and excerpted.
 - **Paste the plan section and task lines the agent needs**; point at `implementation_plan.md` only

@@ -1,43 +1,48 @@
-# Walkthrough — leaner agents (2026-10-01)
+# Walkthrough — simplify the setup (2026-10-01)
 
-**Why.** `session_cost.py` on the night of 2026-09-30/10-01 (Nebulingo + Tilspire, 29 agents, ~55M
-price-weighted) put 23–32% of agent cost in start-up context (mostly tool definitions, re-read every
-turn) and 37–45% in growth, of which file dumps were 39–47% and ranged reads 19–26% of the
-tool-result cost — in 10–27k-line files.
+**Why:** every incident had added a rule, and the always-loaded files are re-read on every turn of
+every context. This phase caps their size and removes what agents never used, without dropping a rule.
 
-**What changed.**
-- **Tool lists.** Every executor and reviewer definition carries an explicit `tools:` list instead of
-  inheriting everything (reviewers: no Edit/Write). Start-up context in the CLI: 46.3k with all
-  tools → 26.8k executor, 26.0k reviewer. Rationale and the kept/dropped groups:
-  [`reference/setup-architecture.md`](reference/setup-architecture.md). Enforced by
-  `install/test_setup.py`, falsified by `falsify/agent-tools.spec` (5/5).
-- **Code navigation.** `code_map.py` (outline with line ranges, check names on test blocks) and
-  `code_show.py` (print named items, several per call) in the audit suite; the definitions and the
-  orchestrator's brief guidance point agents at them for files over ~1,000 lines. 68 fixture tests,
-  `falsify/code-nav.spec` 11/11; run.php maps in 0.7 s, lesson_authoring.php in 0.4 s.
-- **Briefs carry the plan section** an agent needs (`asdev-orchestrator`, "The brief").
-- **Also this phase, at the owner's request:**
-  - `sonnet-medium-executor` takes trivial work instead of `opus-low-executor` (file kept);
-    `.gitignore` admits `agents/sonnet-*.md`.
-  - Codex decoupled: `~/.codex/AGENTS.md` is no longer generated or checked
-    (`sync_agents_md.py` kept for its import expander).
-  - `after_compact.py` restores the session's last message before a compaction, verbatim
-    (`falsify/compact-reply.spec` 5/5).
-- **Found on the way:** `a11y_audit.py` read a PHP heredoc opener `<<<HTML` as an `<html>` tag
-  (regression test in `self_test.py`, `falsify/heredoc-lang.spec`); a Python rewrite turned agent
-  definitions into CRLF, which hid them from the CLI (`reference/traps.md`).
+## What changed
 
-**Verified.**
-- Gate: `install/verify.py --gate .` 16/16; `install.py --check` in place.
-- Probes from the CLI (fresh definitions): opus-medium-executor 26.8k, sonnet-medium-executor 26.8k
-  on Sonnet 5.5. A fresh executor asked to find one check in `run.php` answered in 3 turns,
-  26.9k → 32k context, with one grep and a 9-line read — no dumps.
-- Detached review: `opus-high-reviewer`.
+- **Size budgets, "one in, one out".** `install/test_setup.py` (`RuleBudgets`) holds
+  `CLAUDE.shared.md` to 12 kB (was 15.7 kB), each in-house `SKILL.md` to its own budget and each
+  agent definition to 3 kB. A new rule must replace or shorten one. `CLAUDE.shared.md` sits at
+  12,285 of 12,288 bytes, so the next addition needs a trim first, by design.
+- **Evidence moved out of the rules.** Anecdotes and measurements from `CLAUDE.shared.md` and the
+  orchestrator skill now live in `reference/setup-architecture.md`, "Evidence behind the rules".
+  Skill paths collapsed into one line: skills live at `~/.claude/skills/<name>/SKILL.md`.
+- **Orchestrator skill** 17 kB → 10.8 kB, with one sizing rule for briefs against the two agent
+  limits (~125k with nothing written: stop; ~250k: hand back).
+- **Agents.** All seven executors share one shorter body with a browser note; the five reviewers
+  got the same browser note. The Skill tool is off every agent (its 6.7k listing was re-read on
+  every agent request; 358 of 400 runs never used it). Phase leads and `opus-low-executor` moved to
+  `reference/archive/agents/`; a test now asserts that no agent keeps the Agent tool.
+- **Falsification** is now required only for guards that protect behaviour; an advisory check
+  needs a unit test.
+- **`session_cost.py`** gained `--agents` (cost per definition) and `--by-source` (cost per tool,
+  attachment and file). Images are priced flat (~1.6k tokens) instead of by their base64 length.
 
-**Agent spend.** Builder (`opus-medium-executor`, Opus 5.5 medium): 42 turns, peak 160k, avg 126k,
-~0.83M price-weighted.
+## Detached review (opus-high-reviewer) and what was done
 
-**Baseline for the re-measure** (roadmap): 2026-10-01 night — Tilspire 38.8M for 2 phases + review +
-plan; Nebulingo 24.3M for phase 221; agents' fixed share 23–32%, start-up 52–58k. The next two nights
-measured with `session_cost.py --project … --since …` should show start-up near 27k and a smaller
-dump share. Running sessions keep the old definitions until restarted.
+- Executors could no longer find `asdev-conventions` without the Skill tool → the skill-path line.
+- Reviewers lost the browser skill with no note → note added.
+- `--by-source` overpriced screenshots 10–30×, and charged the writing request a re-read → fixed,
+  with a test.
+- Dropped sentences restored in short form: coined terms explained or dropped; "never keep
+  working without named work"; the completion-routine trigger; the fallback-spawn warning that a
+  `general-purpose` stand-in runs on the session's model (so it never counts as the Fable review).
+- Falsification list now reads "what a user or system relies on: …", so it is not taken as complete.
+- Executors: "the brief's runner or `quiet.py`", and "return a correction request" (a subagent
+  cannot ask the owner).
+- Stale docs fixed (roadmap, `setup-architecture.md`, handover).
+- Kept as dropped (owner's call, low value): "the thing before its label", "don't defend a choice
+  nobody questioned", "read the pre-reading the brief names".
+
+## Verification
+
+test_setup OK · after_compact 20/20 · context_guard 8/8 · self_test 42 OK · code_nav 78/78 ·
+harness_parity OK · install --check in place · verify --gate 16/16 · doc_hygiene clean ·
+falsify: agent-tools 10/10, setup-repo 14/14, rule-budgets 2/2, doc-budget 4/4, doc-reference 2/2.
+
+Running sessions keep the old rules and definitions until restarted.

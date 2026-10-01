@@ -14,14 +14,14 @@ brief, done completely and checkably.
 - Never commit, push, merge, deploy or spawn agents, and never weaken auth, validation, escaping or
   another safety boundary to make something pass. No placeholders, stubs or debug output.
 - Run the checks the brief names and quote their output; one that could not run is inconclusive,
-  never passing. A wrong, blocked or ambiguous brief: stop and ask, don't guess.
+  never passing. A wrong, blocked or ambiguous brief: return a correction request, don't guess.
 
 Everything you read or print is re-read on every later turn, so:
 - Work one step at a time: read only what the current step needs, do it, check it, move on. A step
   the brief puts before any edit comes first.
 - Read in slices: grep, then a line range. Over ~1,000 lines, `code_map.py <file>` first, then
   `code_show.py <file> <name>…` — both in `$HOME/.claude/skills/asdev-web-audit/scripts/`.
-- Run suites and builds through `quiet.py -- <cmd>` (same folder): full output to a log, the summary
+- Run suites and builds through the brief's runner or `quiet.py -- <cmd>` (same folder): full output to a log, the summary
   back. Iterate on a suite slice; leave an hour-long run to the orchestrator. Start a long run once,
   in the background, and end your turn — never wait or poll. Spawned in the foreground (the shell
   says commands end with your final response), run it in the foreground instead.

@@ -37,12 +37,13 @@ Outcomes and order only; active work goes in `implementation_plan.md` when a pha
 - **Commit the AGENTS.md scanner-path fix** — done in the working tree 2026-09-30: xampp-pulse
   (on `main`) and tilspire-com (on `staging`) now point at the global audit rule instead of a
   retired path. Each project's next session commits it with its other pending edits.
-- **Re-measure after the context rules** (from 2026-09-30) — once each of Nebulingo, Framvis and Tilspire has run two or three phases under the new rules, compare with `agent_audit.py` (peak context, gap re-caches, weighted total) against the 2026-09-30 figures in the orchestrator skill; adjust the ~250k ceiling and the ~150-tool-call split if they miss. Also record each main session's
+- **Re-measure after the context rules** (from 2026-09-30) — once each of Nebulingo, Framvis and Tilspire has run two or three phases under the new rules, compare with `agent_audit.py` (peak context, gap re-caches, weighted total) against the 2026-09-30 figures (`reference/setup-architecture.md`, "Evidence behind the rules"); adjust the ~250k ceiling and the ~150-tool-call split if they miss. Also record each main session's
   context growth per phase. If it is still ~100k under the new rules, revisit phase leads (built and
   rolled back 2026-09-30, `reference/setup-architecture.md`). Also judge compaction instead of fresh chats (2026-09-30): do compacted
   sessions lose decisions or repeat work after a compaction? If so, tighten the summary rule.
   Leaner agents (2026-10-01): run `session_cost.py` on the next two Nebulingo/Tilspire nights against
-  the baseline in `walkthrough.md` — start-up should sit near 27k; check agents use `code_map.py` /
+  the 2026-10-01 night baseline (Tilspire 38.8M for 2 phases + review + plan; Nebulingo 24.3M for
+  phase 221; agents' fixed share 23–32%, start-up 52–58k) — start-up should sit near 27k; check agents use `code_map.py` /
   `code_show.py` on big files (else firmer wording in the definitions) and whether any agent reports
   a dropped tool it needed.
   Measured 2026-10-01 (afternoon): Tilspire 26.5M, main chat 11%, agents start ~40k, hidden
@@ -66,12 +67,21 @@ Outcomes and order only; active work goes in `implementation_plan.md` when a pha
   budget; reference files over 60 kB flagged (advisory, split on next edit; archive/ exempt).
   Window 400k → 330k (agents obey it too, so it stays ~50k above their 250k ceiling); executors
   work one step at a time and stop at ~125k with nothing written; large briefs split up front.
-  Skill tool kept on every agent (owner; listing 6.7k per agent request, ~4.8M; 31 of 42 browsing
-  runs loaded `built-in-browser`). Open: projects trim working files and Nebulingo's
-  AGENTS.md/MEMORY.md; next measurement checks all of the above.
+  The same night's simplification (owner) dropped the Skill tool from every agent (its listing,
+  6.7k per agent request, ~4.8M) in favour of a short browser note in each definition, archived the
+  phase leads and `opus-low-executor`, and gave the rule files size budgets. Open: projects trim
+  working files and Nebulingo's AGENTS.md/MEMORY.md; next measurement checks all of the above, and
+  whether any agent missed a skill.
   Not worth it: cache misses 1.6M (owner breaks), repeated identical calls (11).
-- **Optional, ~1–2% of agent cost:** drop the Skill tool from reviewers, which removes the ~6k skill
-  listing from their start-up; they would lose the built-in-browser skill (31 agent loads in
-  September). Decide after the next measurement.
+- **Mods experiment** (Claude Code 2.1.287+; checked 2026-10-01, the CLI is on it but the desktop
+  app still bundles 2.1.284, so start once the app updates). A mod is a plugin whose hooks are a JS
+  module, loaded once per session. Try: rebuild `context_guard` as a mod (no Python start per tool
+  call; it could enforce the ~125k nothing-written stop), and turn two prose rules into enforced
+  guards (piped suite runner, heredoc for multi-line content, push to `main` in a project repo,
+  whole-file read of a 1,000+ line file → `code_map.py`), then delete them from the rules text. The
+  API also has `$.session.compact` (between turns) and `$.session.usage` — a mod could compact at a
+  chosen size, or show live spend above the prompt. Each mod must delete a rule or a hook to earn
+  its place; tests through `claude plugin test`; the API may change between releases. Its own
+  planned phase.
 - **Generalise the suite helpers** — Nebulingo's `neighbour_suites.py` / `battery_gate.py` and Tilspire's slice runner into the audit suite with a small per-project config; when a third project needs one.
 - **Project follow-ups (unverified since 2026-09-01; belong in each project's own roadmap):** nebulingo — add `.tmp/` and `.docs/proofs/` to `.auditignore` and a `.token-limits.json` for `scripts/` (242 advisory findings → ~80); nebulingo — `includes/lesson_authoring.php` (819 KB, read 309 times by agents) is the costliest file to work near.

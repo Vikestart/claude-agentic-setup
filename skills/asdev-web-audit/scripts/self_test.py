@@ -90,13 +90,17 @@ class CoordinationToolTests(unittest.TestCase):
             self.assertEqual(m["output"], 2_500)
 
     def test_a_tool_result_is_priced_by_its_write_and_later_rereads(self):
-        # One result of 402 JSON characters (~100.5 tokens) read again by the two requests after it:
-        # 100.5 x (2 + 0.1 x 2). The compaction after the second request stops later re-reads.
+        # One result of 402 JSON characters (~100.5 tokens), written by the next request and re-read
+        # by the one after: 100.5 x (2 + 0.1). The compaction then stops later re-reads. A screenshot
+        # is priced flat, however long its base64.
         def asst(rid, content):
             return {"type": "assistant", "requestId": rid, "message": {"content": content}}
         recs = [asst("r1", [{"type": "tool_use", "id": "t1", "name": "Bash", "input": {}}]),
                 {"type": "user", "message": {"content": [{"type": "tool_result", "tool_use_id": "t1",
                                                           "content": "x" * 400}]}},
+                asst("r1", [{"type": "tool_use", "id": "t2", "name": "Read", "input": {}}]),
+                {"type": "user", "message": {"content": [{"type": "tool_result", "tool_use_id": "t2",
+                    "content": [{"type": "image", "source": {"data": "A" * 90_000}}]}]}},
                 asst("r2", []), asst("r3", []), {"type": "system", "subtype": "compact_boundary"},
                 asst("r4", [])]
         with tempfile.TemporaryDirectory() as tmp:
@@ -104,7 +108,8 @@ class CoordinationToolTests(unittest.TestCase):
             path.write_text("\n".join(json.dumps(r) for r in recs), encoding="utf-8")
             by, files = {}, {}
             session_cost.sources(path, by, files)
-            self.assertAlmostEqual(by["result Bash:?"], 402 / 4 * 2.2)
+            self.assertAlmostEqual(by["result Bash:?"], 402 / 4 * 2.1)
+            self.assertAlmostEqual(by["result Read"], session_cost.IMAGE_TOKENS * 2.1)
         self.assertEqual(session_cost.bash_key('cd /x && S=1; python "a/b.py" --q'), "python b.py")
 
     def test_forbidden_read_is_caught_through_any_tool_not_just_read(self):

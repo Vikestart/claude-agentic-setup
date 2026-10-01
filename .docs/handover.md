@@ -18,8 +18,10 @@ not `C:\xampp\htdocs`. That folder's memory scope was seeded with a copy of the 
 - Compaction instead of fresh chats; the after-compact hook also restores the last turn-ending
   message verbatim and names working files over budget.
 - Leaner agents: explicit `tools:` lists (start-up 46k → ~27k CLI, ~40k in the app),
-  `code_map.py` / `code_show.py` (PHP, JS, Python, Markdown) → [`walkthrough.md`](walkthrough.md).
-- Effort by role; `sonnet-medium-executor` for mechanical work; `opus-low-executor` retired (kept).
+  `code_map.py` / `code_show.py` (PHP, JS, Python, Markdown) → [`reference/setup-architecture.md`](reference/setup-architecture.md).
+- Effort by role; `sonnet-medium-executor` for mechanical work; phase leads and `opus-low-executor` archived.
+- Simplified 2026-10-01: rule files size-budgeted ("one in, one out"), Skill tool off every agent,
+  window 330k.
 - Codex decoupled; working-file size budgets with a Trim step; `session_cost.py` added and taught to
   flag truncated output.
 

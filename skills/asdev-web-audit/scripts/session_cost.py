@@ -34,6 +34,8 @@ from datetime import datetime, timezone
 
 PARTS = ("fixed", "growth", "writes", "output")
 CHARS_PER_TOKEN = 4
+# An image is stored as base64 (tens of thousands of characters) but costs the model ~1.6k tokens.
+IMAGE_TOKENS = 1_600
 
 
 def stamp(ts: str) -> datetime:
@@ -109,6 +111,13 @@ def agent_type(path: pathlib.Path) -> str:
         return "?"
 
 
+def result_chars(content) -> int:
+    if isinstance(content, list):
+        return sum(IMAGE_TOKENS * CHARS_PER_TOKEN if isinstance(b, dict) and b.get("type") == "image"
+                   else len(json.dumps(b)) for b in content)
+    return len(json.dumps(content))
+
+
 def bash_key(cmd: str) -> str:
     """The program a shell command runs, past `cd …&&` and `VAR=…;` prefixes (`python x.py` keeps the script)."""
     words = [w for w in cmd.replace("&&", ";").replace(";", " ; ").split()]
@@ -157,14 +166,15 @@ def sources(path: pathlib.Path, by: dict, files: dict) -> None:
             for b in content:
                 if isinstance(b, dict) and b.get("type") == "tool_result":
                     key, fp = calls.get(b.get("tool_use_id"), ("?", ""))
-                    items.append((i, "result " + key, fp, len(json.dumps(b.get("content", "")))))
+                    items.append((i, "result " + key, fp, result_chars(b.get("content", ""))))
         elif r.get("type") == "user" and isinstance(content, str):
             items.append((i, "user prompt", "", len(content)))
     for i, key, fp, chars in items:
         first = bisect.bisect_right(starts, i)
         nxt = next((b for b in bounds if b > i), None)
         last = bisect.bisect_left(starts, nxt) if nxt is not None else len(starts)
-        cost = chars / CHARS_PER_TOKEN * (2 + 0.1 * max(last - first, 0))
+        n = last - first  # the first of these requests writes it, the rest re-read it
+        cost = chars / CHARS_PER_TOKEN * (2 + 0.1 * (n - 1)) if n else 0
         by[key] = by.get(key, 0) + cost
         if fp:
             files[fp] = files.get(fp, 0) + cost
