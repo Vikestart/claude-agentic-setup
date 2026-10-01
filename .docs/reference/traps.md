@@ -71,8 +71,12 @@ reported 95% (~570k) the same evening. Compaction sits ~30k below the window at 
 handover sets and clears such overrides through `context_override.py` (handover skill, step 4b). To
 read where a session will compact, `get_usage` reports `contextWindow` and `autoCompactsAtPercent`;
 their product is the compaction point.
-Subagents get their own model's window (1M for Opus and Fable), not the parent's; no setting caps
-one agent — the ~250k context hook is the only per-agent limit.
+Subagents DO obey `autoCompactWindow` (corrected 2026-10-01; an earlier note said no setting caps
+one): a headless probe with a 100k window spawned one agent that compacted three times, at 64–70k,
+then died with an API error ("autocompact kept refilling the context") because each 500-line read
+was large against so small a window. Compaction lands ~33k below the window for main chats and
+agents alike (368k at 400k). So a window must stay ~50k above the ~250k agent ceiling
+(`context_guard.py`), or agents compact mid-step instead of handing back.
 A model cannot trigger compaction: no tool does it, `send_message` refuses the current session, and
 `clear_session("self")` is `/clear` (no summary), refused for a session serving Remote Control.
 
