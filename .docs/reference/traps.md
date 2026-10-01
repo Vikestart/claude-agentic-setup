@@ -16,6 +16,13 @@ each repeating the same `usage`. Summing per record inflates every figure by **2
 reached `CLAUDE.md` §6 before this was caught.
 → **Dedupe by `requestId`.** `agent_audit.py` does; anything hand-rolled must too.
 
+**Some app builds save a reply's `usage` before the reply finishes.**
+On 2026-10-01 a Nebulingo session's agents recorded 6–125 output tokens per request over 111 turns,
+though a single tool call is longer; Tilspire's agents the same day recorded full counts. Hidden
+reasoning is never in a transcript either way.
+→ `session_cost.py` raises such output to what the visible content needs and marks it `*` as a
+floor; treat any hand-rolled output figure the same way.
+
 **`agent_audit.py --summary` walks every project, not the current one.**
 Its repeat-read rate is therefore estate-wide (81%), not per-session. Do not compare the two figures
 directly or you will report a regression that is only a change of scope.

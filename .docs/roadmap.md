@@ -45,5 +45,14 @@ Outcomes and order only; active work goes in `implementation_plan.md` when a pha
   the baseline in `walkthrough.md` — start-up should sit near 27k; check agents use `code_map.py` /
   `code_show.py` on big files (else firmer wording in the definitions) and whether any agent reports
   a dropped tool it needed.
+  Measured 2026-10-01 (afternoon): Tilspire 26.5M, main chat 11%, agents start ~40k, hidden
+  reasoning ~30%; Nebulingo ~23.6M (output a floor), main chat **43%** — 326 turns at ~225k doing
+  its own dumps, greps, fixes and checks. Next measurement should show (a) effort by role cutting
+  agent cost, (b) the Trim step shrinking Tilspire's and Nebulingo's working files, (c) whether
+  Nebulingo's main chat still does hands-on work; if so, tighten the orchestrator rule for the main
+  session (delegate verification and small fixes to `sonnet-medium-executor` / `opus-medium-executor`).
+- **Optional, ~1–2% of agent cost:** drop the Skill tool from reviewers, which removes the ~6k skill
+  listing from their start-up; they would lose the built-in-browser skill (31 agent loads in
+  September). Decide after the next measurement.
 - **Generalise the suite helpers** — Nebulingo's `neighbour_suites.py` / `battery_gate.py` and Tilspire's slice runner into the audit suite with a small per-project config; when a third project needs one.
 - **Project follow-ups (unverified since 2026-09-01; belong in each project's own roadmap):** nebulingo — add `.tmp/` and `.docs/proofs/` to `.auditignore` and a `.token-limits.json` for `scripts/` (242 advisory findings → ~80); nebulingo — `includes/lesson_authoring.php` (819 KB, read 309 times by agents) is the costliest file to work near.

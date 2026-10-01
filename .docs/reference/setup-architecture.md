@@ -63,7 +63,10 @@ skill must still work without it.
 - **Context is the main cost, not effort** (2026-09-30). Measured in Nebulingo, Framvis and Tilspire:
   cost ≈ context size × turns plus re-caches after pauses. Hence a ~250k context ceiling (agents hand
   back; the main chat compacts instead since 2026-09-30, see "Compaction, not fresh chats"), fresh agents for corrections, one role per agent, split
-  builds, quiet tools, and the 1-hour agent cache (`subagentPromptCacheTtl`). Rules in
+  builds, quiet tools, and the 1-hour agent cache (`subagentPromptCacheTtl`; re-measured 2026-10-01
+  over 75 agents: 96.16M with it, 95.93M as if 5-minute — the 2× write premium and the re-caches it
+  avoids cancel out; kept, because the background-run rule creates those pauses and the 1-hour
+  cache caps a long wait's cost). Rules in
   `asdev-orchestrator`; how the figures were measured is below.
 - **Executors and reviewers carry an explicit `tools:` list** (2026-10-01). Start-up context is
   re-read on every turn, and tool definitions were most of it: 46.3k with every tool, 26.8k for an
@@ -74,6 +77,11 @@ skill must still work without it.
   Reviewers have no Edit/Write. `test_setup.py` enforces both; the dormant leads are untouched.
   An agent that needs a dropped group says so, and the group goes back into that definition.
   Large files are read through `code_map.py` / `code_show.py` (audit suite) rather than dumps.
+- **Working files have size budgets, enforced, not only stated** (2026-10-01). The lifecycle rules
+  already said to prune, yet Tilspire's roadmap reached 101 kB and Nebulingo's changelog 112 kB,
+  re-read again and again by every agent; the old 15 kB check was advisory and unread. Now one
+  table in `doc_hygiene.py` (`BUDGET_KB`, `BUDGET_LINES`), a Trim step that ends every phase
+  completion and handover until it is clean, and the after-compact hook naming over-budget files.
 - **The main chat runs at `medium`, `high` for sensitive work, never `max`** (2026-09-30); the owner
   sets it in the app.
 - **Reviews:** Opus between rounds; one Fable review for sensitive material, after all planned work
