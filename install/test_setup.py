@@ -205,9 +205,7 @@ class AgentDefinitions(unittest.TestCase):
         needed = {"Bash", "Read", "Grep", "Glob", "mcp__Claude_Browser"}
         # PowerShell's definition is ~2.5k tokens and agents called it ~120 times in ~400 runs
         # (2026-10-01); Bash runs `powershell.exe -Command` for the rare Windows check.
-        # Skill brings the ~6.7k listing of every skill into each agent; 358 of 400 runs never used
-        # it, and the browser note in the executors replaces the one skill they loaded (2026-10-01).
-        never = {"Agent", "Task", "Artifact", "Workflow", "NotebookEdit", "PowerShell", "Skill"}
+        never = {"Agent", "Task", "Artifact", "Workflow", "NotebookEdit", "PowerShell"}
         # The web tools stay only on the escalation agents (xhigh, max, Fable): the common ones
         # fetched a page about once in a hundred runs.
         no_web = {"opus-medium-executor", "opus-high-executor", "sonnet-medium-executor",

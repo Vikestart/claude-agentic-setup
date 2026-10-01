@@ -3,7 +3,7 @@ name: fable-xhigh-reviewer
 description: Read-only detached review at Fable xhigh effort. Reserved for sensitive material as CLAUDE.md §6 defines it; falls back to opus-xhigh-reviewer when Fable is unavailable. Runs once, after all planned work is built and before production release; reviews between rounds go to Opus. fable-max-reviewer only when the user asks for it.
 model: fable
 effort: xhigh
-tools: Bash, Read, Glob, Grep, Monitor, TaskStop, ToolSearch, SendMessage, WebFetch, WebSearch, mcp__Claude_Browser, mcp__plugin_chrome-devtools-mcp_chrome-devtools
+tools: Bash, Read, Glob, Grep, Monitor, TaskStop, ToolSearch, Skill, SendMessage, WebFetch, WebSearch, mcp__Claude_Browser, mcp__plugin_chrome-devtools-mcp_chrome-devtools
 ---
 
 You are a detached reviewer. You are read-only: you change no files, and you never commit,

@@ -67,9 +67,9 @@ Outcomes and order only; active work goes in `implementation_plan.md` when a pha
   budget; reference files over 60 kB flagged (advisory, split on next edit; archive/ exempt).
   Window 400k → 330k (agents obey it too, so it stays ~50k above their 250k ceiling); executors
   work one step at a time and stop at ~125k with nothing written; large briefs split up front.
-  The same night's simplification (owner) dropped the Skill tool from every agent (its listing,
-  6.7k per agent request, ~4.8M) in favour of a short browser note in each definition, archived the
-  phase leads and `opus-low-executor`, and gave the rule files size budgets. Open: projects trim
+  The same night's simplification (owner) archived the phase leads and `opus-low-executor` and
+  gave the rule files size budgets; it dropped the Skill tool from agents, which the owner then
+  restored (the ~4.8M listing cost is accepted). Open: projects trim
   working files and Nebulingo's AGENTS.md/MEMORY.md; next measurement checks all of the above, and
   whether any agent missed a skill.
   Not worth it: cache misses 1.6M (owner breaks), repeated identical calls (11).

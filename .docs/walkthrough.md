@@ -15,8 +15,8 @@ every context. This phase caps their size and removes what agents never used, wi
 - **Orchestrator skill** 17 kB → 10.8 kB, with one sizing rule for briefs against the two agent
   limits (~125k with nothing written: stop; ~250k: hand back).
 - **Agents.** All seven executors share one shorter body with a browser note; the five reviewers
-  got the same browser note. The Skill tool is off every agent (its 6.7k listing was re-read on
-  every agent request; 358 of 400 runs never used it). Phase leads and `opus-low-executor` moved to
+  got the same browser note. The Skill tool was dropped from agents, then restored by the
+  owner the same night (the skills were worth their ~6.7k listing). Phase leads and `opus-low-executor` moved to
   `reference/archive/agents/`; a test now asserts that no agent keeps the Agent tool.
 - **Falsification** is now required only for guards that protect behaviour; an advisory check
   needs a unit test.

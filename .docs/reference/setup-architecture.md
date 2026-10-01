@@ -126,8 +126,9 @@ The roster is in CLAUDE.md §6 and `agents/`; these are the reasons behind it, s
 - **The sensitive floor is `high`, not `max`:** the models are strong enough, and sessions kept stopping
   to ask the owner to raise the effort. Interruptions are a cost to the owner — which is also why a
   session below the floor hands the change to `opus-high-executor` without asking.
-- **At most 10 subagents in total per task, phase or workflow run.** A queue was rejected: the point
-  is not spawning many agents, and asking first when more seem needed.
+- **At most 10 subagents running at once** (owner, 2026-10-01). It was 10 in total per task or
+  phase, which was never the intent: long phases stopped to ask for more. The setting enforces the
+  concurrent limit; the total is not capped.
 - **Phase leads: built, trialled, rolled back (owner, 2026-09-30).** Each phase of a multi-phase run
   would go to a lead, so the main session keeps ~4k per phase instead of ~100k. The trial measured a
   lead's start-up at ~53k and ~4k per hand-back, with break-even under two phases, but only against
@@ -142,8 +143,9 @@ The roster is in CLAUDE.md §6 and `agents/`; these are the reasons behind it, s
   and the always-loaded files are re-read on every turn: the global rules alone cost ~3M on one
   measured window. So they have size budgets (`RuleBudgets` in `install/test_setup.py`): a new rule
   replaces or shortens one, and evidence lives below, not in the rule. The same pass archived the
-  phase leads and `opus-low-executor`, dropped the Skill tool from agents (its listing re-read
-  every turn; 358 of 400 runs never used it), and limited falsification to behaviour guards.
+  phase leads and `opus-low-executor`, and limited falsification to behaviour guards. It also
+  dropped the Skill tool from agents (358 of 400 runs never used it); the owner restored it the
+  same night: losing the house-style and browser skills was not worth the ~6.7k listing per request.
 
 ## Evidence behind the rules
 

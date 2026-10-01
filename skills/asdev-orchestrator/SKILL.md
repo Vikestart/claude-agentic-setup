@@ -100,9 +100,9 @@ Cost ≈ context size × turns, plus a full re-cache after any pause longer than
   with a real integration benefit. Shared files, live services and mutable databases stay
   single-writer. Where two workstreams reach one file, name an owner; the other reports the change
   and you apply it.
-- **The 10-agent cap counts in total** per task, phase or workflow run, workflow agents included.
-  `settings.json` refuses an eleventh concurrent spawn and stops subagents spawning; nothing caps a
-  workflow's total, and an approved wave above 10 at once needs that setting raised first.
+- **The 10-agent cap is on agents running at once,** not a total: a long phase may spawn more over
+  time without asking. `settings.json` refuses an eleventh concurrent spawn and stops subagents
+  spawning; an approved wave above 10 at once needs that setting raised first.
 - **Never run suites that share a disposable database concurrently** — two agents resetting one
   instance corrupt both runs and produce failures that look like real regressions.
 

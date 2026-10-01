@@ -71,8 +71,8 @@ Put the roster to the owner in chat **as its own question**, separate from point
 
 - one line per agent: the definition (e.g. `opus-medium-executor`), the exact model release with
   its version (e.g. Opus 5.5), its task and the files it owns;
-- for a large phase, how many fresh continuation or correction agents it expects (they count
-  toward the 10-agent cap; the `asdev-orchestrator` skill has the rule);
+- for a large phase, how many fresh continuation or correction agents it expects (only the
+  10-at-once cap applies, not a total; the `asdev-orchestrator` skill has the rule);
 - or "No subagents", with the one-line reason.
 
 Approving the roster IS the owner's request to spawn it; they may override roster, models, effort or

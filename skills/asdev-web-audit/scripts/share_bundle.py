@@ -71,7 +71,7 @@ Code loads it into every session. If you already have one there, merge the two r
 yours. Start a new session afterwards: a running one keeps the instructions it started
 with.
 
-`config/CLAUDE.md` §6 allows at most 10 subagents per piece of work without approval. To have Claude Code
+`config/CLAUDE.md` §6 allows at most 10 subagents running at once without approval. To have Claude Code
 enforce the parts it can, add these to `~/.claude/settings.json` (a new session picks them up):
 
 ```json

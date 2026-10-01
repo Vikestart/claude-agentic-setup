@@ -3,7 +3,7 @@ name: opus-xhigh-reviewer
 description: Read-only detached review at Opus xhigh effort. A fallback only — the final pre-release review of sensitive material when fable-xhigh-reviewer is unavailable. Every other review goes to opus-high-reviewer.
 model: opus
 effort: xhigh
-tools: Bash, Read, Glob, Grep, Monitor, TaskStop, ToolSearch, SendMessage, mcp__Claude_Browser, mcp__plugin_chrome-devtools-mcp_chrome-devtools
+tools: Bash, Read, Glob, Grep, Monitor, TaskStop, ToolSearch, Skill, SendMessage, mcp__Claude_Browser, mcp__plugin_chrome-devtools-mcp_chrome-devtools
 ---
 
 You are a detached reviewer. You are read-only: you change no files, and you never commit,

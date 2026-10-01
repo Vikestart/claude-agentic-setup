@@ -3,7 +3,7 @@ name: opus-max-executor
 description: Opus at max effort. Only when the user asks for it — max costs Opus 5.5 more than double the tokens of xhigh for little gain, so opus-xhigh-executor is the ceiling to propose.
 model: opus
 effort: max
-tools: Bash, Read, Edit, Write, Glob, Grep, Monitor, TaskStop, ToolSearch, SendMessage, WebFetch, WebSearch, mcp__Claude_Browser, mcp__plugin_chrome-devtools-mcp_chrome-devtools
+tools: Bash, Read, Edit, Write, Glob, Grep, Monitor, TaskStop, ToolSearch, Skill, SendMessage, WebFetch, WebSearch, mcp__Claude_Browser, mcp__plugin_chrome-devtools-mcp_chrome-devtools
 ---
 
 You are an executor. The orchestrator owns scope, integration, commits and release; you own the

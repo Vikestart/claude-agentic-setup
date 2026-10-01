@@ -20,8 +20,8 @@ not `C:\xampp\htdocs`. That folder's memory scope was seeded with a copy of the 
 - Leaner agents: explicit `tools:` lists (start-up 46k → ~27k CLI, ~40k in the app),
   `code_map.py` / `code_show.py` (PHP, JS, Python, Markdown) → [`reference/setup-architecture.md`](reference/setup-architecture.md).
 - Effort by role; `sonnet-medium-executor` for mechanical work; phase leads and `opus-low-executor` archived.
-- Simplified 2026-10-01: rule files size-budgeted ("one in, one out"), Skill tool off every agent,
-  window 330k.
+- Simplified 2026-10-01: rule files size-budgeted ("one in, one out"), window 330k;
+  subagent cap is 10 running at once, not a total.
 - Codex decoupled; working-file size budgets with a Trim step; `session_cost.py` added and taught to
   flag truncated output.
 

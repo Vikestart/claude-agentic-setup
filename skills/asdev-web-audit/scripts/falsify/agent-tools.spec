@@ -78,12 +78,3 @@ SendMessage, mcp__Claude_Browser,
 ======= NEW
 SendMessage, WebFetch, WebSearch, mcp__Claude_Browser,
 >>>>>>> END
-
-@@@ agents/opus-xhigh-executor.md
-name: an agent carries the Skill tool again
-expect: carries {'Skill'}
-<<<<<<< OLD
-ToolSearch, SendMessage,
-======= NEW
-ToolSearch, Skill, SendMessage,
->>>>>>> END
