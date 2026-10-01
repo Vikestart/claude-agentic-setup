@@ -2,54 +2,54 @@
 name: an executor loses its tools list and inherits everything again
 expect: no explicit tools: list
 <<<<<<< OLD
-tools: Bash, PowerShell, Read, Edit, Write,
+tools: Bash, Read, Edit, Write,
 ======= NEW
-oldtools: Bash, PowerShell, Read, Edit, Write,
+oldtools: Bash, Read, Edit, Write,
 >>>>>>> END
 
 @@@ agents/opus-high-reviewer.md
 name: a reviewer gains editing tools
 expect: reviewers never edit
 <<<<<<< OLD
-tools: Bash, PowerShell, Read, Glob,
+tools: Bash, Read, Glob,
 ======= NEW
-tools: Bash, PowerShell, Read, Edit, Write, Glob,
+tools: Bash, Read, Edit, Write, Glob,
 >>>>>>> END
 
 @@@ agents/opus-high-executor.md
 name: an executor loses the built-in browser
 expect: a core tool is missing
 <<<<<<< OLD
-WebSearch, mcp__Claude_Browser, mcp__plugin
+SendMessage, mcp__Claude_Browser, mcp__plugin
 ======= NEW
-WebSearch, mcp__plugin
+SendMessage, mcp__plugin
 >>>>>>> END
 
 @@@ agents/opus-xhigh-reviewer.md
 name: a reviewer carries the artifact tool again
 expect: carries {'Artifact'}
 <<<<<<< OLD
-tools: Bash, PowerShell, Read, Glob,
+tools: Bash, Read, Glob,
 ======= NEW
-tools: Bash, PowerShell, Read, Artifact, Glob,
+tools: Bash, Read, Artifact, Glob,
 >>>>>>> END
 
 @@@ agents/opus-low-executor.md
 name: an executor carries computer use
 expect: carries a dropped MCP group
 <<<<<<< OLD
-WebSearch, mcp__Claude_Browser,
+SendMessage, mcp__Claude_Browser,
 ======= NEW
-WebSearch, mcp__computer-use, mcp__Claude_Browser,
+SendMessage, mcp__computer-use, mcp__Claude_Browser,
 >>>>>>> END
 
 @@@ agents/opus-xhigh-reviewer.md
 name: a reviewer gains only Write
 expect: reviewers never edit
 <<<<<<< OLD
-tools: Bash, PowerShell, Read, Glob,
+tools: Bash, Read, Glob,
 ======= NEW
-tools: Bash, PowerShell, Read, Write, Glob,
+tools: Bash, Read, Write, Glob,
 >>>>>>> END
 
 @@@ agents/sonnet-medium-executor.md
@@ -59,4 +59,22 @@ expect: an executor cannot edit
 Read, Edit, Write, Glob,
 ======= NEW
 Read, Edit, Glob,
+>>>>>>> END
+
+@@@ agents/opus-medium-executor.md
+name: an agent carries PowerShell again
+expect: carries {'PowerShell'}
+<<<<<<< OLD
+tools: Bash, Read,
+======= NEW
+tools: Bash, PowerShell, Read,
+>>>>>>> END
+
+@@@ agents/opus-high-reviewer.md
+name: a common agent carries the web tools again
+expect: a common agent carries the web tools
+<<<<<<< OLD
+SendMessage, mcp__Claude_Browser,
+======= NEW
+SendMessage, WebFetch, WebSearch, mcp__Claude_Browser,
 >>>>>>> END

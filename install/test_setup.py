@@ -175,7 +175,13 @@ class AgentDefinitions(unittest.TestCase):
     # `tools:` an agent inherits everything again, silently.
     def test_executors_and_reviewers_carry_only_their_tools(self):
         needed = {"Bash", "Read", "Grep", "Glob", "mcp__Claude_Browser"}
-        never = {"Agent", "Task", "Artifact", "Workflow", "NotebookEdit"}
+        # PowerShell's definition is ~2.5k tokens and agents called it ~120 times in ~400 runs
+        # (2026-10-01); Bash runs `powershell.exe -Command` for the rare Windows check.
+        never = {"Agent", "Task", "Artifact", "Workflow", "NotebookEdit", "PowerShell"}
+        # The web tools stay only on the escalation agents (xhigh, max, Fable): the common ones
+        # fetched a page about once in a hundred runs.
+        no_web = {"opus-medium-executor", "opus-high-executor", "opus-low-executor",
+                  "sonnet-medium-executor", "opus-high-reviewer", "opus-xhigh-reviewer"}
         never_prefix = ("mcp__computer-use", "mcp__claude-in-chrome", "mcp__visualize", "mcp__ccd_")
         defs = [p for p in self.shared_agents() if not p.name.endswith("-lead.md")]
         self.assertTrue(defs, "no agent definitions found")
@@ -188,6 +194,8 @@ class AgentDefinitions(unittest.TestCase):
                 self.assertLessEqual(needed, tools, "a core tool is missing")
                 self.assertFalse(tools & never, f"carries {tools & never}")
                 self.assertFalse([t for t in tools if t.startswith(never_prefix)], "carries a dropped MCP group")
+                if path.stem in no_web:
+                    self.assertFalse({"WebFetch", "WebSearch"} & tools, "a common agent carries the web tools")
                 if "executor" in path.name:
                     self.assertLessEqual({"Edit", "Write"}, tools, "an executor cannot edit")
                 else:

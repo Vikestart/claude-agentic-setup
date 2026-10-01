@@ -9,8 +9,8 @@ root = pathlib.Path(tempfile.mkdtemp(prefix="aftercompact-"))
 atexit.register(shutil.rmtree, root, ignore_errors=True)
 
 
-def call(raw):
-    r = subprocess.run([sys.executable, str(hook)], input=raw, capture_output=True, text=True)
+def call(raw, env=None):
+    r = subprocess.run([sys.executable, str(hook)], input=raw, capture_output=True, text=True, env=env)
     assert r.returncode == 0 and not r.stderr, (r.returncode, r.stderr)
     return json.loads(r.stdout)["hookSpecificOutput"]["additionalContext"] if r.stdout.strip() else ""
 
@@ -105,6 +105,14 @@ fat_msg = call(event(fat))
 check("an oversized working file is named with its trim rule, a lean one is not",
       ".docs/task.md: 39 kB of 15" in fat_msg and ".docs/roadmap.md:" not in fat_msg)
 check("all files within budget: no budget note", "size budget" not in call(event(proj)))
+import os, re
+config = root / "config"
+memory = config / "projects" / re.sub(r"[^A-Za-z0-9]", "-", str(fat.resolve())) / "memory"
+memory.mkdir(parents=True)
+(memory / "MEMORY.md").write_bytes(b"- x\n" * 2500)
+mem_msg = call(event(fat), env={**os.environ, "CLAUDE_CONFIG_DIR": str(config)})
+check("an oversized memory index is named, a lean one is not",
+      "MEMORY.md: 10 kB of 6" in mem_msg and "MEMORY.md" not in fat_msg)
 check("only mid-turn text: the docs notice alone", call(event(proj, transcript=transcript(
       "mid.jsonl", [say("m1", "NARRATION", stop="tool_use")]))) == docs_only)
 

@@ -3,7 +3,7 @@ name: opus-low-executor
 description: RETIRED 2026-10-01 — do not propose; trivial work goes to sonnet-medium-executor. Opus at low effort. Was for an obviously easy workstream inside work that already clears the delegation threshold — running a suite, a doc update, a well-specified fix alongside other agents. A sweep or rename on its own is a script or done inline, never an agent. Not for anything sensitive; when in doubt use opus-medium-executor.
 model: opus
 effort: low
-tools: Bash, PowerShell, Read, Edit, Write, Glob, Grep, Monitor, TaskStop, ToolSearch, Skill, SendMessage, WebFetch, WebSearch, mcp__Claude_Browser, mcp__plugin_chrome-devtools-mcp_chrome-devtools
+tools: Bash, Read, Edit, Write, Glob, Grep, Monitor, TaskStop, ToolSearch, Skill, SendMessage, mcp__Claude_Browser, mcp__plugin_chrome-devtools-mcp_chrome-devtools
 ---
 
 You are an executor subagent. The orchestrator that briefed you stays accountable for scope,

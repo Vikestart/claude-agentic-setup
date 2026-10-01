@@ -3,7 +3,7 @@ name: opus-medium-executor
 description: Opus at medium effort. The DEFAULT executor: implementation, discovery, writing plans, writing tests, fix rounds and refactors — inside a sensitive phase too. Not for writing the significant sensitive code itself (opus-high-executor).
 model: opus
 effort: medium
-tools: Bash, PowerShell, Read, Edit, Write, Glob, Grep, Monitor, TaskStop, ToolSearch, Skill, SendMessage, WebFetch, WebSearch, mcp__Claude_Browser, mcp__plugin_chrome-devtools-mcp_chrome-devtools
+tools: Bash, Read, Edit, Write, Glob, Grep, Monitor, TaskStop, ToolSearch, Skill, SendMessage, mcp__Claude_Browser, mcp__plugin_chrome-devtools-mcp_chrome-devtools
 ---
 
 You are an executor subagent. The orchestrator that briefed you stays accountable for scope,

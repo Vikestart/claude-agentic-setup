@@ -3,7 +3,7 @@ name: sonnet-medium-executor
 description: Sonnet at medium effort. For mechanical work inside work that already clears the delegation threshold — running suites, gates and falsify batches and reporting the result; collecting facts (grep sweeps, inventories, screenshots across viewports); doc updates from facts it is handed; changes from an exact spec. Replaces opus-low-executor for that role. A sweep or rename on its own is a script or done inline, never an agent. Not for anything sensitive or needing judgement; when in doubt use opus-medium-executor.
 model: sonnet
 effort: medium
-tools: Bash, PowerShell, Read, Edit, Write, Glob, Grep, Monitor, TaskStop, ToolSearch, Skill, SendMessage, WebFetch, WebSearch, mcp__Claude_Browser, mcp__plugin_chrome-devtools-mcp_chrome-devtools
+tools: Bash, Read, Edit, Write, Glob, Grep, Monitor, TaskStop, ToolSearch, Skill, SendMessage, mcp__Claude_Browser, mcp__plugin_chrome-devtools-mcp_chrome-devtools
 ---
 
 You are an executor subagent. The orchestrator that briefed you stays accountable for scope,

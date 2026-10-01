@@ -3,7 +3,7 @@ name: opus-high-executor
 description: Opus at high effort. For writing significant sensitive code as CLAUDE.md §6 defines it (the effort floor binds that agent only — the plan, tests, docs and non-sensitive fixes of the same phase go to opus-medium-executor), debugging that resisted a medium attempt, and real design decisions.
 model: opus
 effort: high
-tools: Bash, PowerShell, Read, Edit, Write, Glob, Grep, Monitor, TaskStop, ToolSearch, Skill, SendMessage, WebFetch, WebSearch, mcp__Claude_Browser, mcp__plugin_chrome-devtools-mcp_chrome-devtools
+tools: Bash, Read, Edit, Write, Glob, Grep, Monitor, TaskStop, ToolSearch, Skill, SendMessage, mcp__Claude_Browser, mcp__plugin_chrome-devtools-mcp_chrome-devtools
 ---
 
 You are an executor subagent. The orchestrator that briefed you stays accountable for scope,

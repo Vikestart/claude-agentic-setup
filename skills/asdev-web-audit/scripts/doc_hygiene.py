@@ -9,12 +9,13 @@ Checks:
   * working docs sitting in the project root instead of .docs/
   * .docs/ that is neither ignored nor intentionally tracked
   * working files over their size BUDGET (plan, task, walkthrough, roadmap, changelog, the
-    project's AGENTS.md / CLAUDE.md) - trimmed at every phase completion and handover; the
-    after-compact hook names them too (`over_budget`, below)
+    project's AGENTS.md / CLAUDE.md, its memory index) - trimmed at every phase completion and
+    handover; the after-compact hook names them too (`over_budget`, below)
+  * reference files over REFERENCE_KB (archive/ exempt) - split by topic on the next edit
   * shipped/done sections still present in the plan (delete-on-ship drift)
   * changelog entries that have grown from "1-2 concise lines" into paragraphs
 
-.docs/reference/ is deliberately exempt from the size and shipped-marker
+.docs/reference/ is deliberately exempt from the budget and shipped-marker
 checks: reference docs are durable project knowledge, updated but never
 pruned. Applying delete-on-ship to them would destroy knowledge.
 
@@ -83,8 +84,29 @@ def over_budget(root: str) -> list:
                 over.append(f"{n} lines of {BUDGET_LINES[rel]}")
         if over:
             found.append((rel, ", ".join(over), TRIM_HOW[rel]))
+    memory = memory_index(root)
+    if memory and os.path.getsize(memory) / 1024.0 > MEMORY_KB:
+        found.append((memory.replace(os.sep, "/"), f"{os.path.getsize(memory) / 1024.0:.0f} kB of {MEMORY_KB}",
+                      "one short line per memory; detail belongs in the memory file it points to"))
     return found
+
+
+# The project's memory index is loaded into the main chat and every agent, like AGENTS.md
+# (2026-10-01: Nebulingo's 14 kB index against Tilspire's 4.6 kB).
+MEMORY_KB = 6
+
+
+def memory_index(root: str) -> str:
+    """The MEMORY.md Claude Code loads for this project, or "" when there is none."""
+    config = os.environ.get("CLAUDE_CONFIG_DIR") or os.path.join(os.path.expanduser("~"), ".claude")
+    slug = re.sub(r"[^A-Za-z0-9]", "-", os.path.abspath(root))
+    path = os.path.join(config, "projects", slug, "memory", "MEMORY.md")
+    return path if os.path.isfile(path) else ""
 CHANGELOG_LINE_MAX = 400          # chars; a "1-2 line summary" is well under this
+# Agents grep a big reference file and read slices, so size costs less than it seems (2026-10-01:
+# Nebulingo's 320 kB external-llm-api.md, 36 calls, ~0.5M weighted); past this, finding the right
+# slice takes extra probes.
+REFERENCE_KB = 60
 SHIPPED = re.compile(
     r"^\s{0,3}#{1,6}.*(?:\bshipped\b|\bcomplete[d]?\b|\bdone\b|✅)|^\s*status:\s*(?:shipped|done|complete)",
     re.I | re.M,
@@ -141,7 +163,20 @@ def run(args) -> Report:
                 "remote and production Markdown/.docs denial",
             )
 
-    # 3/4/5. Per-file checks. reference/ is exempt by design.
+    # Reference files are kept, never pruned, but one past REFERENCE_KB is split by topic.
+    ref = os.path.join(docs, "reference")
+    for dirpath, dirnames, filenames in os.walk(ref):
+        dirnames[:] = [d for d in dirnames if d != "archive"]
+        for name in sorted(filenames):
+            full = os.path.join(dirpath, name)
+            rel = os.path.relpath(full, root).replace(os.sep, "/")
+            kb = os.path.getsize(full) / 1024.0
+            if name.lower().endswith(".md") and kb > REFERENCE_KB and (not scope_active() or in_scope(rel)):
+                report.add(rel, None, "REFERENCE_TOO_LARGE",
+                           f"{kb:.0f} kB of {REFERENCE_KB} - when you next edit it, split it into "
+                           ".docs/reference/<topic>/ files with a short index; archive/ is exempt")
+
+    # 3/4/5. Per-file checks. reference/ is exempt from these by design.
     for dirpath, dirnames, filenames in os.walk(docs):
         rel_dir = os.path.relpath(dirpath, root).replace(os.sep, "/")
         if "reference" in rel_dir.split("/"):

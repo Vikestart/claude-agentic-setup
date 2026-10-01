@@ -23,3 +23,12 @@ expect: FAIL an oversized working file is named with its trim rule
 ======= NEW
             + "")
 >>>>>>> END
+
+@@@ skills/asdev-web-audit/scripts/doc_hygiene.py
+name: the memory index is never checked
+expect: FAIL an oversized memory index is named, a lean one is not
+<<<<<<< OLD
+    if memory and os.path.getsize(memory) / 1024.0 > MEMORY_KB:
+======= NEW
+    if False:
+>>>>>>> END

@@ -22,6 +22,7 @@ import audit_all
 import automation_mine
 import context_override
 import convention_audit
+import doc_hygiene
 import handover
 import lint_rules
 import quiet
@@ -215,6 +216,19 @@ class AuditPlumbingTests(unittest.TestCase):
             report = unused_css_detector.run(SimpleNamespace(path=root))
             self.assertFalse(any(item["rule"] == "UNUSED_CLASS"
                                  for item in report.items))
+
+    def test_oversized_reference_file_is_flagged_except_archive(self):
+        with tempfile.TemporaryDirectory() as root:
+            ref = Path(root, ".docs", "reference")
+            Path(ref, "archive").mkdir(parents=True)
+            Path(ref, "big.md").write_bytes(b"x" * 70_000)
+            Path(ref, "small.md").write_bytes(b"x" * 1_000)
+            Path(ref, "archive", "old.md").write_bytes(b"x" * 70_000)
+            set_scope({".docs/reference/big.md", ".docs/reference/small.md",
+                       ".docs/reference/archive/old.md"}, "fixture")
+            report = doc_hygiene.run(SimpleNamespace(path=root))
+            flagged = [i["file"] for i in report.items if i["rule"] == "REFERENCE_TOO_LARGE"]
+            self.assertEqual(flagged, [".docs/reference/big.md"])
 
     def test_custom_token_limits_keep_project_relative_scope(self):
         with tempfile.TemporaryDirectory() as root:
