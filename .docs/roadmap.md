@@ -83,5 +83,13 @@ Outcomes and order only; active work goes in `implementation_plan.md` when a pha
   chosen size, or show live spend above the prompt. Each mod must delete a rule or a hook to earn
   its place; tests through `claude plugin test`; the API may change between releases. Its own
   planned phase.
+  **Graceful compaction** (owner, 2026-10-01): compact at a good moment, not mid-step. After the
+  first commit or phase boundary past ~200k, the session updates its docs and ends the turn with
+  an agreed line (e.g. `ready to compact`); the mod sees it on `turn.complete` and calls
+  `$.session.compact` with short summary instructions (it cannot be called by the model directly,
+  and runs only between turns). Keep `autoCompactWindow` as the backstop, not 1M: every turn
+  re-reads the whole context (600k costs ~2× 300k per turn), a busy session postpones, and agents
+  share the window (their ~250k hand-back). Once early compactions work, the backstop may rise to
+  ~400k. Unknown: whether the call works inside subagents.
 - **Generalise the suite helpers** — Nebulingo's `neighbour_suites.py` / `battery_gate.py` and Tilspire's slice runner into the audit suite with a small per-project config; when a third project needs one.
 - **Project follow-ups (unverified since 2026-09-01; belong in each project's own roadmap):** nebulingo — add `.tmp/` and `.docs/proofs/` to `.auditignore` and a `.token-limits.json` for `scripts/` (242 advisory findings → ~80); nebulingo — `includes/lesson_authoring.php` (819 KB, read 309 times by agents) is the costliest file to work near.
