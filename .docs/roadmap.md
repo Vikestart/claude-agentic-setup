@@ -64,10 +64,11 @@ Outcomes and order only; active work goes in `implementation_plan.md` when a pha
   ~156M; method: price every token by its write plus later re-reads). Applied 2026-10-01:
   PowerShell off every agent, web tools off the common ones (~2.4M est.); a 6 kB memory-index
   budget; reference files over 60 kB flagged (advisory, split on next edit; archive/ exempt).
-  Open: compaction window 400k → ~270k (main chats −13%, ~5M) — test first whether agents compact
-  too; Skill tool (listing 6.7k per agent request; a Skill-less agent gets none; 31 of 37 agent
-  loads were `built-in-browser`, whose app path is unstable, so likely only reviewers and Sonnet
-  lose it, ~0.8M); projects trim their working files and Nebulingo's AGENTS.md/MEMORY.md.
+  Window 400k → 330k (agents obey it too, so it stays ~50k above their 250k ceiling); executors
+  work one step at a time and stop at ~125k with nothing written; large briefs split up front.
+  Skill tool kept on every agent (owner; listing 6.7k per agent request, ~4.8M; 31 of 42 browsing
+  runs loaded `built-in-browser`). Open: projects trim working files and Nebulingo's
+  AGENTS.md/MEMORY.md; next measurement checks all of the above.
   Not worth it: cache misses 1.6M (owner breaks), repeated identical calls (11).
 - **Optional, ~1–2% of agent cost:** drop the Skill tool from reviewers, which removes the ~6k skill
   listing from their start-up; they would lose the built-in-browser skill (31 agent loads in

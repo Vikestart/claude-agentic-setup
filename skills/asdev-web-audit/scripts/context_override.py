@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """A temporary, per-project context limit for the NEXT session, set and cleared by the handover.
 
-WHY THIS EXISTS. The shared settings cap every main session at `autoCompactWindow` 400000, which
-compacts at ~368k. A phase known to need more gets a project-level override instead, written into
+WHY THIS EXISTS. The shared settings cap every main session at `autoCompactWindow` 330000, which
+compacts at ~300k (~33k below the window). A phase known to need more gets a project-level override instead, written into
 `<project>/.claude/settings.local.json`; a NEW session there obeys it (probed 2026-09-30: 600000
 compacted at 95%, ~570k). Settings load at session start, so an override set at the end of
 session N applies to N+1, and N+1's handover clears it again unless the next phase qualifies.

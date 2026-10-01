@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """SessionStart hook (matcher `compact`): after a compaction, point the session back at its docs.
 
-Sessions no longer hand over to a fresh chat (owner, 2026-09-30): automatic compaction at the 400k
-window handles their size. A compaction summary is lossy and chosen by the model, so this hook adds
+Sessions no longer hand over to a fresh chat (owner, 2026-09-30): automatic compaction at the shared
+window (`autoCompactWindow`) handles their size. A compaction summary is lossy and chosen by the model, so this hook adds
 one notice naming the working documents that exist in the session's `.docs/`, the same files a fresh
 session would read after a handover; without a `.docs/` in the session folder, a general reminder.
 Silent for any other start.

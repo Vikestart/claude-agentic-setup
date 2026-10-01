@@ -5,7 +5,7 @@
     "env.CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH": "1",
     "subagentPromptCacheTtl": "1h",
     "workflowSizeGuideline": "medium",
-    "autoCompactWindow": 400000
+    "autoCompactWindow": 330000
   },
   "unset": {},
   "add": {

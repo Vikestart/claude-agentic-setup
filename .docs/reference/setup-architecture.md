@@ -45,6 +45,10 @@ skill must still work without it.
   state (updated at every phase boundary), CLAUDE.md §1 tells the summary what to keep, and
   `after_compact.py` sends the session back to the docs. Owner-requested handovers remain (another
   machine, the partner, a long break). Revisit when `start_session` ships.
+  Window lowered 400k → 330k (owner, 2026-10-01): replaying four main chats, compacting near 300k
+  instead of 368k cost ~10% less, compaction calls included (each ~0.15–0.25M, paid back in 6–9
+  turns). Not lower: agents obey the same window (`traps.md`) and work up to ~275k after the 250k
+  hand-back notice, so the window stays ~50k above that ceiling.
 
 - **CLAUDE.md is a core; procedures are skills** (2026-09-29). CLAUDE.md is re-read every turn, so
   every line costs in every session. It went from 30 kB to 15 kB. Skills are named **by path**,

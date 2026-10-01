@@ -82,13 +82,16 @@ small, short-lived context matters more. The rules below keep it small.
 - **One role per agent.** Planner, plan attacker and builder are separate fresh agents. A builder
   gets the plan's path and a compact brief, never the planner's thread.
 - **Split long builds.** A build expected to exceed ~150 tool calls or ~2 hours runs as 2–3
-  sequential builders with disjoint files, each starting from the previous one's hand-back.
+  sequential builders with disjoint files, each starting from the previous one's hand-back. Split
+  up front, too, when a brief spans more than ~2 steps across large files (over ~1,000 lines): a
+  Nebulingo brief of six steps over ~13 such files used a whole agent on reading (2026-10-01).
 - **Context ceiling ~250k.** An agent past it finishes its current step and hands back what is
   done, what is left, and the exact next step (the context hook tells it when). Start a fresh agent
   for the rest from that hand-back. The main session has no ceiling to report: `autoCompactWindow`
-  compacts it at ~368k of 400k (checked 2026-09-30; a session already running ignores the setting,
-  `traps.md`), and `after_compact.py` points it back at its docs (CLAUDE.md §1). Agents never
-  compact; they hand back.
+  compacts it at ~300k of 330k (~33k below the window; a session already running ignores the
+  setting, `traps.md`), and `after_compact.py` points it back at its docs (CLAUDE.md §1). Agents
+  obey the same window, so one that runs ~50k past its ceiling compacts mid-step: hand back at
+  the notice instead.
 - **Approval covers the continuations.** An approved roster covers fresh continuation and
   correction agents for its roles (same definition, same files); say one line when you start one.
   They count toward the 10-agent cap, so a roster for a large phase states how many it expects,

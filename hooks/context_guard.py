@@ -11,7 +11,7 @@ Hooks receive the MAIN session's `transcript_path`; inside a subagent they also 
 and that agent's transcript is `<session>/subagents/agent-<agent_id>.jsonl` beside it.
 
 The main chat gets no notice (owner, 2026-09-30): it never asks about a fresh chat or `/compact`.
-Automatic compaction (`autoCompactWindow` 400k) handles its size, and `after_compact.py` points it
+Automatic compaction (`autoCompactWindow`, ~33k below it) handles its size, and `after_compact.py` points it
 back at the working docs afterwards (`reference/setup-architecture.md`).
 
 Environment: CONTEXT_GUARD_LIMIT (default 250000), CONTEXT_GUARD_STEP (default 50000).

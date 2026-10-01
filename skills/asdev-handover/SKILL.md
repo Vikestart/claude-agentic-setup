@@ -130,7 +130,7 @@ Short, and linking rather than repeating:
 
 ## 4b. The next session's context limit
 
-Every main session compacts at the shared `autoCompactWindow` cap (400k, compacting ~30k below it).
+Every main session compacts at the shared `autoCompactWindow` cap (330k, compacting ~33k below it).
 A project may get a temporary override for the next session only. It must be set now, because
 settings load at session start. Run from the project root, with
 `S=$HOME/.claude/skills/asdev-web-audit/scripts`:
