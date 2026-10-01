@@ -108,8 +108,13 @@ small, short-lived context matters more. The rules below keep it small.
   so never spawn one for a long run.
 - **In a planned phase you stay the orchestrator.** Long build/test loops and large writes go to a
   builder in the approved roster, not into your thread. Write the brief from the plan and the
-  reference docs — reading the code first means it is read twice. Outside a plan, "directly by
-  default" still governs.
+  reference docs — reading the code first means it is read twice. Code and test edits beyond a
+  glance-sized correction go to a fresh `opus-medium-executor`; suite, gate and falsify runs, and
+  sweeps that collect facts, go to `sonnet-medium-executor`. Your own checks stay small: the diff
+  stat, one targeted read, the summary line of a run. Everything you read stays in a context that
+  is re-read every turn — at ~230k, each added turn costs about what a small agent's whole start
+  does (Nebulingo 2026-10-01: the main chat edited code and tests itself, 44% of the session).
+  Outside a plan, "directly by default" still governs.
 
 ## Proposing a roster
 

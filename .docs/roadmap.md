@@ -51,6 +51,15 @@ Outcomes and order only; active work goes in `implementation_plan.md` when a pha
   agent cost, (b) the Trim step shrinking Tilspire's and Nebulingo's working files, (c) whether
   Nebulingo's main chat still does hands-on work; if so, tighten the orchestrator rule for the main
   session (delegate verification and small fixes to `sonnet-medium-executor` / `opus-medium-executor`).
+  Measured 2026-10-01 (evening; sessions 13:07–20:13, effort by role from 17:50, so mixed):
+  (a) both sessions switched to medium/Sonnet agents mid-session, but per-agent cost did not
+  fall — Tilspire medium 2.17M avg vs high 1.97M, Nebulingo 1.30M vs 1.57M (different tasks;
+  cost follows turns × context, not effort). Sonnet falsify/gate run: 0.29M. (b) Trim step landed
+  after both sessions: untested; both projects still over budget (Nebulingo changelog 109 kB,
+  task 69 kB; Tilspire roadmap 99 kB, plan 46 kB). (c) Nebulingo main chat still hands-on: 44%,
+  352 turns at avg 233k, 49 edits to code and tests → orchestrator rule tightened the same day.
+  Next: one more night each — check (b), whether Nebulingo's main share drops, and Tilspire's
+  reviewers (still `opus-xhigh-reviewer` before 17:50; should be `opus-high-reviewer`).
 - **Optional, ~1–2% of agent cost:** drop the Skill tool from reviewers, which removes the ~6k skill
   listing from their start-up; they would lose the built-in-browser skill (31 agent loads in
   September). Decide after the next measurement.
