@@ -138,6 +138,47 @@ The roster is in CLAUDE.md §6 and `agents/`; these are the reasons behind it, s
   only if the re-measure (roadmap) shows main sessions still keeping ~100k per phase. Revert the
   rollback commit and set the depth to 2.
 
+- **One in, one out** (owner, 2026-10-01). Every incident had added a rule (four in one night),
+  and the always-loaded files are re-read on every turn: the global rules alone cost ~3M on one
+  measured window. So they have size budgets (`RuleBudgets` in `install/test_setup.py`): a new rule
+  replaces or shortens one, and evidence lives below, not in the rule. The same pass archived the
+  phase leads and `opus-low-executor`, dropped the Skill tool from agents (its listing re-read
+  every turn; 358 of 400 runs never used it), and limited falsification to behaviour guards.
+
+## Evidence behind the rules
+
+Moved out of `CLAUDE.shared.md` and the orchestrator skill on 2026-10-01 (budgets: 12 kB each,
+`install/test_setup.py`), so the always-loaded files carry rules and this file carries why.
+
+- **CLAUDE.md §0:** CLAUDE.md was once re-read 7× at ~4.9k tokens each; `Write` averaged ~1,283
+  output tokens a call against `Edit` ~236; 7% of edits failed on "String to replace not found"
+  (wrapping, whitespace or quotes drifted). §1: a hardcoded "expect 24 cached entries" failed a
+  healthy service worker that also held runtime-cached files.
+- **Agent start-up:** over 271 runs (`agent_audit.py`) an agent cost ~50k to cold-start (~27k
+  after explicit tool lists, ~40–51k measured in the app 2026-10-01) and a median ~285k of fresh
+  input before it could work. A mechanical sweep as a script: 31 path fixes across 17 files, exact
+  and re-runnable.
+- **Effort:** a roster approved at `max` and `medium` once spawned five built-in agents, all at the
+  session's `high`. Agents report their own effort wrongly ("low", "10", "15" while running at
+  `medium`/`high`/`max`). `max` spent more than twice the tokens of `xhigh` for next to no gain
+  (September 2026). Effort by role: a sensitive Tilspire session put 12 of 13 agents at `high`, and
+  hidden reasoning was ~30% of its 26.5M; Opus 5.5 is strong at `medium` and `high`.
+- **Context cost, 2026-09-30** (cache read 0.1, write 2, output 5): a Nebulingo builder, 533 turns
+  at an average 523k, cost 31M of 44M, ~90% re-reading its own history; a Tilspire builder grew to
+  ~720k over 265 steps, 41M of 61.5M, ~30M of it cache writes during waits; Framvis main chats were
+  ~72% of 292M (one ran 904 turns at an average 464k). In 200 agent runs, 61% of agent cache writes
+  (119M of 194M) followed a pause over 5 minutes — hence the 1-hour agent cache. A ~220k Tilspire
+  builder woke every ~10 minutes through a 14-run falsify batch. ~65% of output is reasoning, ~29%
+  tool-call JSON, ~6% prose.
+- **Briefs:** agents made 2.7× the primary's tool calls re-finding what it had; 73% of agent reads
+  repeated another agent's; agents re-read the plan 20–39 times a night and file dumps were 39–47%
+  of what they read (2026-10-01). One detached review cost 829k fresh tokens for four findings and
+  missed a whole class a grep then found in seconds.
+- **2026-10-01 night:** Nebulingo's main chat edited code and tests itself (44% of the session);
+  a Nebulingo executor briefed with six steps over ~13 large files spent its whole 250k context
+  reading for every step before step 1 and wrote nothing (1.57M) — hence step-at-a-time, the ~125k
+  early stop and splitting large briefs up front.
+
 ## How the cost figures were measured
 
 Regenerate rather than trusting old numbers: `agent_audit.py --summary` (it dedupes transcript `usage`

@@ -26,6 +26,7 @@ Read-only.
 from __future__ import annotations
 
 import argparse
+import bisect
 import json
 import pathlib
 import sys
@@ -100,7 +101,91 @@ def line(label: str, m: dict) -> str:
             f" | avg {avg/1e3:>4.0f}k | {m['cost']/1e6:>6.2f}M{'*' if m['estimated'] else ' '}| >1h gaps {m['gaps']}")
 
 
-def report(main: pathlib.Path, top: int) -> None:
+def agent_type(path: pathlib.Path) -> str:
+    meta = path.with_name(path.stem + ".meta.json")
+    try:
+        return json.loads(meta.read_text(encoding="utf-8")).get("agentType", "?")
+    except (OSError, ValueError):
+        return "?"
+
+
+def bash_key(cmd: str) -> str:
+    """The program a shell command runs, past `cd …&&` and `VAR=…;` prefixes (`python x.py` keeps the script)."""
+    words = [w for w in cmd.replace("&&", ";").replace(";", " ; ").split()]
+    while words and (words[0] == ";" or "=" in words[0] or words[0] == "cd"):
+        words = words[2:] if words[0] == "cd" else words[1:]
+    if not words:
+        return "?"
+    key = words[0].split("/")[-1]
+    if key in ("python", "python3", "php", "node") and len(words) > 1:
+        key += " " + pathlib.PurePath(words[1].strip("\"'")).name
+    return key[:40]
+
+
+def sources(path: pathlib.Path, by: dict, files: dict) -> None:
+    """Price every item that enters this context: its cache write (2) plus 0.1 per later request
+    until a compaction drops it. Start-up attachments are counted as `attach <type>`."""
+    recs = []
+    for raw in path.open(encoding="utf-8", errors="replace"):
+        try:
+            recs.append(json.loads(raw))
+        except ValueError:
+            pass
+    starts, seen = [], set()
+    for i, r in enumerate(recs):
+        rid = r.get("requestId")
+        if r.get("type") == "assistant" and rid and rid not in seen:
+            seen.add(rid)
+            starts.append(i)
+    bounds = [i for i, r in enumerate(recs) if r.get("subtype") == "compact_boundary"]
+    calls, items = {}, []
+    for i, r in enumerate(recs):
+        content = (r.get("message") or {}).get("content")
+        if r.get("type") == "attachment":
+            att = r.get("attachment") or {}
+            items.append((i, f"attach {att.get('type')}", "", len(json.dumps(att))))
+        elif r.get("type") == "assistant" and isinstance(content, list):
+            for b in content:
+                if isinstance(b, dict) and b.get("type") == "tool_use":
+                    inp = b.get("input") or {}
+                    key = b["name"] + (":" + bash_key(inp.get("command", "")) if b["name"] == "Bash" else "")
+                    calls[b.get("id")] = (key, inp.get("file_path", ""))
+                    items.append((i, "call " + b["name"], "", len(json.dumps(inp))))
+                elif isinstance(b, dict) and b.get("type") == "text":
+                    items.append((i, "own text", "", len(b.get("text", ""))))
+        elif r.get("type") == "user" and isinstance(content, list):
+            for b in content:
+                if isinstance(b, dict) and b.get("type") == "tool_result":
+                    key, fp = calls.get(b.get("tool_use_id"), ("?", ""))
+                    items.append((i, "result " + key, fp, len(json.dumps(b.get("content", "")))))
+        elif r.get("type") == "user" and isinstance(content, str):
+            items.append((i, "user prompt", "", len(content)))
+    for i, key, fp, chars in items:
+        first = bisect.bisect_right(starts, i)
+        nxt = next((b for b in bounds if b > i), None)
+        last = bisect.bisect_left(starts, nxt) if nxt is not None else len(starts)
+        cost = chars / CHARS_PER_TOKEN * (2 + 0.1 * max(last - first, 0))
+        by[key] = by.get(key, 0) + cost
+        if fp:
+            files[fp] = files.get(fp, 0) + cost
+
+
+def by_source(mains: list, top: int) -> None:
+    by, files = {}, {}
+    for main in mains:
+        sub = main.with_suffix("") / "subagents"
+        for path in [main] + (sorted(sub.glob("agent-*.jsonl")) if sub.is_dir() else []):
+            sources(path, by, files)
+    total = sum(by.values()) or 1
+    print(f"\nBY SOURCE — {total/1e6:.1f}M weighted (context only: start-up attachments included, output not)")
+    for key, cost in sorted(by.items(), key=lambda kv: -kv[1])[:top]:
+        print(f"  {cost/1e6:7.2f}M {cost/total*100:5.1f}%  {key}")
+    print("  costliest files read:")
+    for fp, cost in sorted(files.items(), key=lambda kv: -kv[1])[:top // 2]:
+        print(f"  {cost/1e6:7.2f}M  {fp}")
+
+
+def report(main: pathlib.Path, top: int, by_type: bool = False) -> None:
     rows, compactions, first_user, visible = load(main)
     if not rows:
         return
@@ -113,18 +198,25 @@ def report(main: pathlib.Path, top: int) -> None:
     for a in sorted(sub.glob("agent-*.jsonl")) if sub.is_dir() else []:
         arows, _, _, avisible = load(a)
         if arows:
-            agents.append((a.stem[6:13], measure(arows, avisible)))
-    for name, am in sorted(agents, key=lambda x: -x[1]["cost"])[:top]:
+            agents.append((a.stem[6:13], measure(arows, avisible), agent_type(a)))
+    for name, am, _ in sorted(agents, key=lambda x: -x[1]["cost"])[:top]:
         print(line(f"agent {name}", am))
     if len(agents) > top:
         print(f"  … {len(agents) - top} more agents")
-    total = mm["cost"] + sum(am["cost"] for _, am in agents)
+    total = mm["cost"] + sum(am["cost"] for _, am, _ in agents)
     print(f"  TOTAL {total/1e6:.2f}M weighted; main {mm['cost']/total*100:.0f}%, {len(agents)} agents")
     if agents:
-        acost = sum(am["cost"] for _, am in agents) or 1
-        split = ", ".join(f"{p} {sum(am[p] for _, am in agents)/acost*100:.0f}%" for p in PARTS)
+        acost = sum(am["cost"] for _, am, _ in agents) or 1
+        split = ", ".join(f"{p} {sum(am[p] for _, am, _ in agents)/acost*100:.0f}%" for p in PARTS)
         print(f"  agents' cost: {split}")
-    marked = sum(1 for m in [mm] + [am for _, am in agents] if m["estimated"])
+    if by_type:
+        types: dict = {}
+        for _, am, kind in agents:
+            n, cost, turns = types.get(kind, (0, 0.0, 0))
+            types[kind] = (n + 1, cost + am["cost"], turns + am["turns"])
+        for kind, (n, cost, turns) in sorted(types.items(), key=lambda kv: -kv[1][1]):
+            print(f"  {kind:24} n={n:<3} {cost/1e6:6.2f}M  avg {cost/n/1e6:.2f}M, {turns // n} turns")
+    marked = sum(1 for m in [mm] + [am for _, am, _ in agents] if m["estimated"])
     if marked:
         print(f"  * {marked} transcript(s) recorded less output than their visible content needs: output "
               f"estimated from that content; reasoning is not recorded, so treat these as floors")
@@ -137,6 +229,9 @@ def main() -> int:
     ap.add_argument("--project", action="append", default=[], help="substring of a project folder (repeatable)")
     ap.add_argument("--since", help="only transcripts modified on or after this date (YYYY-MM-DD)")
     ap.add_argument("--top", type=int, default=5, help="agents listed per session")
+    ap.add_argument("--agents", action="store_true", help="also sum each session's agents by definition")
+    ap.add_argument("--by-source", action="store_true",
+                    help="price what entered the contexts, per tool, attachment and file, across all sessions")
     a = ap.parse_args()
     paths = list(a.transcripts)
     if not paths:
@@ -149,7 +244,9 @@ def main() -> int:
         print("no transcripts matched")
         return 1
     for p in sorted(paths, key=lambda p: p.stat().st_mtime, reverse=True):
-        report(p, a.top)
+        report(p, a.top, a.agents)
+    if a.by_source:
+        by_source(paths, max(a.top, 30))
     return 0
 
 

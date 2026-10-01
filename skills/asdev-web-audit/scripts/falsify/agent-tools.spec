@@ -34,7 +34,7 @@ tools: Bash, Read, Glob,
 tools: Bash, Read, Artifact, Glob,
 >>>>>>> END
 
-@@@ agents/opus-low-executor.md
+@@@ agents/sonnet-medium-executor.md
 name: an executor carries computer use
 expect: carries a dropped MCP group
 <<<<<<< OLD
@@ -77,4 +77,13 @@ expect: a common agent carries the web tools
 SendMessage, mcp__Claude_Browser,
 ======= NEW
 SendMessage, WebFetch, WebSearch, mcp__Claude_Browser,
+>>>>>>> END
+
+@@@ agents/opus-xhigh-executor.md
+name: an agent carries the Skill tool again
+expect: carries {'Skill'}
+<<<<<<< OLD
+ToolSearch, SendMessage,
+======= NEW
+ToolSearch, Skill, SendMessage,
 >>>>>>> END

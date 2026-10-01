@@ -86,29 +86,15 @@
   {
     "name": "an executor regains the Agent tool",
     "file": "agents/opus-medium-executor.md",
-    "old": "disallowedTools: Agent\n",
-    "new": "",
-    "expect": "AgentDefinitions.test_only_phase_leads_keep_the_agent_tool) [opus-medium-executor.md]"
-  },
-  {
-    "name": "a reviewer's list drops Agent",
-    "file": "agents/opus-high-reviewer.md",
-    "old": "NotebookEdit, Agent, Artifact",
-    "new": "NotebookEdit, Artifact",
-    "expect": "AgentDefinitions.test_only_phase_leads_keep_the_agent_tool) [opus-high-reviewer.md]"
-  },
-  {
-    "name": "a lead loses the Agent tool",
-    "file": "agents/opus-medium-lead.md",
-    "old": "effort: medium\n",
-    "new": "effort: medium\ndisallowedTools: Agent\n",
-    "expect": "AgentDefinitions.test_only_phase_leads_keep_the_agent_tool) [opus-medium-lead.md]"
+    "old": "tools: Bash, Read,",
+    "new": "tools: Agent, Bash, Read,",
+    "expect": "an agent keeps the Agent tool"
   },
   {
     "name": "an executor gains the Agent tool by its legacy name",
-    "file": "agents/opus-low-executor.md",
-    "old": "disallowedTools: Agent\n",
-    "new": "tools: Read, Task\n",
-    "expect": "AgentDefinitions.test_only_phase_leads_keep_the_agent_tool) [opus-low-executor.md]"
+    "file": "agents/sonnet-medium-executor.md",
+    "old": "tools: Bash, Read,",
+    "new": "tools: Task, Bash, Read,",
+    "expect": "an agent keeps the Agent tool"
   }
 ]

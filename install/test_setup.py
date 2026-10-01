@@ -144,9 +144,38 @@ class SettingsMerge(unittest.TestCase):
         self.assertNotIn(hook["command"], commands)
 
 
+class RuleBudgets(unittest.TestCase):
+    # "One in, one out" (owner, 2026-10-01): these files are loaded into every context, or every
+    # time their subject comes up, so a new rule replaces or shortens one instead of growing them.
+    # Evidence and history live in `.docs/reference/setup-architecture.md`. Raise a budget only on
+    # purpose, here.
+    BUDGET_KB = {
+        "CLAUDE.shared.md": 12,
+        "skills/asdev-orchestrator/SKILL.md": 11,
+        "skills/asdev-planner/SKILL.md": 8,
+        "skills/asdev-release/SKILL.md": 7,
+        "skills/asdev-conventions/SKILL.md": 7,
+        "skills/asdev-handover/SKILL.md": 12,
+        "skills/asdev-web-audit/SKILL.md": 24,
+        "skills/asdev-blueprints/SKILL.md": 27,
+    }
+    AGENT_KB = 3
+
+    def test_rule_files_stay_within_budget(self):
+        for rel, kb in self.BUDGET_KB.items():
+            with self.subTest(rel):
+                size = (REPO / rel).stat().st_size
+                self.assertLessEqual(size, kb * 1024, f"{rel} is {size} bytes, budget {kb} kB")
+        for path in AgentDefinitions.shared_agents():
+            with self.subTest(path.name):
+                size = path.stat().st_size
+                self.assertLessEqual(size, self.AGENT_KB * 1024, f"{path.name} is {size} bytes, budget {self.AGENT_KB} kB")
+
+
 class AgentDefinitions(unittest.TestCase):
     # At spawn depth 1 the harness stops nesting anyway. This keeps the frontmatter honest for the day
-    # the depth rises again (phase leads, rolled back 2026-09-30): then only the frontmatter stops it.
+    # the depth rises again: then only the frontmatter stops it. The phase leads, the one kind that
+    # spawned, were archived 2026-10-01 (`.docs/reference/archive/agents/`).
     # Only the shared definitions — the prefixes `.gitignore` admits. A person's own agents sit in
     # the same folder untracked, and must not turn the partner's gate red after a pull.
     @staticmethod
@@ -154,9 +183,9 @@ class AgentDefinitions(unittest.TestCase):
         return [p for p in sorted((REPO / "agents").glob("*.md"))
                 if p.name.startswith(("opus-", "fable-", "sonnet-"))]
 
-    def test_only_phase_leads_keep_the_agent_tool(self):
+    def test_no_agent_keeps_the_agent_tool(self):
         defs = self.shared_agents()
-        self.assertTrue(any(p.name.endswith("-lead.md") for p in defs), "no lead definitions found")
+        self.assertTrue(defs, "no agent definitions found")
         for path in defs:
             front = path.read_text(encoding="utf-8").split("---")[1]
             fields = dict(line.split(":", 1) for line in front.strip().splitlines() if ":" in line)
@@ -167,8 +196,7 @@ class AgentDefinitions(unittest.TestCase):
             grants = allowed is None or any(t.strip().split("(")[0] in spawn for t in allowed.split(","))
             can_spawn = not denied.intersection(spawn) and grants
             with self.subTest(path.name):
-                self.assertEqual(can_spawn, path.name.endswith("-lead.md"),
-                                 "only *-lead.md may keep the Agent tool")
+                self.assertFalse(can_spawn, "an agent keeps the Agent tool")
 
     # Every tool definition an agent carries is re-read on every turn: an explicit list cut the
     # start-up context from ~46k to ~25k (2026-10-01, `reference/setup-architecture.md`). Without
@@ -177,13 +205,15 @@ class AgentDefinitions(unittest.TestCase):
         needed = {"Bash", "Read", "Grep", "Glob", "mcp__Claude_Browser"}
         # PowerShell's definition is ~2.5k tokens and agents called it ~120 times in ~400 runs
         # (2026-10-01); Bash runs `powershell.exe -Command` for the rare Windows check.
-        never = {"Agent", "Task", "Artifact", "Workflow", "NotebookEdit", "PowerShell"}
+        # Skill brings the ~6.7k listing of every skill into each agent; 358 of 400 runs never used
+        # it, and the browser note in the executors replaces the one skill they loaded (2026-10-01).
+        never = {"Agent", "Task", "Artifact", "Workflow", "NotebookEdit", "PowerShell", "Skill"}
         # The web tools stay only on the escalation agents (xhigh, max, Fable): the common ones
         # fetched a page about once in a hundred runs.
-        no_web = {"opus-medium-executor", "opus-high-executor", "opus-low-executor",
-                  "sonnet-medium-executor", "opus-high-reviewer", "opus-xhigh-reviewer"}
+        no_web = {"opus-medium-executor", "opus-high-executor", "sonnet-medium-executor",
+                  "opus-high-reviewer", "opus-xhigh-reviewer"}
         never_prefix = ("mcp__computer-use", "mcp__claude-in-chrome", "mcp__visualize", "mcp__ccd_")
-        defs = [p for p in self.shared_agents() if not p.name.endswith("-lead.md")]
+        defs = self.shared_agents()
         self.assertTrue(defs, "no agent definitions found")
         for path in defs:
             front = path.read_text(encoding="utf-8").split("---")[1]

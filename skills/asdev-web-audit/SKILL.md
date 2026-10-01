@@ -146,7 +146,9 @@ assessed inside the active Git scope. Standalone scanners intentionally show raw
 
 ## Falsifying a new guard
 
-Every new guard is reverted one at a time and shown to go RED *for the right reason* (CLAUDE.md §6):
+Every new guard that protects behaviour — security, data, routing, hooks, the installer, agent tool
+lists — is reverted one at a time and shown to go RED *for the right reason* (CLAUDE.md §6). An
+advisory check (doc sizes, style hints) needs only a unit test.
 
 ```
 python $HOME/.claude/skills/asdev-web-audit/scripts/falsify.py --suite "<cmd>" --mutations <spec>
@@ -189,6 +191,9 @@ Only for work on `~/.claude` itself, never a project session.
 
 - **One copy, never one per harness:** no copy of this suite under `~/.codex` or anywhere else — that
   is how harnesses drift.
+- **One in, one out:** `CLAUDE.shared.md`, the in-house `SKILL.md` files and the agent definitions
+  have size budgets (`install/test_setup.py`, `RuleBudgets`). A new rule replaces or shortens an
+  existing one; evidence goes to `.docs/reference/setup-architecture.md`, not into the rule.
 - After changing a project hook, `~/.claude/CLAUDE.md` or the suite's location, run
   `python $HOME/.claude/skills/asdev-web-audit/scripts/harness_parity.py`.
 - Codex is decoupled (owner, 2026-10-01): `~/.codex/AGENTS.md` is no longer generated or checked, and

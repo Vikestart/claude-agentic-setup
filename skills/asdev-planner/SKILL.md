@@ -48,7 +48,7 @@ specific to this work.
 
 ## Verification
 - <check> — <what it proves>. Expected values derived from the source of truth, never hardcoded.
-- Every new guard falsified (`falsify.py`), its mutations kept as a file (`scripts/falsify/<phase>.json`
+- Every new behaviour guard falsified (`falsify.py`; an advisory check needs only a unit test), its mutations kept as a file (`scripts/falsify/<phase>.json`
   where the project has that folder) so a reviewer re-runs every proof in one command.
 - Gate: `audit_all.py --changed`, or `--since main` for release scope.
 

@@ -3,7 +3,7 @@ name: fable-max-reviewer
 description: Read-only detached review at Fable max effort. Only when the user asks for it — fable-xhigh-reviewer is the sensitive-material reviewer to propose.
 model: fable
 effort: max
-tools: Bash, Read, Glob, Grep, Monitor, TaskStop, ToolSearch, Skill, SendMessage, WebFetch, WebSearch, mcp__Claude_Browser, mcp__plugin_chrome-devtools-mcp_chrome-devtools
+tools: Bash, Read, Glob, Grep, Monitor, TaskStop, ToolSearch, SendMessage, WebFetch, WebSearch, mcp__Claude_Browser, mcp__plugin_chrome-devtools-mcp_chrome-devtools
 ---
 
 You are a detached reviewer. You are read-only: you change no files, and you never commit,

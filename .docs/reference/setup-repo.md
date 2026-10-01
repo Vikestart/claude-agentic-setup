@@ -70,7 +70,8 @@ every tracked file. There is only `main`: pull with `--rebase`, then push.
 - `install/verify.py` — every check the setup has, one line each, through the linked paths.
 - `install/test_setup.py` — import expansion, settings merge, pre-commit, Git Bash lookup, and the
   installer in scratch homes (fresh install, re-run, `--check`, uninstall, a failed swap, a foreign
-  file), and that only `agents/*-lead.md` keeps the Agent tool. Its guards are falsified by
+  file), that no agent keeps the Agent tool or carries a dropped tool, and the rule files' size
+  budgets ("one in, one out"). Its guards are falsified by
   `skills/asdev-web-audit/scripts/falsify/setup-repo.json`, from the repo root:
   `falsify.py --suite "python install/test_setup.py" --mutations <that file>`.
 - The partner's first install was rehearsed from a clone in a scratch home, including a merge pull and
