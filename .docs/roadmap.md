@@ -91,7 +91,9 @@ Outcomes and order only; active work goes in `implementation_plan.md` when a pha
   request is now **25%** of spend (main chat median 82k at start, agents 35–46k). **Owner decision
   2026-10-02: none of the four for now (avoid over-engineering); re-measure first.** After a few
   project nights with the 150k checkpoints, rerun the mining and revisit only if start-up is still
-  ~25%. Candidates then:
+  ~25%. **First data point:** the Tilspire and Nebulingo night of 2026-10-02 — weekly usage was
+  48% when the owner left them running; next morning compare the weekly figure and analyse both
+  sessions (`session_cost.py`, `agent_audit.py`). Candidates then:
   1. Main chat tool definitions are 53k: Artifact 15.3k, PowerShell 5.2k, Workflow 2.5k,
      ScheduleWakeup 2.2k, visualize/SendUserFile/SuggestPluginInstall ~4k. Denying the unused
      ones in project sessions saves ~3% of all spend (~10% of the main chat's) — first probe that
