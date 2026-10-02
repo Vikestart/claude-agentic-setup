@@ -36,4 +36,4 @@
 ## Where to look
 
 - Live findings and API quirks: `reference/traps.md`, "Mods".
-- Next: the start-up trim candidates in `roadmap.md` (owner's pick).
+- Next: none; the start-up trim in `roadmap.md` waits on a re-measurement.
