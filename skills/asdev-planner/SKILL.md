@@ -45,6 +45,7 @@ specific to this work.
 
 ## Steps
 1. <what changes, in which files>
+   ⟲ checkpoint — <after a step that leaves a clean break: committed, or docs and code agree>
 
 ## Verification
 - <check> — <what it proves>. Expected values derived from the source of truth, never hardcoded.
@@ -102,6 +103,9 @@ production path unless the plan or the owner excludes one; don't re-ask at routi
 ## During the phase
 
 - Track tasks in `task.md`.
+- **Compaction checkpoints (⟲)** mark the clean breaks between steps. Past ~150k the `asdev` mod's
+  note says how to compact at the next ⟲ or phase end (the work carries on after it, under `/goal`
+  too). Never end a reply with `ready to compact` before the mod has said so.
 - If the scope changes materially, update the plan and ask again.
 - Anything discovered for later goes to the roadmap, not into the running phase.
 
@@ -126,11 +130,10 @@ production path unless the plan or the owner excludes one; don't re-ask at routi
    when its item is promoted, the changelog's oldest block rotates into a dated reference archive,
    and occasional detail in `AGENTS.md` moves to `.docs/reference/` behind a one-line pointer. Never
    delete a decision, an open question or unshipped work — move it. If something must stay over
-   budget, say why in the walkthrough. Measured 2026-10-01: Tilspire's roadmap had reached 101 kB
-   and Nebulingo's changelog 112 kB, read again and again by every agent, although the rules
-   above already said to prune them.
+   budget, say why in the walkthrough.
 7. **Carry on.** No fresh-chat question: the docs just updated are what a compaction falls back
    on (CLAUDE.md §1, "Compaction, not fresh chats"). If a handover raised this project's context
    limit for the phase just finished, clear it: `python $HOME/.claude/skills/asdev-web-audit/scripts/context_override.py status`,
    then `clear` when it reports `temporary` (a deliberate value is never touched). Start the next
-   approved phase, if any.
+   approved phase, if any — but if the mod has said the session is past ~150k, the phase end is a
+   checkpoint: compact first ("During the phase"), and the next phase starts after it.

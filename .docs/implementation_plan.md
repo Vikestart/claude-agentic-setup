@@ -1,3 +1,4 @@
 # Implementation plan
 
-No plan is active. The next candidates are in [`roadmap.md`](roadmap.md).
+No plan active. The last phase (session mod `mods/asdev`, 2026-10-02) is in `walkthrough.md`.
+Next candidate: "Start-up trim" in `roadmap.md`, waiting on the owner's pick of items 1–4.

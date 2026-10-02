@@ -3,7 +3,8 @@
   "set": {
     "env.CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS": "10",
     "env.CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH": "1",
-    "env.CLAUDE_CODE_PLUGIN_DIRS": "~/.claude/claude-agentic-setup/mods/context-band",
+    "env.CLAUDE_CODE_PLUGIN_DIRS": "~/.claude/claude-agentic-setup/mods/asdev",
+    "env.CLAUDE_CODE_PLUGIN_DIR_WATCH": "1",
     "subagentPromptCacheTtl": "1h",
     "workflowSizeGuideline": "medium",
     "autoCompactWindow": 330000
@@ -36,20 +37,6 @@
           "command": "python \"$HOME/.claude/hooks/guard_credentials.py\"",
           "timeout": 10
         }
-      ],
-      "PostToolUse": [
-        {
-          "matcher": "*",
-          "command": "python \"$HOME/.claude/hooks/context_guard.py\"",
-          "timeout": 5
-        }
-      ],
-      "SessionStart": [
-        {
-          "matcher": "compact",
-          "command": "python \"$HOME/.claude/hooks/after_compact.py\"",
-          "timeout": 10
-        }
       ]
     }
   },
@@ -64,6 +51,11 @@
           "matcher": "*",
           "command": "python \"$HOME/.claude/hooks/context_window.py\" --hook",
           "timeout": 10
+        },
+        {
+          "matcher": "compact",
+          "command": "python \"$HOME/.claude/hooks/after_compact.py\"",
+          "timeout": 10
         }
       ],
       "SessionEnd": [
@@ -71,6 +63,13 @@
           "matcher": "*",
           "command": "python \"$HOME/.claude/hooks/context_window.py\" --hook",
           "timeout": 10
+        }
+      ],
+      "PostToolUse": [
+        {
+          "matcher": "*",
+          "command": "python \"$HOME/.claude/hooks/context_guard.py\"",
+          "timeout": 5
         }
       ]
     }

@@ -25,8 +25,8 @@ def checks(gate_roots: list[Path]) -> list[tuple[str, list[str], str]]:
         ("blueprints self-test", [py, str(HOME / "skills" / "asdev-blueprints" / "scripts" / "self_test.py")], ""),
         ("harness parity", [py, str(AUDIT / "harness_parity.py")], ""),
         ("credentials guard tests", [py, str(HOME / "hooks" / "test_guard_credentials.py")], r"^\d+/\d+ ok"),
-        ("context guard tests", [py, str(HOME / "hooks" / "test_context_guard.py")], r"^\d+/\d+ ok"),
-        ("after-compact hook tests", [py, str(HOME / "hooks" / "test_after_compact.py")], r"^\d+/\d+ ok"),
+        ("doc budget tests", [py, str(AUDIT / "test_doc_budget.py")], r"^\d+/\d+ ok"),
+        ("asdev mod tests", ["claude", "plugin", "test", str(REPO / "mods" / "asdev")], r"^\s*\d+ pass"),
     ]
     setup_tests = REPO / "install" / "test_setup.py"
     if setup_tests.is_file():

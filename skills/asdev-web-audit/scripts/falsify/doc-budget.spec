@@ -15,15 +15,6 @@ expect: FAIL all files within budget: no budget note
         if rel in BUDGET_KB:
 >>>>>>> END
 
-@@@ hooks/after_compact.py
-name: the hook stops naming oversized files
-expect: FAIL an oversized working file is named with its trim rule
-<<<<<<< OLD
-            + budget_note(event["cwd"]))
-======= NEW
-            + "")
->>>>>>> END
-
 @@@ skills/asdev-web-audit/scripts/doc_hygiene.py
 name: the memory index is never checked
 expect: FAIL an oversized memory index is named, a lean one is not

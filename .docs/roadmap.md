@@ -72,24 +72,37 @@ Outcomes and order only; active work goes in `implementation_plan.md` when a pha
   restored (the ~4.8M listing cost is accepted). Open: projects trim
   working files and Nebulingo's AGENTS.md/MEMORY.md; next measurement checks all of the above, and
   whether any agent missed a skill.
-  Not worth it: cache misses 1.6M (owner breaks), repeated identical calls (11).
-- **Mods experiment** (the desktop app's Claude Code 2.1.286 runs them, 2026-10-02; the first,
-  `mods/context-band`, is shipped and loads through `env.CLAUDE_CODE_PLUGIN_DIRS`). A mod is a plugin whose hooks are a JS
-  module, loaded once per session. Try: rebuild `context_guard` as a mod (no Python start per tool
-  call; it could enforce the ~125k nothing-written stop), and turn two prose rules into enforced
-  guards (piped suite runner, heredoc for multi-line content, push to `main` in a project repo,
-  whole-file read of a 1,000+ line file → `code_map.py`), then delete them from the rules text. The
-  API also has `$.session.compact` (between turns) and `$.session.usage` — a mod could compact at a
-  chosen size, or show live spend above the prompt. Each mod must delete a rule or a hook to earn
-  its place; tests through `claude plugin test`; the API may change between releases. Its own
-  planned phase.
-  **Graceful compaction** (owner, 2026-10-01): compact at a good moment, not mid-step. After the
-  first commit or phase boundary past ~200k, the session updates its docs and ends the turn with
-  an agreed line (e.g. `ready to compact`); the mod sees it on `turn.complete` and calls
-  `$.session.compact` with short summary instructions (it cannot be called by the model directly,
-  and runs only between turns). Keep `autoCompactWindow` as the backstop, not 1M: every turn
-  re-reads the whole context (600k costs ~2× 300k per turn), a busy session postpones, and agents
-  share the window (their ~250k hand-back). Once early compactions work, the backstop may rise to
-  ~400k. Unknown: whether the call works inside subagents.
+  Not worth it: cache misses 1.6M (owner breaks), repeated identical calls (11). A keep-alive mod
+  (owner agreed 2026-10-02): suites finish inside the 1h cache; only a real turn renews it, which
+  enters the chat; pings beat one rebuild only for breaks under ~20h.
+- **Compaction backstop** (from the mods phase, 2026-10-02): once checkpoint compactions prove
+  reliable in project sessions, the `autoCompactWindow` backstop may rise from 330k to ~400k (not
+  1M: every turn re-reads the whole context, and agents share the window). Unverified: whether
+  the mod's compaction instructions reach subagents.
+- **From the 2026-10-02 session mining, not built** (the four mods it ranked were, in the mods
+  phase): a guard on pushing `main` in a project repo — a release pushes `main` after merging
+  `staging`, which a guard cannot tell from a direct push without risking a blocked release.
+  Not mods: Nebulingo's `PHASE98_TEST_*` exports and bearer-token reads from `.env` (~400 repeated
+  commands) belong in that project's `.claude/settings.local.json` `env` (secrets: owner's call);
+  permission prompts the owner was stopped by → the `fewer-permission-prompts` skill. 240 refused
+  Edits/Writes ("not read yet", "modified since read") cost a turn each; no mod fix found.
+- **Start-up trim, from the second 2026-10-02 mining** (67 transcripts since 2026-10-01 18:00,
+  109M price units; scripts `mine4.py`, `startup2.py`, scratchpad). Start-up text re-read by every
+  request is now **25%** of spend (main chat median 82k at start, agents 35–46k). Candidates, for
+  the owner's pick:
+  1. Main chat tool definitions are 53k: Artifact 15.3k, PowerShell 5.2k, Workflow 2.5k,
+     ScheduleWakeup 2.2k, visualize/SendUserFile/SuggestPluginInstall ~4k. Denying the unused
+     ones in project sessions saves ~3% of all spend (~10% of the main chat's) — first probe that
+     a deny rule removes a definition, not only blocks the call.
+  2. The built-in browser's tools (8.7k) load in every agent through the definitions' tool lists:
+     ~4%. Keep them only on the agents that check UI (owner's call: it changes what agents can do).
+  3. AGENTS.md budget 20 kB → ~12 kB (Nebulingo 20.4 kB, Framvis 16 kB, Tilspire 6 kB): ~1%.
+  4. The skill list is 6.9k, the owner's skills ~1k of it; hiding unused built-in and plugin
+     skills (if a setting allows; probe) ~1.5%.
+  Not worth it: batching lookups (one read-only call per request in 56–87% of agent requests,
+  but a sample shows reviewers already chain reads with `;` and most steps follow the last
+  result). Healthy since the rules: requests at 300k+ fell 43% → 2.5% of spend, cache misses
+  11% → 1.8% (all owner breaks of 1h+), tool errors 1.2%, output 9%. Main chat still spends 40%
+  at 200k+; the 150k compaction checkpoints should cut it — re-measure.
 - **Generalise the suite helpers** — Nebulingo's `neighbour_suites.py` / `battery_gate.py` and Tilspire's slice runner into the audit suite with a small per-project config; when a third project needs one.
 - **Project follow-ups (unverified since 2026-09-01; belong in each project's own roadmap):** nebulingo — add `.tmp/` and `.docs/proofs/` to `.auditignore` and a `.token-limits.json` for `scripts/` (242 advisory findings → ~80); nebulingo — `includes/lesson_authoring.php` (819 KB, read 309 times by agents) is the costliest file to work near.

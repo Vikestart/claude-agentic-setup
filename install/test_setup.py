@@ -135,12 +135,12 @@ class SettingsMerge(unittest.TestCase):
         base["permissions"]["allow"].append("Bash(mine)")
         fragment = json.loads(json.dumps(FRAGMENT))
         gone = fragment["add"]["permissions.allow"].pop()
-        hook = fragment["add"]["hooks"]["PostToolUse"].pop()
-        fragment["retire"] = {"permissions.allow": [gone], "hooks": {"PostToolUse": [hook]}}
+        hook = fragment["add"]["hooks"]["PreToolUse"].pop()
+        fragment["retire"] = {"permissions.allow": [gone], "hooks": {"PreToolUse": [hook]}}
         merged, _, _ = install.merge_settings(base, fragment, FRAGMENT["set"])
         self.assertNotIn(gone, merged["permissions"]["allow"])
         self.assertIn("Bash(mine)", merged["permissions"]["allow"])
-        commands = [h["command"] for g in merged.get("hooks", {}).get("PostToolUse", []) for h in g["hooks"]]
+        commands = [h["command"] for g in merged.get("hooks", {}).get("PreToolUse", []) for h in g["hooks"]]
         self.assertNotIn(hook["command"], commands)
 
 
@@ -150,8 +150,8 @@ class RuleBudgets(unittest.TestCase):
     # Evidence and history live in `.docs/reference/setup-architecture.md`. Raise a budget only on
     # purpose, here.
     BUDGET_KB = {
-        "CLAUDE.shared.md": 12,
-        "skills/asdev-orchestrator/SKILL.md": 11,
+        "CLAUDE.shared.md": 11.75,
+        "skills/asdev-orchestrator/SKILL.md": 10.5,
         "skills/asdev-planner/SKILL.md": 8,
         "skills/asdev-release/SKILL.md": 7,
         "skills/asdev-conventions/SKILL.md": 7,

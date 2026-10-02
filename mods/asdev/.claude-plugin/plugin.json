@@ -1,0 +1,1 @@
+{ "name": "asdev", "version": "0.3.0", "description": "The setup's session mod: context band, graceful compaction and rule guards", "author": { "name": "claude-agentic-setup" }, "types": "./types/index.d.ts" }

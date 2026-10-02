@@ -51,7 +51,7 @@ Cost ≈ context size × turns, plus a full re-cache after any pause longer than
 - **One role per agent.** Planner, plan attacker and builder are separate fresh agents. A builder
   gets the plan's path and a compact brief, never the planner's thread.
 - **Size every brief against the two limits:** an executor stops at ~125k with nothing written,
-  and hands back at ~250k (the context hook). A brief that will not fit — more than ~2 steps across
+  and hands back at ~250k (the `asdev` mod's notes). A brief that will not fit — more than ~2 steps across
   large files (over ~1,000 lines), or roughly 150 tool calls — is split up front into sequential
   builders with disjoint files, each starting from the previous one's hand-back.
 - **A hand-back starts a fresh agent** for the rest. Agents obey the main chat's `autoCompactWindow`
@@ -65,7 +65,7 @@ Cost ≈ context size × turns, plus a full re-cache after any pause longer than
 - **Keep an agent's waits short.** Agents run suite slices; a full battery or long falsify run that
   could outlast the cache is yours or a small fresh agent's, never a large builder's.
 - **A long run is started once, then the turn ends;** the completion notification wakes whoever
-  started it. Never a wait, sleep or polling loop. Only a background agent (the default) is woken: a
+  started it. Only a background agent (the default) is woken: a
   foreground agent's end of turn kills its background commands, so never spawn one for a long run.
 - **In a planned phase you stay the orchestrator.** Write the brief from the plan and the reference
   docs — reading the code first means it is read twice. Code and test edits beyond a glance-sized
@@ -84,7 +84,6 @@ Cost ≈ context size × turns, plus a full re-cache after any pause longer than
 
 ## Spawning
 
-- **Never pass a `model` override** to a definition; the name would then lie about the model.
 - **A `fork`** inherits the session's model, effort and conversation, so it never serves as a
   detached review and never satisfies an effort rule.
 - **A session opened before a definition existed** may not be offered it (`traps.md`). Then spawn

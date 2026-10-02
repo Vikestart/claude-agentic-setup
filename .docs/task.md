@@ -1,3 +1,3 @@
 # Tasks
 
-No phase is active.
+No phase active (see `implementation_plan.md`).

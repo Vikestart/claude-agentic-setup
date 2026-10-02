@@ -76,7 +76,7 @@ one): a headless probe with a 100k window spawned one agent that compacted three
 then died with an API error ("autocompact kept refilling the context") because each 500-line read
 was large against so small a window. Compaction lands ~33k below the window for main chats and
 agents alike (368k at 400k). So a window must stay ~50k above the ~250k agent ceiling
-(`context_guard.py`), or agents compact mid-step instead of handing back.
+(the `asdev` mod's agent notes), or agents compact mid-step instead of handing back.
 A model cannot trigger compaction: no tool does it, `send_message` refuses the current session, and
 `clear_session("self")` is `/clear` (no summary), refused for a session serving Remote Control.
 
@@ -300,6 +300,30 @@ orchestration, release, audits, conventions), so Codex — which cannot see `~/.
 them. Keep new procedures in a skill and give CLAUDE.md one line saying when to read it.
 
 ---
+
+## Mods (probe 2026-10-02, app engine 2.1.286)
+
+- **Mods see subagents.** `tool.call` fires for an agent's calls with `agentId`, and a note returned
+  in the result's `context` reaches that agent ("tool.call hook additional context: …").
+- **Context size per loop:** hook `turn.step` (an `async function*`, `yield* next(e)`); its result's
+  `usage` gives input + cache read + cache write = that loop's context, keyed by `agentId`
+  (absent = main chat). No transcript reading needed.
+- **Validator rules that bite:** a `turn.step` hook must be an async generator; `$` may only be
+  passed to a function declared at the top of the module; a `types` contract exports nothing else.
+- **Mods load when the turn ends**, not mid-turn: a test needs one more turn.
+- **Compacting from a mod in the app:** `$.session.compact` is refused (SDK host: "not available in
+  a headless … session"). `$.command.run({ command: 'compact', args })`, called un-awaited from
+  `turn.complete`, works: `/compact <args>` starts at once (0.1 s after the turn) and takes ~40 s,
+  with no sign of it in the app until it finishes; a message sent meanwhile waits for it. The app's
+  own "Compacting conversation…" line never shows for it, but the mod's own cues do (owner, 2026-10-02):
+  `$.ui.status`, `$.ui.toast` and an AbovePrompt row redrawn each second through `$.ui.invalidate`.
+  `session.compact` fires with trigger `manual` and the args as instructions. A `classic.SessionStart` hook with `source: 'compact'` adds
+  `additionalContext` that reaches the model after the summary. `turn.complete`'s text is `e.answer`.
+- **Under `/goal`** the goal's Stop hook blocks every stop, so the turn never ends and `turn.complete`
+  never fires; `$.command.run` compact from `classic.Stop` is refused (it would wait on the held turn).
+  What works (live check 3, 2026-10-02): the goal's block reaches a mod's `classic.Stop` as `r.block`;
+  returning `{ ...r, block: undefined }` ends the turn, `turn.complete` compacts, and
+  `$.prompt.submit` after the compaction starts the next turn, shown as "<plugin> sent a message".
 
 ## Related
 

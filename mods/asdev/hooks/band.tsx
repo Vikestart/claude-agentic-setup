@@ -11,7 +11,9 @@ const LIMIT_NAME: Record<string, string> = { five_hour: '5 hours', seven_day: 'W
 const GREEN = '#2e9e6a', AMBER = '#d4a017', RED = '#d9534f'
 const W = 300, H = 12
 
-const isCollapsed = atom({ plugin: 'context-band', key: 'isCollapsed' } as const, false)
+const isCollapsed = atom({ plugin: 'asdev', key: 'isCollapsed' } as const, false)
+// Set by compaction.ts while a main-chat compaction runs.
+const compactingSince = atom({ plugin: 'asdev', key: 'compactingSince' } as const, 0)
 
 const k = (n: number) => `${Math.round(n / 1000)}k`
 
@@ -35,33 +37,46 @@ function blocks(used: number, pace?: number, cells = 20): string {
   return Array.from({ length: cells }, (_, i) => cell(i)).join('')
 }
 
-type Row = { name: string; used: number; fill: string; ticks: { at: number; dashed?: boolean }[]; pace?: number; detail: string }
+type Row = { name: string; used: number; fill: string; ticks: { at: number; dashed?: boolean }[]; pace?: number; detail: string; alt: string }
 
 export const register: Register = on => {
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
+    // Shown even collapsed: the app gives no sign of a compaction it did not start (traps.md, Mods).
+    const since = await read($, compactingSince)
+    if (since && !e.props.hasSurvey) {
+      const { Text } = $.ui.resolve(e)
+      const s = Math.round(((await $.clock.now()) - since) / 1000)
+      return <Text>Compacting the conversation… {s} s (about a minute; a message sent now waits)</Text>
+    }
     if (e.props.hasSurvey || (await read($, isCollapsed))) {
       return next(e)
     }
 
     const { context, cost, rateLimits } = await $.session.usage()
-    if (context.tokens === undefined) {
-      return next(e)
-    }
 
     // The window the session compacts against is the setting when one is set, not the model's.
-    const settings = (await $.settings.read()) as { autoCompactWindow?: number }
-    const limit = Math.min(context.window, settings.autoCompactWindow ?? context.window)
+    let setting: number | undefined
+    try {
+      setting = ((await $.settings.read()) as { autoCompactWindow?: number }).autoCompactWindow
+    } catch {
+      // Unreadable settings: the model's window still gives a usable bar.
+    }
+    const limit = Math.min(context.window, setting ?? context.window)
     const compactAt = limit - COMPACT_MARGIN
+    // Absent in a fresh session and after a compaction or relaunch until the next reply; the band
+    // stays up rather than vanishing (it hid itself whole here before, 2026-10-02).
     const tokens = context.tokens
     const now = await $.clock.now()
 
     const list: Row[] = [{
       name: 'Context',
-      used: tokens / limit,
-      fill: tokens >= compactAt ? RED : tokens >= TIDY_AT ? AMBER : GREEN,
+      used: (tokens ?? 0) / limit,
+      fill: tokens === undefined ? GREEN : tokens >= compactAt ? RED : tokens >= TIDY_AT ? AMBER : GREEN,
       ticks: [{ at: TIDY_AT / limit, dashed: true }, { at: compactAt / limit }],
-      detail: `${k(tokens)} of ${k(limit)} · compacts ~${k(compactAt)}`
-        + (cost ? ` · $${cost.usd.toFixed(2)} so far` : ''),
+      // Kept short: a long line wraps the band onto an extra row (owner, 2026-10-02). The ticks show
+      // the tidy and compaction points; the alt text names them.
+      detail: `${tokens === undefined ? '–' : k(tokens)} / ${k(limit)}` + (cost ? ` · $${cost.usd.toFixed(2)}` : ''),
+      alt: `tidy at ${k(TIDY_AT)}, compacts ~${k(compactAt)}`,
     }]
 
     // The pace line is the share of the window already elapsed: staying left of it means the
@@ -74,16 +89,17 @@ export const register: Register = on => {
         : undefined
       const used = r.percentUsed / 100
       const ahead = pace !== undefined && used > pace
-      const left = Number.isNaN(resets) ? '' : ` · resets in ${Math.max(0, Math.round((resets - now) / 3600_000))}h`
+      const h = Math.max(0, Math.round((resets - now) / 3600_000))
+      const left = Number.isNaN(resets) ? '' : ` · resets ${h < 48 ? `${h}h` : `${Math.round(h / 24)}d`}`
       list.push({
         name: LIMIT_NAME[r.kind] ?? r.kind,
         used,
+        // Amber already says "ahead of pace", and the tick is the pace.
         fill: used >= 0.9 ? RED : ahead ? AMBER : GREEN,
         ticks: pace === undefined ? [] : [{ at: pace }],
         pace,
-        detail: `${r.percentUsed}% used`
-          + (pace === undefined ? '' : ` · pace ${Math.round(pace * 100)}%${ahead ? ' (ahead of pace)' : ''}`)
-          + left,
+        detail: `${r.percentUsed}%` + left,
+        alt: pace === undefined ? '' : `pace ${Math.round(pace * 100)}%${ahead ? ', ahead of pace' : ''}`,
       })
     }
 
@@ -109,8 +125,9 @@ export const register: Register = on => {
         <Box flexDirection="column" flexGrow={1}>
           {list.map(r => (
             <Box key={r.name} flexDirection="row" alignItems="center" gap={1}>
-              <Text dimColor>{r.name.padEnd(7)}</Text>
-              <Svg source={bar(r.used, r.fill, r.ticks)} alt={`${r.name}: ${r.detail}`} />
+              {/* A fixed width: padEnd aligns only in a monospace font, and the desktop's is not. */}
+              <Box width={8} flexShrink={0}><Text dimColor>{r.name}</Text></Box>
+              <Svg source={bar(r.used, r.fill, r.ticks)} alt={`${r.name}: ${r.detail}${r.alt ? `, ${r.alt}` : ''}`} />
               <Text dimColor>{r.detail}</Text>
             </Box>
           ))}
@@ -118,6 +135,12 @@ export const register: Register = on => {
         <Button key="hide" label="✕" role="dismiss" onPress={collapse} />
       </Box>
     )
+  })
+
+  // New figures redraw the band at once, not at the app's next unrelated redraw.
+  on('session.measure', async ($, e, next) => {
+    $.ui.invalidate('ui.render')
+    return next(e)
   })
 
   // Collapsed, the band becomes one button in the footer below the prompt.

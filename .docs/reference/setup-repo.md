@@ -15,7 +15,7 @@ why. Traps it produced are in [`traps.md`](traps.md) (Windows and shell).
 | `skills/asdev-*` | `~/.claude/skills/<name>` | one junction per skill; third-party skills stay real folders |
 | `settings/shared-settings.json` | entries in `~/.claude/settings.json` | merged by the installer |
 | `githooks/` | — | `core.hooksPath`, set by the installer |
-| `mods/<name>` | a plugin in every session (Claude Code 2.1.286+) | `env.CLAUDE_CODE_PLUGIN_DIRS`, merged by the installer; several paths join with `;` on Windows, `:` elsewhere |
+| `mods/<name>` | a plugin in every session (Claude Code 2.1.286+) | `env.CLAUDE_CODE_PLUGIN_DIRS`, merged by the installer; several paths join with `;` on Windows, `:` elsewhere; `env.CLAUDE_CODE_PLUGIN_DIR_WATCH=1` makes a desktop session reload a mod when its folder changes (without it, only an app relaunch does) |
 
 - **Why the shared file is not named `CLAUDE.md`:** a session opened inside the repo would load it
   twice — once as that folder's project file, once through the stub.
