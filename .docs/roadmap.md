@@ -73,8 +73,8 @@ Outcomes and order only; active work goes in `implementation_plan.md` when a pha
   working files and Nebulingo's AGENTS.md/MEMORY.md; next measurement checks all of the above, and
   whether any agent missed a skill.
   Not worth it: cache misses 1.6M (owner breaks), repeated identical calls (11).
-- **Mods experiment** (Claude Code 2.1.287+; checked 2026-10-01, the CLI is on it but the desktop
-  app still bundles 2.1.284, so start once the app updates). A mod is a plugin whose hooks are a JS
+- **Mods experiment** (the desktop app's Claude Code 2.1.286 runs them, 2026-10-02; the first,
+  `mods/context-band`, is shipped and loads through `env.CLAUDE_CODE_PLUGIN_DIRS`). A mod is a plugin whose hooks are a JS
   module, loaded once per session. Try: rebuild `context_guard` as a mod (no Python start per tool
   call; it could enforce the ~125k nothing-written stop), and turn two prose rules into enforced
   guards (piped suite runner, heredoc for multi-line content, push to `main` in a project repo,

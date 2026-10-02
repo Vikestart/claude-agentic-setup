@@ -1,0 +1,1 @@
+{ "name": "context-band", "version": "0.2.0", "description": "Shows context size, spend and usage-limit pace above the prompt", "author": { "name": "claude-agentic-setup" }, "types": "./types/index.d.ts" }

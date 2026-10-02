@@ -22,6 +22,7 @@ ALLOWED = [
     "CLAUDE.shared.md", "CLAUDE.personal.example.md", "README.md", ".gitignore", ".gitattributes",
     "install-setup.cmd", "install/*", "githooks/*", "settings/*.json", "agents/opus-*.md",
     "agents/fable-*.md", "agents/sonnet-*.md", "hooks/*.py", ".docs/*", "skills/asdev-*/*",
+    "mods/*", ".auditignore",
 ]
 FORBIDDEN_PARTS = {"local", "__pycache__", ".sandbox", "projects", "backups"}
 FORBIDDEN_NAMES = {"." + "credentials.json", ".claude.json", "CLAUDE.personal.md", "setup-state.json",

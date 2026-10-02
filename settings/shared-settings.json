@@ -3,6 +3,7 @@
   "set": {
     "env.CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS": "10",
     "env.CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH": "1",
+    "env.CLAUDE_CODE_PLUGIN_DIRS": "~/.claude/claude-agentic-setup/mods/context-band",
     "subagentPromptCacheTtl": "1h",
     "workflowSizeGuideline": "medium",
     "autoCompactWindow": 330000
