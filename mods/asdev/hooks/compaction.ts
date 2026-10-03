@@ -46,6 +46,7 @@ const nudgedAt = atom({ plugin: 'asdev', key: 'nudgedAt' } as const, 0)
 const lastReply = atom({ plugin: 'asdev', key: 'lastReply' } as const, '')
 // Read by band.tsx too: the app shows nothing while a compaction it did not start runs (traps.md, Mods).
 const compactingSince = atom({ plugin: 'asdev', key: 'compactingSince' } as const, 0)
+const STALE_COMPACTION = 10 * 60_000
 const cacheAt = atom({ plugin: 'asdev', key: 'cacheAt' } as const, 0)
 
 const k = (n: number) => `${Math.round(n / 1000)}k`
@@ -250,6 +251,22 @@ export const register: Register = on => {
       await update($, nudgedAt, () => 0)
       carryOn($)
     }
+  })
+
+  // A reload during a compaction unloads the old ticker before it clears its status line, and
+  // leaves "Compacting… N s" frozen under the prompt (seen 2026-10-04). A reload fires session.start
+  // again: pick the count back up, or clear what was left. A flag older than any compaction is one
+  // whose clean-up never ran.
+  on('session.start', async ($, e, next) => {
+    const r = await next(e)
+    const since = await read($, compactingSince)
+    if (since && (await $.clock.now()) - since < STALE_COMPACTION) {
+      void tick($, since).catch(() => undefined)
+    } else {
+      if (since) await update($, compactingSince, () => 0)
+      $.ui.status(undefined)
+    }
+    return r
   })
 
   on('classic.SessionStart', async ($, e, next) => {

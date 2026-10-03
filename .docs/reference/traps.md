@@ -313,7 +313,9 @@ them. Keep new procedures in a skill and give CLAUDE.md one line saying when to 
 - **Mods load when the turn ends**, not mid-turn: a test needs one more turn.
 - **The desktop app may not hot-reload `mods/asdev`** even with `CLAUDE_CODE_PLUGIN_DIR_WATCH=1`:
   on 2026-10-03 the A5 band rewrite left no reload line and the old band stayed until an app
-  restart. After changing a shipped mod, tell the owner to restart the app.
+  restart. On 2026-10-04 it did reload without one, mid-compaction, and froze the status line until
+  compaction.ts learnt to clear it on load. Reloading is not reliable: after changing a shipped mod,
+  tell the owner a restart is the sure way to see it.
 - **Compacting from a mod in the app:** `$.session.compact` is refused (SDK host: "not available in
   a headless … session"). `$.command.run({ command: 'compact', args })`, called un-awaited from
   `turn.complete`, works: `/compact <args>` starts at once (0.1 s after the turn) and takes ~40 s,

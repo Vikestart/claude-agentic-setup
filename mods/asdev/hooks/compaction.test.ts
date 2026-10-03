@@ -211,3 +211,37 @@ test('no split note for an agent that wrote, or one that only reads by design', 
   await step($, 'r')
   expect(notes(await call($, 'r'))).toContain('hand back')
 })
+
+// A reload mid-compaction leaves the old ticker's status line behind; the next load clears it, or
+// picks the count back up while the compaction is still running.
+test('a reload clears a frozen compaction status, or resumes a running one', async ($: any, on) => {
+  const clock = mock.clock(on, { now: 10_000_000 })
+  for (const ev of ['ui.toast', 'ui.invalidate'] as const) on(ev, async () => ({ value: undefined }) as never)
+  on('session.start', async (_$, e: any) => ({ cwd: e.cwd }) as never)
+  const status: (string | undefined)[] = []
+  on('ui.status', async (_$, e: any) => { status.push(e.text); return { value: undefined } as never })
+  on('prompt.submit', async () => ({}) as never)
+  let finish = () => {}
+  on('session.compact', async (_$, e) => { await new Promise<void>(r => { finish = r }); return { messages: e.messages } as never })
+  const start = () => $.session.start({ cwd: 'x', surface: null, isInteractive: true })
+
+  // No compaction: whatever an earlier load left is cleared.
+  await start()
+  expect(status).toEqual([undefined])
+
+  // A compaction still running: the count carries on through the reload.
+  const done = $.session.compact({ trigger: 'auto', messages: [{ role: 'user', text: 'hi', toolUses: [] }] })
+  await clock.advance(2000)
+  status.length = 0
+  await start()
+  await clock.advance(1000)
+  expect(status.length).toBeGreaterThan(0)
+  expect(status.every(s => s?.includes('Compacting'))).toBe(true)
+
+  // Once it ends the line clears as before. (The branch for a flag whose clean-up never ran, older
+  // than STALE_COMPACTION, is not covered: a held compaction is cut off after 10 real seconds.)
+  finish()
+  await done
+  await clock.advance(1000)
+  expect(status.at(-1)).toBeUndefined()
+})

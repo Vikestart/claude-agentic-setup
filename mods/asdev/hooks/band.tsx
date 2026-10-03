@@ -8,7 +8,7 @@ const TIDY_AT = 200_000
 const WINDOW_MS: Record<string, number> = { five_hour: 5 * 3600_000, seven_day: 7 * 86400_000 }
 const LIMIT_NAME: Record<string, string> = { five_hour: '5 hours', seven_day: 'Week' }
 const LIMIT_LABEL: Record<string, string> = { five_hour: '5h', seven_day: 'Week' }
-const LIMIT_WIDTH: Record<string, number> = { five_hour: 48 }
+const LIMIT_WIDTH: Record<string, number> = { five_hour: 40 }
 
 // The main chat's prompt cache lasts an hour from the last reply (the 1-hour TTL; a session in usage
 // overage drops to 5 minutes, which the engine does not report). Past it, the next message writes the
@@ -21,7 +21,7 @@ const GREEN = '#2e9e6a', RED = '#d9534f'
 const HEAT: [number, string][] = [[0, GREEN], [0.45, '#8cc152'], [0.7, '#e0b02a'], [1, RED]]
 // The bar sits in the middle of an image of height H, so it lines up with the text beside it; the
 // arrows take the band above it. Widths are kept small enough for one row (owner, 2026-10-03).
-const W = 88, H = 18, BAR = 8, BAR_Y = (H - BAR) / 2
+const W = 64, H = 18, BAR = 8, BAR_Y = (H - BAR) / 2
 // How long the first draw waits for the figures before drawing the band without them.
 const FIRST_WAIT = 150
 
