@@ -86,7 +86,9 @@ Outcomes and order only; active work goes in `implementation_plan.md` when a pha
   commands) belong in that project's `.claude/settings.local.json` `env` (secrets: owner's call);
   permission prompts the owner was stopped by → the `fewer-permission-prompts` skill. 240 refused
   Edits/Writes ("not read yet", "modified since read") cost a turn each; no mod fix found.
-- **Start-up trim, from the second 2026-10-02 mining** (67 transcripts since 2026-10-01 18:00,
+- **CLOSED 2026-10-03 (owner), not built: at 0.05 cache-read weights the largest candidate is ~2%
+  of spend and compaction keeps main chats short.** Kept for its measurements, delete on next trim.
+  **Start-up trim, from the second 2026-10-02 mining** (67 transcripts since 2026-10-01 18:00,
   109M price units; scripts `mine4.py`, `startup2.py`, scratchpad). Start-up text re-read by every
   request is now **25%** of spend (main chat median 82k at start, agents 35–46k). **Owner decision
   2026-10-02: none of the four for now (avoid over-engineering); re-measure first.** After a few
