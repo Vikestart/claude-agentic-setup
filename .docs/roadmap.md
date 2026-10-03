@@ -117,6 +117,10 @@ Outcomes and order only; active work goes in `implementation_plan.md` when a pha
   about twice); ~60–65% of output is hidden reasoning,
   which follows turns × effort. Hand-written replace scripts fell from 11% of output to ~3% once
   the heredoc guard landed. Built 2026-10-03 (owner: "both"): `falsify.py --check` / `--only`, and
-  the pipe guard exempts `--help`. Nothing else visible worth a script.
+  the pipe guard exempts `--help`. Nothing else visible worth a script. Effort check (scratchpad
+  `effort_check.py`): high executors were the default until effort-by-role (10-01 17:50); since
+  then 16 runs, ~14.5M, about a third not sensitive (sweeps, lesson reviews); xhigh reviewers gone;
+  high executors' final reports ~1,250 tokens vs medium ~450. **Owner 2026-10-03: leave the rules
+  as they are** (no tighter wording, no report cap, sensitive floor kept).
 - **Generalise the suite helpers** — Nebulingo's `neighbour_suites.py` / `battery_gate.py` and Tilspire's slice runner into the audit suite with a small per-project config; when a third project needs one.
 - **Project follow-ups (unverified since 2026-09-01; belong in each project's own roadmap):** nebulingo — add `.tmp/` and `.docs/proofs/` to `.auditignore` and a `.token-limits.json` for `scripts/` (242 advisory findings → ~80); nebulingo — `includes/lesson_authoring.php` (819 KB, read 309 times by agents) is the costliest file to work near.
