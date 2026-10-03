@@ -112,7 +112,9 @@ Outcomes and order only; active work goes in `implementation_plan.md` when a pha
   11% → 1.8% (all owner breaks of 1h+), tool errors 1.2%, output 9%. Main chat still spends 40%
   at 200k+; the 150k compaction checkpoints should cut it — re-measure.
 - **Output sweep, 2026-10-03** (owner asked; scripts `output_split.py`, `out_by_type.py`, scratchpad):
-  output is 16% of spend since 10-01 (main 11%, agents 15–21%); ~60–65% of it is hidden reasoning,
+  output is 23% of spend since 10-01 at Opus 5.5 prices (main 17%, agents 20–30%; the cost tools
+  weighted a cache read 0.1 until 2026-10-03, now 0.05, so earlier figures overstate re-reading
+  about twice); ~60–65% of output is hidden reasoning,
   which follows turns × effort. Hand-written replace scripts fell from 11% of output to ~3% once
   the heredoc guard landed. Candidates, for the owner's pick: `falsify.py --check` (anchor
   pre-flight) and `--only NAMES` (agents hand-write both, ~25 runs); the pipe guard refuses

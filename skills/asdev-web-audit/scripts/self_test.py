@@ -66,8 +66,8 @@ class CoordinationToolTests(unittest.TestCase):
         self.assertEqual(a["turns"], 3)
         self.assertEqual(a["peak_ctx"], 51_010)
         self.assertEqual(a["gap_writes"], 40_000)
-        # input 30 + read 50,000 x 0.1 + write 91,000 x 2 + output 300 x 5
-        self.assertEqual(agent_audit.weighted(a), 30 + 5_000 + 182_000 + 1_500)
+        # input 30 + read 50,000 x 0.05 + write 91,000 x 2 + output 300 x 5
+        self.assertEqual(agent_audit.weighted(a), 30 + 2_500 + 182_000 + 1_500)
 
     def test_truncated_output_is_raised_to_the_visible_floor_and_marked(self):
         # 400 characters of tool input need ~100 output tokens; a record of 8 is a truncated one.
@@ -91,7 +91,7 @@ class CoordinationToolTests(unittest.TestCase):
 
     def test_a_tool_result_is_priced_by_its_write_and_later_rereads(self):
         # One result of 402 JSON characters (~100.5 tokens), written by the next request and re-read
-        # by the one after: 100.5 x (2 + 0.1). The compaction then stops later re-reads. A screenshot
+        # by the one after: 100.5 x (2 + 0.05). The compaction then stops later re-reads. A screenshot
         # is priced flat, however long its base64.
         def asst(rid, content):
             return {"type": "assistant", "requestId": rid, "message": {"content": content}}
@@ -108,8 +108,8 @@ class CoordinationToolTests(unittest.TestCase):
             path.write_text("\n".join(json.dumps(r) for r in recs), encoding="utf-8")
             by, files = {}, {}
             session_cost.sources(path, by, files)
-            self.assertAlmostEqual(by["result Bash:?"], 402 / 4 * 2.1)
-            self.assertAlmostEqual(by["result Read"], session_cost.IMAGE_TOKENS * 2.1)
+            self.assertAlmostEqual(by["result Bash:?"], 402 / 4 * 2.05)
+            self.assertAlmostEqual(by["result Read"], session_cost.IMAGE_TOKENS * 2.05)
         self.assertEqual(session_cost.bash_key('cd /x && S=1; python "a/b.py" --q'), "python b.py")
 
     def test_forbidden_read_is_caught_through_any_tool_not_just_read(self):

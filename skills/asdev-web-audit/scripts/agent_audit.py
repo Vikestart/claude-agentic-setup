@@ -38,9 +38,10 @@ USAGE_FIELDS = ("input_tokens", "output_tokens",
 # excluded from the forbidden check: the reviewer this tool was written for read a forbidden
 # directory with `cat`, and the first version reported "scope: clean", which is worse than no check
 # at all. Bash commands are therefore substring-matched against forbidden globs (see `mentions`).
-# Price weights relative to fresh input, as all three 2026-09-30 spend reports used them. A
-# 5-minute cache write is really 1.25x; 2x (the 1-hour price) keeps figures comparable with theirs.
-WEIGHTS = {"input_tokens": 1.0, "cache_read_input_tokens": 0.1,
+# Price weights relative to fresh input, from Opus 5.5's prices (a cache read is 0.05x; reports
+# before 2026-10-03 used 0.1). A 5-minute cache write is really 1.25x; 2x (the 1-hour price) keeps
+# figures comparable with the 2026-09-30 reports.
+WEIGHTS = {"input_tokens": 1.0, "cache_read_input_tokens": 0.05,
            "cache_creation_input_tokens": 2.0, "output_tokens": 5.0}
 GAP_SECONDS = 300  # the default subagent cache lifetime
 PATH_TOOLS = {"Read": "read", "Write": "write", "Edit": "write", "NotebookEdit": "write"}

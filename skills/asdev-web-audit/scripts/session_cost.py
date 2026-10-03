@@ -4,8 +4,10 @@
 `agent_audit.py` looks at one agent at a time; this looks at a session, so a night's work can be
 compared with an earlier one. Usage is deduped by `requestId` (each content block repeats it).
 
-Weights, relative to fresh input = 1: cache read 0.1, cache write 1.25 (5-min) or 2 (1-hour),
-output 5. Each transcript's cost is split into:
+Weights, relative to fresh input = 1, from Opus 5.5's prices ($4 input, $0.20 cache read, $5 / $8
+cache write, $20 output): cache read 0.05, cache write 1.25 (5-min) or 2 (1-hour), output 5.
+Figures before 2026-10-03 used 0.1 for a cache read, which doubled the re-reading's share.
+Each transcript's cost is split into:
   * fixed  — the start-up context (system prompt, tool definitions, instructions, brief), re-read
              on every turn. Shrinks with a smaller tool set or shorter instructions.
   * growth — everything added after the first turn (tool results, own edits and commands),
@@ -34,6 +36,7 @@ from datetime import datetime, timezone
 
 PARTS = ("fixed", "growth", "writes", "output")
 CHARS_PER_TOKEN = 4
+READ = 0.05  # a cache read, relative to fresh input (Opus 5.5: $0.20 against $4)
 # An image is stored as base64 (tens of thousands of characters) but costs the model ~1.6k tokens.
 IMAGE_TOKENS = 1_600
 
@@ -80,8 +83,8 @@ def measure(rows, visible_tokens: int = 0) -> dict:
         ctx = inp + cr + cw
         cold = ctx if cold is None else cold
         w1h = (u.get("cache_creation") or {}).get("ephemeral_1h_input_tokens", 0)
-        m["fixed"] += inp + 0.1 * min(cold, cr)
-        m["growth"] += 0.1 * max(cr - cold, 0)
+        m["fixed"] += inp + READ * min(cold, cr)
+        m["growth"] += READ * max(cr - cold, 0)
         m["writes"] += 2 * w1h + 1.25 * max(cw - w1h, 0)
         m["output"] += 5 * u.get("output_tokens", 0)
         m["peak"] = max(m["peak"], ctx)
@@ -132,7 +135,7 @@ def bash_key(cmd: str) -> str:
 
 
 def sources(path: pathlib.Path, by: dict, files: dict) -> None:
-    """Price every item that enters this context: its cache write (2) plus 0.1 per later request
+    """Price every item that enters this context: its cache write (2) plus READ per later request
     until a compaction drops it. Start-up attachments are counted as `attach <type>`."""
     recs = []
     for raw in path.open(encoding="utf-8", errors="replace"):
@@ -174,7 +177,7 @@ def sources(path: pathlib.Path, by: dict, files: dict) -> None:
         nxt = next((b for b in bounds if b > i), None)
         last = bisect.bisect_left(starts, nxt) if nxt is not None else len(starts)
         n = last - first  # the first of these requests writes it, the rest re-read it
-        cost = chars / CHARS_PER_TOKEN * (2 + 0.1 * (n - 1)) if n else 0
+        cost = chars / CHARS_PER_TOKEN * (2 + READ * (n - 1)) if n else 0
         by[key] = by.get(key, 0) + cost
         if fp:
             files[fp] = files.get(fp, 0) + cost
