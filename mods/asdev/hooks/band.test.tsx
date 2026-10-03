@@ -17,6 +17,10 @@ for (const surface of ['terminal', 'desktop'] as const) {
     const done = $.session.compact({ trigger: 'auto', messages: [{ role: 'user', text: 'hi', toolUses: [] }] })
     await clock.advance(3000)
     expect((await ui.find({ text: /Compacting/ }))?.text).toContain('3 s')
+    // On the desktop Clawd vacuums beside the timer; the terminal cannot animate a drawing.
+    const vac = await ui.find({ type: 'Svg' })
+    if (surface === 'terminal') expect(vac).toBeUndefined()
+    else expect(vac?.props).toMatchObject({ alt: 'Clawd vacuums up the old context', isInteractive: true })
 
     finish()
     await done
@@ -63,7 +67,34 @@ for (const surface of ['terminal', 'desktop'] as const) {
     const foot = await $.ui.mount({ plugin: 'asdev', surface, component: 'SessionMode', props: { modes: [] } })
     expect(await foot.find({ text: /Usage/ })).toBeUndefined()
     if (surface === 'terminal') expect(await foot.find({ text: /██░░ ███░/ })).toBeDefined()
-    else expect(await foot.find({ alt: '5 hours 40%, week 75%' })).toBeDefined()
+    else expect((await foot.find({ type: 'Svg' }))?.props.alt).toBe('5 hours 40%, week 75%')
+  })
+
+  // Clawd turns up on the desktop within a few minutes, does one of the tricks and leaves.
+  test(`${surface}: Clawd does a trick now and then`, async ($: any, on) => {
+    const clock = mock.clock(on, { now: 1_000_000 })
+    on('session.usage', async () => ({ value: { startedAt: 0, rateLimits: [], context: { tokens: 50_000, window: 330_000 } } }) as never)
+    on('settings.read', async () => ({ value: {} }) as never)
+    on('store.get', async () => ({ value: undefined }) as never)
+    const tricks = ['Clawd peeks up behind the context bar and waves', 'Clawd strolls along the bar and naps on the week meter', 'Clawd hops across the meters onto the cache ring']
+    const find = async (ui: any) => (await ui.find({ key: 'clawd' }))?.children[0]
+    const ui = await $.ui.mount({ plugin: 'asdev', surface, component: 'AbovePrompt', props: { hasSurvey: false } })
+    expect(await find(ui)).toBeUndefined()
+
+    // The first comes at a random moment 2 to 6 minutes in; walk the clock until it shows.
+    let shown
+    for (let t = 0; t < 6 * 60 && !shown; t += 2) {
+      await clock.advance(2000)
+      await clock.settle()
+      shown = await find(ui)
+    }
+    if (surface === 'terminal') { expect(shown).toBeUndefined(); return }
+    expect(tricks).toContain(shown?.props.alt)
+    expect(shown?.props.isInteractive).toBe(true)
+
+    await clock.advance(12_000)
+    await clock.settle()
+    expect(await find(ui)).toBeUndefined()
   })
 
   // The cache timer counts down from the last main-thread reply and turns red in its last ten minutes.

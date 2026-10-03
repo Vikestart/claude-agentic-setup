@@ -67,6 +67,72 @@ function mini(top: number, bottom: number): string {
     + row(1, top) + row(6, bottom) + '</svg>'
 }
 
+// Clawd, the Claude Code mascot, as pixels (X body, E eye), for the desktop's animated drawings:
+// all three idle tricks at random now and then, and the vacuum during a compaction (owner, 2026-10-04).
+// They run as SMIL in an isInteractive Svg; the terminal cannot animate one, so it gets neither.
+const CLAWD = ['..XXXXXXXX..', '..XXXXXXXX..', '..XEXXXXEX..', 'XXXXXXXXXXXX', 'XXXXXXXXXXXX', '..XXXXXXXX..', '..X.X..X.X..', '..X.X..X.X..']
+const ORANGE = '#d97757'
+
+function clawd(extra = ''): string {
+  const px = 2
+  const cells = (rows: number[]) => CLAWD.flatMap((row, y) => rows.includes(y)
+    ? [...row].map((c, x) => c === '.' ? '' : `<rect x="${x * px}" y="${y * px}" width="${px}" height="${px}" fill="${c === 'E' ? '#1f1e1c' : ORANGE}"/>`)
+    : []).join('')
+  return `<g>${cells([0, 1, 2, 3, 4, 5])}<g>${cells([6, 7])}`
+    + '<animateTransform attributeName="transform" type="translate" values="0 0;0 -1;0 0" dur="0.3s" repeatCount="indefinite"/></g>'
+    + extra + '</g>'
+}
+
+// The stage lies over the band's first row; positions along it follow the desktop layout roughly
+// (context bar near 60–150 px, the week bar near 380–470, the cache ring near 540).
+const STAGE_W = 620, STAGE_H = 24
+const stage = (body: string) => `<svg xmlns="http://www.w3.org/2000/svg" width="${STAGE_W}" height="${STAGE_H}" viewBox="0 0 ${STAGE_W} ${STAGE_H}" shape-rendering="crispEdges">${body}</svg>`
+const move = (values: string, keyTimes: string, dur: number) =>
+  `<animateTransform attributeName="transform" type="translate" values="${values}" keyTimes="${keyTimes}" dur="${dur}ms" fill="freeze"/>`
+
+const TRICKS: Record<string, { ms: number; alt: string; svg: () => string }> = {
+  // Pops up behind the context bar, waves and ducks back down.
+  peek: {
+    ms: 6000,
+    alt: 'Clawd peeks up behind the context bar and waves',
+    svg: () => stage(`<g transform="translate(100 ${STAGE_H})">${move(`100 ${STAGE_H};100 ${STAGE_H};100 6;100 6;100 ${STAGE_H};100 ${STAGE_H}`, '0;0.1;0.25;0.75;0.9;1', 6000)}`
+      + `<g>${clawd()}<animateTransform attributeName="transform" type="rotate" values="0 12 8;-8 12 8;8 12 8;-8 12 8;8 12 8;0 12 8" keyTimes="0;0.3;0.4;0.5;0.6;0.7" dur="6000ms" fill="freeze"/></g></g>`),
+  },
+  // Strolls in along the bar, dozes on the week meter, then fades.
+  stroll: {
+    ms: 12000,
+    alt: 'Clawd strolls along the bar and naps on the week meter',
+    svg: () => stage(`<g transform="translate(-30 6)">${move('-30 6;400 6;400 6', '0;0.45;1', 12000)}${clawd()}`
+      + '<animate attributeName="opacity" values="1;1;0" keyTimes="0;0.85;1" dur="12000ms" fill="freeze"/></g>'
+      + '<text x="428" y="9" font-size="9" font-weight="700" fill="#888" opacity="0">z z<animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;0.5;0.58;0.8;0.86" dur="12000ms" fill="freeze"/></text>'),
+  },
+  // Hops across the meters like platforms and lands on the cache ring.
+  hop: {
+    ms: 8000,
+    alt: 'Clawd hops across the meters onto the cache ring',
+    svg: () => stage(`<g transform="translate(40 7)">${move('40 7;90 0;140 7;200 0;260 7;320 0;380 7;440 0;500 7;540 7;540 7', '0;0.08;0.16;0.24;0.32;0.4;0.48;0.56;0.64;0.7;1', 8000)}${clawd()}`
+      + '<animate attributeName="opacity" values="1;1;0" keyTimes="0;0.88;1" dur="8000ms" fill="freeze"/></g>'),
+  },
+}
+
+// Compaction: the meters empty into Clawd's vacuum, bits of context streaming down the hose.
+const VACUUM = '<g transform="translate(-22 0)"><rect x="0" y="4" width="16" height="10" rx="3" fill="#6b6a66"/>'
+  + '<rect x="-10" y="10" width="12" height="3" fill="#6b6a66"/><circle cx="4" cy="15" r="2" fill="#2f2f2d"/><circle cx="13" cy="15" r="2" fill="#2f2f2d"/></g>'
+function vacuum(): string {
+  const stops = HEAT.map(([at, c]) => `<stop offset="${at}" stop-color="${c}"/>`).join('')
+  const bits = [[20, 9, 0], [70, 14, 0.3], [120, 10, 0.6], [170, 15, 0.9], [210, 11, 0.45]]
+    .map(([x, y, d]) => `<rect x="${x}" y="${y}" width="4" height="4" rx="1" fill="${ORANGE}" opacity="0">`
+      + `<animate attributeName="x" from="${x}" to="236" dur="1.2s" begin="${d}s" repeatCount="indefinite"/>`
+      + `<animate attributeName="opacity" values="1;0" dur="1.2s" begin="${d}s" repeatCount="indefinite"/></rect>`).join('')
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="300" height="${STAGE_H}" viewBox="0 0 300 ${STAGE_H}" shape-rendering="crispEdges">`
+    + `<defs><linearGradient id="heat" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="220" y2="0">${stops}</linearGradient></defs>`
+    + '<rect y="8" width="220" height="8" rx="4" fill="#8884"/>'
+    + '<rect y="8" width="220" height="8" rx="4" fill="url(#heat)"><animate attributeName="width" values="220;0" dur="3s" repeatCount="indefinite"/></rect>'
+    + bits
+    + `<g transform="translate(266 4)">${clawd(VACUUM)}<animateTransform attributeName="transform" type="translate" values="266 4;267 3" dur="0.12s" repeatCount="indefinite"/></g>`
+    + '</svg>'
+}
+
 function blocks(used: number, pace?: number, cells = 20): string {
   const filled = Math.min(cells, Math.round(used * cells))
   const cell = (i: number) => (pace !== undefined && i === Math.round(pace * cells) ? '│' : i < filled ? '█' : '░')
@@ -79,6 +145,11 @@ type Row = { name: string; label: string; width: number; used: number; ticks: { 
 let ticking = false
 // Whether the figures have answered once; until then a draw does not wait on them (see FIRST_WAIT).
 let answered = false
+// The trick on stage and when the next one may start: the first within a few minutes, then one
+// every 12 to 25 minutes, so Clawd stays a surprise.
+let trick: { name: string; until: number } | undefined
+let nextTrickAt = 0
+const between = (lo: number, hi: number) => (lo + Math.random() * (hi - lo)) * 60_000
 
 export const register: Register = on => {
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
@@ -87,7 +158,18 @@ export const register: Register = on => {
     if (since && !e.props.hasSurvey) {
       const { Text } = $.ui.resolve(e)
       const s = Math.round(((await $.clock.now()) - since) / 1000)
-      return <Text>Compacting the conversation… {s} s (about a minute; a message sent now waits)</Text>
+      const text = <Text>Compacting the conversation… {s} s (about a minute; a message sent now waits)</Text>
+      if (e.surface === 'terminal') {
+        return text
+      }
+      // The drawing never changes while the seconds do, so the redraw each second leaves it playing.
+      const { Box, Svg } = $.ui.resolve(e)
+      return (
+        <Box flexDirection="row" alignItems="center" gap={1}>
+          <Svg source={vacuum()} alt="Clawd vacuums up the old context" isInteractive />
+          {text}
+        </Box>
+      )
     }
     if (e.props.hasSurvey || (await read($, isCollapsed))) {
       return next(e)
@@ -176,9 +258,9 @@ export const register: Register = on => {
 
     // None before the first reply: there is no cache to time yet.
     const at = await read($, cacheAt)
-    // The countdown moves with no new figures, so the band redraws itself each minute once it has one.
-    // Started here rather than at session start, which a hot reload does not repeat for a live session.
-    if (at && !ticking) {
+    // The countdown and Clawd's tricks move with no new figures, so the band redraws itself each
+    // minute. Started here rather than at session start, which a hot reload does not repeat.
+    if (!ticking) {
       ticking = true
       $.clock.every(60_000, () => $.ui.invalidate('ui.render'))
     }
@@ -206,6 +288,25 @@ export const register: Register = on => {
       )
     }
 
+    // Each start and end wakes the band at its moment rather than at the next minute's redraw.
+    const wake = (at: number) => void $.clock.sleep(at - now).then(() => $.ui.invalidate('ui.render'), () => {})
+    if (!nextTrickAt) {
+      nextTrickAt = now + between(2, 6)
+      wake(nextTrickAt)
+    }
+    if (trick && now >= trick.until) {
+      trick = undefined
+    }
+    if (!trick && now >= nextTrickAt) {
+      const names = Object.keys(TRICKS)
+      const name = names[Math.floor(Math.random() * names.length)]
+      trick = { name, until: now + TRICKS[name].ms }
+      nextTrickAt = trick.until + between(12, 25)
+      wake(trick.until)
+      wake(nextTrickAt)
+    }
+    const shownTrick = trick && TRICKS[trick.name]
+
     const { Box, Button, Svg, Text } = $.ui.resolve(e)
     return (
       <Box flexDirection="row" flexWrap="wrap" alignItems="center" columnGap={2} rowGap={1}>
@@ -227,6 +328,12 @@ export const register: Register = on => {
           {usd ? <Text bold>{usd}</Text> : null}
           <Button key="hide" label="✕" role="dismiss" onPress={collapse} />
         </Box>
+        {/* Over the meters without moving them; the drawing stays the same for the whole trick. */}
+        {shownTrick ? (
+          <Box key="clawd" position="absolute" top={0} left={0}>
+            <Svg source={shownTrick.svg()} alt={shownTrick.alt} isInteractive />
+          </Box>
+        ) : null}
       </Box>
     )
   })
