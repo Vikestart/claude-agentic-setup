@@ -311,6 +311,9 @@ them. Keep new procedures in a skill and give CLAUDE.md one line saying when to 
 - **Validator rules that bite:** a `turn.step` hook must be an async generator; `$` may only be
   passed to a function declared at the top of the module; a `types` contract exports nothing else.
 - **Mods load when the turn ends**, not mid-turn: a test needs one more turn.
+- **The desktop app may not hot-reload `mods/asdev`** even with `CLAUDE_CODE_PLUGIN_DIR_WATCH=1`:
+  on 2026-10-03 the A5 band rewrite left no reload line and the old band stayed until an app
+  restart. After changing a shipped mod, tell the owner to restart the app.
 - **Compacting from a mod in the app:** `$.session.compact` is refused (SDK host: "not available in
   a headless … session"). `$.command.run({ command: 'compact', args })`, called un-awaited from
   `turn.complete`, works: `/compact <args>` starts at once (0.1 s after the turn) and takes ~40 s,

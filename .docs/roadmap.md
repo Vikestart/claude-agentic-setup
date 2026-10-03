@@ -129,8 +129,8 @@ Outcomes and order only; active work goes in `implementation_plan.md` when a pha
   then 16 runs, ~14.5M, about a third not sensitive (sweeps, lesson reviews); xhigh reviewers gone;
   high executors' final reports ~1,250 tokens vs medium ~450. **Owner 2026-10-03: leave the rules
   as they are** (no tighter wording, no report cap, sensitive floor kept).
-- **Usage bar A5 + cache ring: live check** (built 2026-10-03): confirm in the desktop app that the
-  heat gradient and arrows draw, the row wraps cleanly when narrow, and the cache ring counts down
+- **Usage bar A5 + cache ring: live check** (built 2026-10-03; owner saw it live after a restart):
+  still to confirm that the heat gradient and arrows draw, the row wraps cleanly when narrow, and the cache ring counts down
   and turns red under 10 min. Known gap: a session in usage overage drops to a 5-minute cache, which
   the engine does not report, so the ring still counts an hour.
 - **Generalise the suite helpers** — Nebulingo's `neighbour_suites.py` / `battery_gate.py` and Tilspire's slice runner into the audit suite with a small per-project config; when a third project needs one.
