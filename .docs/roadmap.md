@@ -96,7 +96,11 @@ Outcomes and order only; active work goes in `implementation_plan.md` when a pha
   themselves (Tilspire's goal done, Nebulingo awaiting a draft approval), not by the expired login;
   ~13.4M after the owner left (Tilspire 9.8M closing Phase 6, main 25%; Nebulingo 3.6M, main 35%).
   All 13 compactions were checkpoint ones, none automatic; Tilspire's main still peaked at 259k.
-  Too little night data to judge the trim; next measurement after a full night. Candidates then:
+  Too little night data to judge the trim; next measurement after a full night.
+  Day run 2026-10-03 (08:40–20:15 UTC, scratchpad `segments.py`): Tilspire 53.1M (main 26%), Nebulingo
+  42.2M (main 38%); 21 checkpoint compactions, none automatic; main peaks 144–194k, one 212k;
+  restart at 74–90k; no repeated agent task or commit. Nebulingo's high executors (28, 18M) were
+  mostly Phase 225 authority/schema work; ~2M content fixes and lesson reviews. Candidates then:
   1. Main chat tool definitions are 53k: Artifact 15.3k, PowerShell 5.2k, Workflow 2.5k,
      ScheduleWakeup 2.2k, visualize/SendUserFile/SuggestPluginInstall ~4k. Denying the unused
      ones in project sessions saves ~3% of all spend (~10% of the main chat's) — first probe that
