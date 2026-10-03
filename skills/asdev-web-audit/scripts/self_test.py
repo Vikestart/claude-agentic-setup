@@ -553,13 +553,13 @@ class FalsifyTests(unittest.TestCase):
     CHECK = ('import sys\nt = open("guard.php", "rb").read()\n'
              'if b"isAdmin()" not in t:\n    print("admin gate missing here")\n    sys.exit(1)\nprint("ok")\n')
 
-    def _run(self, root: Path, name: str, mutations: str) -> subprocess.CompletedProcess:
+    def _run(self, root: Path, name: str, mutations: str, *extra: str) -> subprocess.CompletedProcess:
         (root / "guard.php").write_bytes(self.GUARD)
         (root / "check.py").write_text(self.CHECK, encoding="utf-8")
         (root / name).write_text(mutations, encoding="utf-8")
         return subprocess.run([sys.executable, str(Path(__file__).with_name("falsify.py")),
                                "--suite", f'"{sys.executable}" check.py',
-                               "--mutations", str(root / name), "--cwd", str(root)],
+                               "--mutations", str(root / name), "--cwd", str(root), *extra],
                               capture_output=True, text=True, encoding="utf-8")
 
     def test_spec_blocks_carry_their_own_name_and_expect(self):
@@ -588,6 +588,29 @@ class FalsifyTests(unittest.TestCase):
                                                        "expect": "admin gate missing here"}]))
             self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
             self.assertIn("falsified 1/1", r.stdout)
+
+    TWO = ("@@@ guard.php\nname: admin gate\nexpect: admin gate missing here\n"
+           "<<<<<<< OLD\nisAdmin()\n======= NEW\nisUser()\n>>>>>>> END\n"
+           "name: dollar\n<<<<<<< OLD\n$\n======= NEW\n>>>>>>> END\n")
+
+    def test_check_reports_each_anchor_without_running_the_suite(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            r = self._run(Path(tmp), "m.txt", self.TWO, "--check")
+            self.assertEqual(r.returncode, 1, r.stdout + r.stderr)
+            self.assertRegex(r.stdout, r"ok +admin gate +anchor occurs 1x")
+            self.assertRegex(r.stdout, r"BAD +dollar +anchor occurs 2x")
+            self.assertIn("check: 1/2 anchors unique", r.stdout)
+            self.assertNotIn("PRECONDITION", r.stdout, "--check never runs the suite")
+
+    def test_only_runs_the_named_mutations_and_refuses_unknown_names(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            r = self._run(Path(tmp), "m.txt", self.TWO, "--only", "admin gate")
+            self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+            self.assertIn("falsified 1/1", r.stdout)
+            self.assertNotIn("dollar", r.stdout)
+            r = self._run(Path(tmp), "m.txt", self.TWO, "--only", "admin gate,typo")
+            self.assertNotEqual(r.returncode, 0)
+            self.assertIn("no mutation called: typo", r.stderr)
 
 
 class ContextOverrideTests(unittest.TestCase):

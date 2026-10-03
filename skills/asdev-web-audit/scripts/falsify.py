@@ -161,21 +161,45 @@ def locate(data: bytes, needle: str) -> tuple[bytes, int]:
 def main() -> int:
     parser = argparse.ArgumentParser(
         description="Revert each guard one at a time and prove it goes red for the right reason.")
-    parser.add_argument("--suite", required=True, help="command that must be GREEN on a clean tree")
+    parser.add_argument("--suite", help="command that must be GREEN on a clean tree")
     parser.add_argument("--mutations", required=True,
                         help="patch.py-style block spec with name:/expect: lines, or a .json list")
     parser.add_argument("--cwd", default=".", help="working directory for the suite (default: cwd)")
+    parser.add_argument("--only", help="comma-separated mutation names to run; the rest are skipped")
+    parser.add_argument("--check", action="store_true",
+                        help="only confirm every file exists and every anchor occurs once; no suite run")
     args = parser.parse_args()
+    if not args.check and not args.suite:
+        parser.error("--suite is required unless --check is given")
 
     cwd = os.path.abspath(args.cwd)
     mutations = load_mutations(args.mutations)
     if not isinstance(mutations, list) or not mutations:
         raise SystemExit("falsify: --mutations must hold at least one mutation.")
+    for index, m in enumerate(mutations, 1):
+        m.setdefault("name", f"mutation {index}")
+    if args.only:
+        wanted = [n.strip() for n in args.only.split(",") if n.strip()]
+        unknown = [n for n in wanted if n not in {m["name"] for m in mutations}]
+        if unknown:
+            raise SystemExit("falsify: --only names no mutation called: " + ", ".join(unknown))
+        mutations = [m for m in mutations if m["name"] in wanted]
 
     files = sorted({os.path.join(cwd, m["file"]) for m in mutations})
     missing = [f for f in files if not os.path.isfile(f)]
     if missing:
         raise SystemExit("falsify: these files do not exist:\n  " + "\n  ".join(missing))
+    if args.check:
+        # The anchors were otherwise found wrong only after the clean-tree suite run, one turn and
+        # one suite later; agents hand-wrote this pre-flight about 25 times since 2026-10-01.
+        bad = 0
+        for m in mutations:
+            with open(os.path.join(cwd, m["file"]), "rb") as handle:
+                hits = locate(handle.read(), m["old"])[1]
+            bad += hits != 1
+            print(f"  {'ok' if hits == 1 else 'BAD':<5} {m['name']:<42} anchor occurs {hits}x")
+        print(f"check: {len(mutations) - bad}/{len(mutations)} anchors unique")
+        return 1 if bad else 0
     # ⚠️ RECOVER FIRST, THEN BASELINE. Hashing before recovery captures the MUTATED file
     # as the baseline, so the restore at the end of the first mutation compares against a
     # corrupt reference and reports a false "RESTORE FAILED" on a tree that is actually

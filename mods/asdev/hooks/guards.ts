@@ -13,8 +13,8 @@ const RUNNER = /\b(pytest|phpunit|unittest|audit_all\.py|self_test\.py|verify\.p
 // `tee` too: `runner | tee log` reports tee's exit code. PowerShell's own filters for its tool.
 const FILTER = /^\s*(head|tail|grep|egrep|rg|sort|uniq|wc|cut|awk|sed|less|more|tee|Select-Object|select|Select-String|sls|Sort-Object|Measure-Object|Out-String|findstr)\b/i
 // A command that only reads, names or describes a runner: `grep x test_setup.py | head`,
-// `pip show pytest | head`, `phpunit --version | head` run no suite.
-const READER = /^\s*(head|tail|grep|egrep|rg|sort|uniq|wc|cut|awk|sed|less|more|cat|type|ls|find|git|echo|diff|Get-Content|gc|Select-String)\b|^\s*(pip3?|composer|npm)\s+(show|info|list|view)\b|--version\b/i
+// `pip show pytest | head`, `phpunit --version | head`, `falsify.py --help | grep` run no suite.
+const READER = /^\s*(head|tail|grep|egrep|rg|sort|uniq|wc|cut|awk|sed|less|more|cat|type|ls|find|git|echo|diff|Get-Content|gc|Select-String)\b|^\s*(pip3?|composer|npm)\s+(show|info|list|view)\b|--(version|help)\b/i
 // Inline code (`python -c "…"`, `node -e '…'`) only names what it imports.
 const INLINE_CODE = /\s-[ce]\s+("[^"]*"|'[^']*')/g
 

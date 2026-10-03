@@ -154,6 +154,9 @@ advisory check (doc sizes, style hints) needs only a unit test.
 python $HOME/.claude/skills/asdev-web-audit/scripts/falsify.py --suite "<cmd>" --mutations <spec>
 ```
 
+`--check` (no `--suite`) only confirms every anchor occurs once, without running anything; `--only "name a,name b"`
+reruns just those mutations after a fix. Use both instead of a hand-written check.
+
 Write the spec with the Write tool. Nothing in it is escaped, so no script is needed to build JSON:
 
 ```

@@ -35,7 +35,7 @@ test('a suite runner piped into a filter is refused, with quiet.py instead; near
   for (const cmd of ['pytest -q | tail -5', 'python "$HOME/.claude/install/verify.py" 2>&1 | grep FAIL', 'claude plugin test mods/asdev | grep pass', 'python test_setup.py | head', 'pytest | tee log', 'echo pipefail; pytest | tail']) {
     expect((await bash($, cmd)).deny).toContain('quiet.py')
   }
-  for (const cmd of ['pip show pytest | head -3', 'composer show phpunit/phpunit | grep versions', 'vendor/bin/phpunit --version | head -1', 'python -c "import pytest; print(pytest.__version__)" | head -1', 'bash -o pipefail -c "pytest | tail"']) {
+  for (const cmd of ['pip show pytest | head -3', 'composer show phpunit/phpunit | grep versions', 'vendor/bin/phpunit --version | head -1', 'python falsify.py --help 2>&1 | grep only', 'python -c "import pytest; print(pytest.__version__)" | head -1', 'bash -o pipefail -c "pytest | tail"']) {
     expect((await bash($, cmd)).deny).toBeUndefined()
   }
   for (const cmd of ['set -o pipefail; pytest -q | tail -5', 'pytest -q || echo failed', 'git log | head', 'python quiet.py -- pytest -q', 'grep -c x f | head -1', 'pytest -q > log.txt', 'pytest -q; ls -t logs | head -1', 'grep -n budget install/test_setup.py | head', 'cat verify.py | wc -l']) {

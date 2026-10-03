@@ -116,8 +116,7 @@ Outcomes and order only; active work goes in `implementation_plan.md` when a pha
   weighted a cache read 0.1 until 2026-10-03, now 0.05, so earlier figures overstate re-reading
   about twice); ~60–65% of output is hidden reasoning,
   which follows turns × effort. Hand-written replace scripts fell from 11% of output to ~3% once
-  the heredoc guard landed. Candidates, for the owner's pick: `falsify.py --check` (anchor
-  pre-flight) and `--only NAMES` (agents hand-write both, ~25 runs); the pipe guard refuses
-  `<script> --help | grep` (add `--help` to its reader exemption). Nothing else visible worth a script.
+  the heredoc guard landed. Built 2026-10-03 (owner: "both"): `falsify.py --check` / `--only`, and
+  the pipe guard exempts `--help`. Nothing else visible worth a script.
 - **Generalise the suite helpers** — Nebulingo's `neighbour_suites.py` / `battery_gate.py` and Tilspire's slice runner into the audit suite with a small per-project config; when a third project needs one.
 - **Project follow-ups (unverified since 2026-09-01; belong in each project's own roadmap):** nebulingo — add `.tmp/` and `.docs/proofs/` to `.auditignore` and a `.token-limits.json` for `scripts/` (242 advisory findings → ~80); nebulingo — `includes/lesson_authoring.php` (819 KB, read 309 times by agents) is the costliest file to work near.
