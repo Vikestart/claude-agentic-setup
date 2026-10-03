@@ -92,8 +92,11 @@ Outcomes and order only; active work goes in `implementation_plan.md` when a pha
   2026-10-02: none of the four for now (avoid over-engineering); re-measure first.** After a few
   project nights with the 150k checkpoints, rerun the mining and revisit only if start-up is still
   ~25%. **First data point:** the Tilspire and Nebulingo night of 2026-10-02 — weekly usage was
-  48% when the owner left them running; next morning compare the weekly figure and analyse both
-  sessions (`session_cost.py`, `agent_audit.py`). Candidates then:
+  48% when the owner left them running, 49% next morning. Measured 2026-10-03: both stopped by
+  themselves (Tilspire's goal done, Nebulingo awaiting a draft approval), not by the expired login;
+  ~13.4M after the owner left (Tilspire 9.8M closing Phase 6, main 25%; Nebulingo 3.6M, main 35%).
+  All 13 compactions were checkpoint ones, none automatic; Tilspire's main still peaked at 259k.
+  Too little night data to judge the trim; next measurement after a full night. Candidates then:
   1. Main chat tool definitions are 53k: Artifact 15.3k, PowerShell 5.2k, Workflow 2.5k,
      ScheduleWakeup 2.2k, visualize/SendUserFile/SuggestPluginInstall ~4k. Denying the unused
      ones in project sessions saves ~3% of all spend (~10% of the main chat's) — first probe that
