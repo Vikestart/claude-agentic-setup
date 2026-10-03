@@ -129,8 +129,9 @@ Outcomes and order only; active work goes in `implementation_plan.md` when a pha
   then 16 runs, ~14.5M, about a third not sensitive (sweeps, lesson reviews); xhigh reviewers gone;
   high executors' final reports ~1,250 tokens vs medium ~450. **Owner 2026-10-03: leave the rules
   as they are** (no tighter wording, no report cap, sensitive floor kept).
-- **Usage bar redesign** (owner, 2026-10-03): four directions for `mods/asdev/hooks/band.tsx` on the
-  canvas https://claude.ai/artifact/CyKCjYSCWq8cPkhQKHGgxB (A one line, B rings, C week first with
-  a projection, D refined rows); waiting on the owner's pick. Terminal keeps its text blocks.
+- **Usage bar A5 + cache ring: live check** (built 2026-10-03): confirm in the desktop app that the
+  heat gradient and arrows draw, the row wraps cleanly when narrow, and the cache ring counts down
+  and turns red under 10 min. Known gap: a session in usage overage drops to a 5-minute cache, which
+  the engine does not report, so the ring still counts an hour.
 - **Generalise the suite helpers** — Nebulingo's `neighbour_suites.py` / `battery_gate.py` and Tilspire's slice runner into the audit suite with a small per-project config; when a third project needs one.
 - **Project follow-ups (unverified since 2026-09-01; belong in each project's own roadmap):** nebulingo — add `.tmp/` and `.docs/proofs/` to `.auditignore` and a `.token-limits.json` for `scripts/` (242 advisory findings → ~80); nebulingo — `includes/lesson_authoring.php` (819 KB, read 309 times by agents) is the costliest file to work near.

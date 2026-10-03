@@ -46,6 +46,7 @@ const nudgedAt = atom({ plugin: 'asdev', key: 'nudgedAt' } as const, 0)
 const lastReply = atom({ plugin: 'asdev', key: 'lastReply' } as const, '')
 // Read by band.tsx too: the app shows nothing while a compaction it did not start runs (traps.md, Mods).
 const compactingSince = atom({ plugin: 'asdev', key: 'compactingSince' } as const, 0)
+const cacheAt = atom({ plugin: 'asdev', key: 'cacheAt' } as const, 0)
 
 const k = (n: number) => `${Math.round(n / 1000)}k`
 
@@ -188,6 +189,11 @@ export const register: Register = on => {
 
   on('turn.step', async function* ($, e, next) {
     const r = yield* next(e)
+    // A main-thread reply refreshes its prompt cache; band.tsx counts down from here.
+    if (!e.agentId && r.usage) {
+      const t = await $.clock.now()
+      await update($, cacheAt, () => t)
+    }
     if (e.agentId && r.usage) {
       const u = r.usage
       const tokens = u.input_tokens + u.cache_read_input_tokens + u.cache_creation_input_tokens
