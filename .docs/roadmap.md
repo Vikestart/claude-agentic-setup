@@ -129,6 +129,11 @@ Outcomes and order only; active work goes in `implementation_plan.md` when a pha
   then 16 runs, ~14.5M, about a third not sensitive (sweeps, lesson reviews); xhigh reviewers gone;
   high executors' final reports ~1,250 tokens vs medium ~450. **Owner 2026-10-03: leave the rules
   as they are** (no tighter wording, no report cap, sensitive floor kept).
+- **Clawd on the usage bar — waiting on the owner's pick** (asked 2026-10-03): Clawd appears now and
+  then on the bar, and takes over the bar during a compaction. Round 4 of the design canvas
+  (https://claude.ai/artifact/CyKCjYSCWq8cPkhQKHGgxB, scratchpad `usagebar/mascot_variants.py`) has
+  three directions: M1 peek and sweep, M2 stroll and mop, M3 hop and vacuum. To build: an
+  `isInteractive` Svg (it runs SMIL/CSS animation on the desktop); the terminal gets no animation.
 - **Usage bar A5 + cache ring: live check** (built 2026-10-03; owner saw it live after a restart):
   still to confirm that the heat gradient and arrows draw, the row wraps cleanly when narrow, and the cache ring counts down
   and turns red under 10 min. Known gap: a session in usage overage drops to a 5-minute cache, which
