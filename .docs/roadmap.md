@@ -134,7 +134,10 @@ Outcomes and order only; active work goes in `implementation_plan.md` when a pha
   trick drawing paints over the band (only a browser mock was seen), that the once-a-second redraw
   during compaction does not restart the vacuum animation, and that the trick positions roughly
   meet the meters (they are fixed pixel guesses). While a trick plays (6–12 s) the ✕ under it may
-  not take clicks.
+  not take clicks. Added later the same day (owner): four more tricks (dance, juggle, flip, chase;
+  never the same twice running), hover tooltips on every meter and the cache ring (each now an
+  interactive drawing, so a native `<title>` shows), and a red pace arrow and figure when a limit runs
+  ahead of pace. To confirm: the tooltips appear and the meters still sit in one row.
 - **Usage bar A5 + cache ring: live check** (built 2026-10-03; owner saw it live after a restart):
   still to confirm that the heat gradient and arrows draw, the row wraps cleanly when narrow, and the cache ring counts down
   and turns red under 10 min. Known gap: a session in usage overage drops to a 5-minute cache, which

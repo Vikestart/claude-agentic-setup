@@ -16,7 +16,8 @@ const LIMIT_WIDTH: Record<string, number> = { five_hour: 40 }
 const CACHE_TTL = 3600_000
 const CACHE_WARN = 10 * 60_000
 
-const GREEN = '#2e9e6a', RED = '#d9534f'
+const GREEN = '#2e9e6a'
+export const RED = '#d9534f'
 // The fill's colour says how full the bar is wherever it ends (design pick A5, owner 2026-10-03).
 const HEAT: [number, string][] = [[0, GREEN], [0.45, '#8cc152'], [0.7, '#e0b02a'], [1, RED]]
 // The bar sits in the middle of an image of height H, so it lines up with the text beside it; the
@@ -33,42 +34,48 @@ const cacheAt = atom({ plugin: 'asdev', key: 'cacheAt' } as const, 0)
 
 const k = (n: number) => `${Math.round(n / 1000)}k`
 
+// A hover tooltip over the whole drawing (owner asked, 2026-10-04). It shows only in an isInteractive
+// Svg, so those are sized; the transparent rect lets the gaps around the bar catch the pointer too.
+const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+const tipped = (tip: string, w: number, h: number, body: string) =>
+  `<g><title>${esc(tip)}</title><rect width="${w}" height="${h}" fill="transparent"/>${body}</g>`
+
 // One bar: `used` and the ticks are fractions of the whole (0..1); a tick is an arrow above it.
-function bar(width: number, used: number, ticks: { at: number; faint?: boolean }[]): string {
+function bar(width: number, used: number, ticks: { at: number; faint?: boolean; red?: boolean }[], tip: string): string {
   const x = (f: number) => Math.min(width, Math.max(0, f * width))
   const stops = HEAT.map(([at, c]) => `<stop offset="${at}" stop-color="${c}"/>`).join('')
   const arrows = ticks
     .filter(t => t.at > 0 && t.at < 1)
-    .map(t => `<polygon points="${x(t.at) - 4},0 ${x(t.at) + 4},0 ${x(t.at)},5" fill="${t.faint ? '#8888' : '#888'}"/>`)
+    .map(t => `<polygon points="${x(t.at) - 4},0 ${x(t.at) + 4},0 ${x(t.at)},5" fill="${t.red ? RED : t.faint ? '#8888' : '#888'}"/>`)
     .join('')
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${H}" viewBox="0 0 ${width} ${H}">`
     + `<defs><linearGradient id="heat" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="${width}" y2="0">${stops}</linearGradient></defs>`
-    + `<rect y="${BAR_Y}" width="${width}" height="${BAR}" rx="4" fill="#8884"/>`
-    + `<rect y="${BAR_Y}" width="${x(used)}" height="${BAR}" rx="4" fill="url(#heat)"/>`
-    + arrows + '</svg>'
+    + tipped(tip, width, H, `<rect y="${BAR_Y}" width="${width}" height="${BAR}" rx="4" fill="#8884"/>`
+      + `<rect y="${BAR_Y}" width="${x(used)}" height="${BAR}" rx="4" fill="url(#heat)"/>` + arrows)
+    + '</svg>'
 }
 
 // The cache ring empties as the cache runs out: `left` is the fraction of its life still to run.
-function ring(left: number, colour: string): string {
+function ring(left: number, colour: string, tip: string): string {
   const c = 2 * Math.PI * 7
   return '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 18 18">'
-    + '<circle cx="9" cy="9" r="7" fill="none" stroke="#8884" stroke-width="3"/>'
-    + `<circle cx="9" cy="9" r="7" fill="none" stroke="${colour}" stroke-width="3" stroke-dasharray="${(c * left).toFixed(1)} ${c.toFixed(1)}" transform="rotate(-90 9 9)"/>`
+    + tipped(tip, 18, 18, '<circle cx="9" cy="9" r="7" fill="none" stroke="#8884" stroke-width="3"/>'
+      + `<circle cx="9" cy="9" r="7" fill="none" stroke="${colour}" stroke-width="3" stroke-dasharray="${(c * left).toFixed(1)} ${c.toFixed(1)}" transform="rotate(-90 9 9)"/>`)
     + '</svg>'
 }
 
 // The collapsed band: two thin bars, the first fraction above the second.
-function mini(top: number, bottom: number): string {
+function mini(top: number, bottom: number, tip: string): string {
   const stops = HEAT.map(([at, c]) => `<stop offset="${at}" stop-color="${c}"/>`).join('')
   const row = (y: number, f: number) => `<rect y="${y}" width="28" height="3" rx="1.5" fill="#8884"/>`
     + `<rect y="${y}" width="${(28 * Math.min(1, Math.max(0, f))).toFixed(1)}" height="3" rx="1.5" fill="url(#heat)"/>`
   return '<svg xmlns="http://www.w3.org/2000/svg" width="28" height="10" viewBox="0 0 28 10">'
     + `<defs><linearGradient id="heat" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="28" y2="0">${stops}</linearGradient></defs>`
-    + row(1, top) + row(6, bottom) + '</svg>'
+    + tipped(tip, 28, 10, row(1, top) + row(6, bottom)) + '</svg>'
 }
 
 // Clawd, the Claude Code mascot, as pixels (X body, E eye), for the desktop's animated drawings:
-// all three idle tricks at random now and then, and the vacuum during a compaction (owner, 2026-10-04).
+// idle tricks at random now and then, and the vacuum during a compaction (owner, 2026-10-04).
 // They run as SMIL in an isInteractive Svg; the terminal cannot animate one, so it gets neither.
 const CLAWD = ['..XXXXXXXX..', '..XXXXXXXX..', '..XEXXXXEX..', 'XXXXXXXXXXXX', 'XXXXXXXXXXXX', '..XXXXXXXX..', '..X.X..X.X..', '..X.X..X.X..']
 const ORANGE = '#d97757'
@@ -90,7 +97,7 @@ const stage = (body: string) => `<svg xmlns="http://www.w3.org/2000/svg" width="
 const move = (values: string, keyTimes: string, dur: number) =>
   `<animateTransform attributeName="transform" type="translate" values="${values}" keyTimes="${keyTimes}" dur="${dur}ms" fill="freeze"/>`
 
-const TRICKS: Record<string, { ms: number; alt: string; svg: () => string }> = {
+export const TRICKS: Record<string, { ms: number; alt: string; svg: () => string }> = {
   // Pops up behind the context bar, waves and ducks back down.
   peek: {
     ms: 6000,
@@ -112,6 +119,44 @@ const TRICKS: Record<string, { ms: number; alt: string; svg: () => string }> = {
     alt: 'Clawd hops across the meters onto the cache ring',
     svg: () => stage(`<g transform="translate(40 7)">${move('40 7;90 0;140 7;200 0;260 7;320 0;380 7;440 0;500 7;540 7;540 7', '0;0.08;0.16;0.24;0.32;0.4;0.48;0.56;0.64;0.7;1', 8000)}${clawd()}`
       + '<animate attributeName="opacity" values="1;1;0" keyTimes="0;0.88;1" dur="8000ms" fill="freeze"/></g>'),
+  },
+  // Dances between the meters, swaying and bobbing, with notes rising (owner asked for more, 2026-10-04).
+  dance: {
+    ms: 7000,
+    alt: 'Clawd dances between the meters',
+    svg: () => stage('<g transform="translate(300 8)" opacity="0"><animate attributeName="opacity" values="0;1;1;0" keyTimes="0;0.08;0.9;1" dur="7000ms" fill="freeze"/>'
+      + '<g><animateTransform attributeName="transform" type="translate" values="0 0;0 -3;0 0" dur="0.5s" repeatCount="indefinite"/>'
+      + `<g>${clawd()}<animateTransform attributeName="transform" type="rotate" values="-10 12 16;10 12 16;-10 12 16" dur="1s" repeatCount="indefinite"/></g></g>`
+      + [[28, 0], [34, 0.5], [-8, 1]].map(([x, d]) => `<text x="${x}" y="8" font-size="9" font-weight="700" fill="${ORANGE}" opacity="0">♪`
+        + `<animate attributeName="y" values="8;-6" dur="1.5s" begin="${d}s" repeatCount="indefinite"/>`
+        + `<animate attributeName="opacity" values="1;0" dur="1.5s" begin="${d}s" repeatCount="indefinite"/></text>`).join('')
+      + '</g>'),
+  },
+  // Juggles three bits of context, one in each meter colour.
+  juggle: {
+    ms: 7000,
+    alt: 'Clawd juggles three bits of context',
+    svg: () => stage('<g transform="translate(250 8)" opacity="0"><animate attributeName="opacity" values="0;1;1;0" keyTimes="0;0.08;0.9;1" dur="7000ms" fill="freeze"/>'
+      + clawd()
+      + ['#3fa66b', '#e2a33a', ORANGE].map((c, i) => `<rect x="-1.5" y="-1.5" width="3" height="3" fill="${c}">`
+        + `<animateMotion path="M 1 6 Q 12 -12 23 6 Q 12 -12 1 6" dur="1.2s" begin="${i * 0.4}s" repeatCount="indefinite"/></rect>`).join('')
+      + '</g>'),
+  },
+  // Runs across the band and does a backflip halfway.
+  flip: {
+    ms: 6000,
+    alt: 'Clawd runs across the band and does a backflip',
+    svg: () => stage(`<g transform="translate(-30 8)">${move('-30 8;650 8', '0;1', 6000)}`
+      + `<g>${move('0 0;0 0;0 -6;0 0;0 0', '0;0.42;0.5;0.58;1', 6000)}`
+      + `<g>${clawd()}<animateTransform attributeName="transform" type="rotate" values="0 12 8;0 12 8;-360 12 8;-360 12 8" keyTimes="0;0.42;0.58;1" dur="6000ms" fill="freeze"/></g></g></g>`),
+  },
+  // Chases a bug that zigzags across the band.
+  chase: {
+    ms: 7000,
+    alt: 'Clawd chases a bug across the band',
+    svg: () => stage(`<g transform="translate(-10 14)">${move('-10 14;150 9;250 16;380 9;500 15;640 11', '0;0.2;0.4;0.6;0.8;1', 5000)}`
+      + '<rect width="4" height="3" fill="#2f2f2d"/><rect x="-1" y="3" width="1" height="1" fill="#2f2f2d"/><rect x="4" y="3" width="1" height="1" fill="#2f2f2d"/></g>'
+      + `<g transform="translate(-40 8)"><animateTransform attributeName="transform" type="translate" values="-40 8;120 8;220 8;350 8;470 8;640 8" keyTimes="0;0.2;0.4;0.6;0.8;1" dur="5200ms" begin="1s" fill="freeze"/>${clawd()}</g>`),
   },
 }
 
@@ -139,7 +184,7 @@ function blocks(used: number, pace?: number, cells = 20): string {
   return Array.from({ length: cells }, (_, i) => cell(i)).join('')
 }
 
-type Row = { name: string; label: string; width: number; used: number; ticks: { at: number; faint?: boolean }[]; pace?: number; value: string; detail: string; alt: string; old?: boolean }
+type Row = { name: string; label: string; width: number; used: number; ticks: { at: number; faint?: boolean; red?: boolean }[]; pace?: number; value: string; detail: string; alt: string; tip: string; old?: boolean; ahead?: boolean }
 
 // Module-level on purpose: a reload cancels the old timer and starts this over with it.
 let ticking = false
@@ -149,6 +194,7 @@ let answered = false
 // every 12 to 25 minutes, so Clawd stays a surprise.
 let trick: { name: string; until: number } | undefined
 let nextTrickAt = 0
+let lastTrick = ''
 const between = (lo: number, hi: number) => (lo + Math.random() * (hi - lo)) * 60_000
 
 export const register: Register = on => {
@@ -220,6 +266,10 @@ export const register: Register = on => {
       // the tidy and compaction points; the alt text names them.
       detail: shown + (usd ? ` · ${usd}` : ''),
       alt: limit ? `tidy at ${k(TIDY_AT)}, compacts ~${k(compactAt)}` : 'loading',
+      tip: !limit ? 'Context: waiting for the first reply'
+        : `Context: ${tokens === undefined ? 'unknown until the next reply' : `${k(tokens)} of ${k(limit)} tokens used`}\n`
+          + `Faint arrow: past ${k(TIDY_AT)} the session compacts at its next clean break\n`
+          + `Dark arrow: it compacts by itself at about ${k(compactAt)}`,
       old: !limit,
     }]
 
@@ -242,18 +292,24 @@ export const register: Register = on => {
         label: LIMIT_LABEL[r.kind] ?? r.kind,
         width: LIMIT_WIDTH[r.kind] ?? W,
         used,
-        ticks: pace === undefined ? [] : [{ at: pace }],
+        // Past the pace line the arrow and the figure turn red (owner, 2026-10-04).
+        ticks: pace === undefined ? [] : [{ at: pace, red: ahead }],
+        ahead,
         pace,
         value: gone ? '–' : `${r.percentUsed}%` + (when ? ` · ${when}` : ''),
         detail: gone ? '–' : `${r.percentUsed}%` + (when ? ` · resets ${when}` : ''),
         old,
         alt: (when ? `resets in ${when}` : '') + (pace === undefined ? '' : `, pace ${Math.round(pace * 100)}%${ahead ? ', ahead of pace' : ''}`),
+        tip: `${LIMIT_NAME[r.kind] ?? r.kind} limit: ${gone ? 'reset since the last figure' : `${r.percentUsed}% used`}${when ? `, resets in ${when}` : ''}`
+          + (old && !gone ? ' (last known)' : '')
+          + (pace === undefined ? '' : `\nArrow: ${Math.round(pace * 100)}% of the window has gone by. Left of it, the limit lasts until the reset`
+            + (ahead ? '\nAhead of pace: at this rate it runs out before the reset' : '')),
       })
     }
     // Nothing to stand in yet: the rows still show, waiting.
     if (!got && !rateLimits.length) {
       for (const kind of ['five_hour', 'seven_day']) {
-        list.push({ name: LIMIT_NAME[kind], label: LIMIT_LABEL[kind], width: LIMIT_WIDTH[kind] ?? W, used: 0, ticks: [], value: '…', detail: '…', alt: 'loading', old: true })
+        list.push({ name: LIMIT_NAME[kind], label: LIMIT_LABEL[kind], width: LIMIT_WIDTH[kind] ?? W, used: 0, ticks: [], value: '…', detail: '…', alt: 'loading', tip: `${LIMIT_NAME[kind]} limit: waiting for the first figure`, old: true })
       }
     }
 
@@ -280,7 +336,8 @@ export const register: Register = on => {
         <Box flexDirection="column">
           {list.map((r, i) => (
             <Box key={r.name} flexDirection="row" gap={1}>
-              <Text dimColor>{r.name.padEnd(7)} {blocks(r.used, r.pace)} {r.detail}</Text>
+              <Text dimColor>{r.name.padEnd(7)} {blocks(r.used, r.pace)}</Text>
+              {r.ahead ? <Text color={RED}>{r.detail}</Text> : <Text dimColor>{r.detail}</Text>}
               {i === 0 && cache ? <Text key="cache" color={cache.colour}>· cache {cache.text}</Text> : null}
               {i === 0 ? <Button key="hide" label="x" plain onPress={collapse} /> : null}
             </Box>
@@ -299,8 +356,9 @@ export const register: Register = on => {
       trick = undefined
     }
     if (!trick && now >= nextTrickAt) {
-      const names = Object.keys(TRICKS)
-      const name = names[Math.floor(Math.random() * names.length)]
+      // Never the same trick twice running, so the variety shows.
+      const names = Object.keys(TRICKS).filter(n => n !== lastTrick)
+      const name = lastTrick = names[Math.floor(Math.random() * names.length)]
       trick = { name, until: now + TRICKS[name].ms }
       nextTrickAt = trick.until + between(12, 25)
       wake(trick.until)
@@ -314,13 +372,16 @@ export const register: Register = on => {
         {list.map(r => (
           <Box key={r.name} flexDirection="row" alignItems="center" gap={1}>
             <Text dimColor>{r.label}</Text>
-            <Svg source={bar(r.width, r.used, r.ticks)} alt={`${r.name}: ${r.value}${r.old && r.alt !== 'loading' ? ' (last known)' : ''}${r.alt ? `, ${r.alt}` : ''}`} />
-            {r.old ? <Text dimColor>{r.value}</Text> : <Text bold>{r.value}</Text>}
+            <Svg source={bar(r.width, r.used, r.ticks, r.tip)} alt={`${r.name}: ${r.value}${r.old && r.alt !== 'loading' ? ' (last known)' : ''}${r.alt ? `, ${r.alt}` : ''}`} width={r.width} height={H} isInteractive />
+            {r.old ? <Text dimColor>{r.value}</Text> : <Text bold color={r.ahead ? RED : undefined}>{r.value}</Text>}
           </Box>
         ))}
         {cache ? (
           <Box key="cache" flexDirection="row" alignItems="center" gap={1}>
-            <Svg source={ring(cache.left, cache.colour)} alt={`Prompt cache: ${cache.text}${left > 0 ? ' left' : ''}`} />
+            <Svg source={ring(cache.left, cache.colour, left > 0
+              ? `Prompt cache: ${cache.text} left\nEach reply renews it. Once it expires, the next reply re-reads the whole context at full price`
+              : 'Prompt cache: expired\nThe next reply re-reads the whole context at full price, then the cache runs for an hour again')}
+              alt={`Prompt cache: ${cache.text}${left > 0 ? ' left' : ''}`} width={18} height={18} isInteractive />
             <Text dimColor>Cache</Text>
             <Text bold color={cache.colour}>{cache.text}</Text>
           </Box>
@@ -384,7 +445,7 @@ export const register: Register = on => {
     return (
       <Box flexDirection="row" alignItems="center" gap={1}>
         {modes}
-        <Svg source={mini(hours, week)} alt={`5 hours ${Math.round(hours * 100)}%, week ${Math.round(week * 100)}%`} />
+        <Svg source={mini(hours, week, `5-hour limit ${Math.round(hours * 100)}% used (top)\nWeek limit ${Math.round(week * 100)}% used (bottom)`)} alt={`5 hours ${Math.round(hours * 100)}%, week ${Math.round(week * 100)}%`} width={28} height={10} isInteractive />
         <Button key="show" label="▴" plain dimColor onPress={show} />
       </Box>
     )

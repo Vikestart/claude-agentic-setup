@@ -1,4 +1,5 @@
 import { expect, mock, test } from 'claude-code/testing'
+import { RED, TRICKS } from './band'
 
 // The app gives no sign of a compaction it did not start, so the band says so, collapsed or not.
 for (const surface of ['terminal', 'desktop'] as const) {
@@ -41,6 +42,26 @@ for (const surface of ['terminal', 'desktop'] as const) {
     expect(await ui.find({ text: surface === 'terminal' ? /40% · resets 1h/ : /40% · 1h/ })).toBeDefined()
   })
 
+  // A limit used faster than its window passes turns its figure, and on the desktop its arrow, red.
+  test(`${surface}: a limit ahead of pace shows red`, async ($: any, on) => {
+    mock.clock(on, { now: 1_000_000 })
+    const resetsAt = new Date(1_000_000 + 3600_000).toISOString()
+    // One hour left: the 5-hour pace is 80%, so 90% is ahead; the week's pace is near 100%, so 10% is not.
+    on('session.usage', async () => ({ value: { startedAt: 0, rateLimits: [{ kind: 'five_hour', percentUsed: 90, resetsAt }, { kind: 'seven_day', percentUsed: 10, resetsAt }], context: { window: 330_000 } } }) as never)
+    on('settings.read', async () => ({ value: {} }) as never)
+    on('store.get', async () => ({ value: undefined }) as never)
+    const ui = await $.ui.mount({ plugin: 'asdev', surface, component: 'AbovePrompt', props: { hasSurvey: false } })
+    const red = (await ui.findAll({ type: 'Text' })).filter((t: any) => t.props.color === RED).map((t: any) => t.text).join('|')
+    expect(red).toMatch(/90%/)
+    expect(red).not.toMatch(/10%/)
+    if (surface === 'desktop') {
+      const svgs = await ui.findAll({ type: 'Svg' })
+      const arrow = (alt: RegExp) => /<polygon[^>]*fill="([^"]+)"/.exec(svgs.find((s: any) => alt.test(s.props.alt))?.props.source ?? '')?.[1]
+      expect(arrow(/^5 hours/)).toBe(RED)
+      expect(arrow(/^Week/)).not.toBe(RED)
+    }
+  })
+
   // Before this session's first reply the last limits any session saw stand in, unless their window
   // has reset since. (The kit settles all work before a mount returns, so the waiting frame drawn
   // while the figures are slow cannot be observed here.)
@@ -77,10 +98,16 @@ for (const surface of ['terminal', 'desktop'] as const) {
     on('session.usage', async () => ({ value: { startedAt: 0, rateLimits: [], context: { tokens: 50_000, window: 330_000 } } }) as never)
     on('settings.read', async () => ({ value: {} }) as never)
     on('store.get', async () => ({ value: undefined }) as never)
-    const tricks = ['Clawd peeks up behind the context bar and waves', 'Clawd strolls along the bar and naps on the week meter', 'Clawd hops across the meters onto the cache ring']
+    const tricks = Object.values(TRICKS).map(t => t.alt)
     const find = async (ui: any) => (await ui.find({ key: 'clawd' }))?.children[0]
     const ui = await $.ui.mount({ plugin: 'asdev', surface, component: 'AbovePrompt', props: { hasSurvey: false } })
     expect(await find(ui)).toBeUndefined()
+    // Each meter explains itself on hover; only a sized interactive drawing shows a <title>.
+    if (surface === 'desktop') {
+      const context = (await ui.findAll({ type: 'Svg' })).find((s: any) => s.props.alt.startsWith('Context'))
+      expect(context?.props).toMatchObject({ isInteractive: true, width: expect.any(Number), height: expect.any(Number) })
+      expect(context?.props.source).toContain('<title>Context: 50k of 330k tokens used')
+    }
 
     // The first comes at a random moment 2 to 6 minutes in; walk the clock until it shows.
     let shown
