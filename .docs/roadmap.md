@@ -137,8 +137,10 @@ Outcomes and order only; active work goes in `implementation_plan.md` when a pha
   not take clicks. Added later the same day (owner): four more tricks (dance, juggle, flip, chase;
   never the same twice running), and a red pace arrow and figure when a limit runs ahead of pace.
   The meters' browser tooltips (seen working) became a dark one-line strip over the band on hover
-  (owner's pick: plugins cannot raise the app's own tooltip). To confirm: the strip appears on hover,
-  stays while the pointer rests on it, covers Clawd, and its text fits one line.
+  (owner's pick: plugins cannot raise the app's own tooltip). The first build never showed live (a
+  keyed hidden Box can't be hovered); rebuilt 2026-10-04 inside each meter. To confirm: it appears on
+  hover from the meter's left edge (the cache ring's grows leftwards), stays while the pointer rests
+  on it, and its text fits; plus the limits now read "used / pace" and follow the newest reading.
 - **Usage bar A5 + cache ring: live check** (built 2026-10-03; owner saw it live after a restart):
   still to confirm that the heat gradient and arrows draw, the row wraps cleanly when narrow, and the cache ring counts down
   and turns red under 10 min. Known gap: a session in usage overage drops to a 5-minute cache, which

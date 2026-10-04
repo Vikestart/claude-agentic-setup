@@ -39,7 +39,8 @@ for (const surface of ['terminal', 'desktop'] as const) {
     on('store.get', async () => ({ value: undefined }) as never)
     const ui = await $.ui.mount({ plugin: 'asdev', surface, component: 'AbovePrompt', props: { hasSurvey: false } })
     expect(await ui.find({ text: /– \/ 330k/})).toBeDefined()
-    expect(await ui.find({ text: surface === 'terminal' ? /40% · resets 1h/ : /40% · 1h/ })).toBeDefined()
+    // Used, then the pace: one hour left of five, so 80% (owner, 2026-10-04).
+    expect(await ui.find({ text: /40% \/ 80%/ })).toBeDefined()
   })
 
   // A limit used faster than its window passes turns its figure, and on the desktop its arrow, red.
@@ -73,8 +74,21 @@ for (const surface of ['terminal', 'desktop'] as const) {
     on('settings.read', async () => ({ value: {} }) as never)
     on('store.get', async () => ({ value: [{ kind: 'five_hour', percentUsed: 40, resetsAt }, { kind: 'seven_day', percentUsed: 90, resetsAt: resetAlready }] }) as never)
     const ui = await $.ui.mount({ plugin: 'asdev', surface, component: 'AbovePrompt', props: { hasSurvey: false } })
-    expect(await ui.find({ text: surface === 'terminal' ? /40% · resets 1h/ : /40% · 1h/ })).toBeDefined()
+    // Used, then the pace: one hour left of five, so 80% (owner, 2026-10-04).
+    expect(await ui.find({ text: /40% \/ 80%/ })).toBeDefined()
     expect(await ui.find({ text: /90%/ })).toBeUndefined()
+  })
+
+  // A chat left idle keeps the reading of its last reply; the newest any session saw wins.
+  test(`${surface}: the newest limits win over the session's own`, async ($: any, on) => {
+    mock.clock(on, { now: 1_000_000 })
+    const resetsAt = new Date(1_000_000 + 3600_000).toISOString()
+    on('session.usage', async () => ({ value: { startedAt: 0, rateLimits: [{ kind: 'five_hour', percentUsed: 20, resetsAt }], context: { tokens: 50_000, window: 330_000 } } }) as never)
+    on('settings.read', async () => ({ value: {} }) as never)
+    on('store.get', async () => ({ value: [{ kind: 'five_hour', percentUsed: 40, resetsAt }] }) as never)
+    const ui = await $.ui.mount({ plugin: 'asdev', surface, component: 'AbovePrompt', props: { hasSurvey: false } })
+    expect(await ui.find({ text: /40% \/ 80%/ })).toBeDefined()
+    expect(await ui.find({ text: /20%/ })).toBeUndefined()
   })
 
   // Collapsed, the band is two small bars beside the footer's modes, not a word.
@@ -102,18 +116,15 @@ for (const surface of ['terminal', 'desktop'] as const) {
     const find = async (ui: any) => (await ui.find({ key: 'clawd' }))?.children[0]
     const ui = await $.ui.mount({ plugin: 'asdev', surface, component: 'AbovePrompt', props: { hasSurvey: false } })
     expect(await find(ui)).toBeUndefined()
-    // Hovering a meter lays a dark strip over the band explaining it; hidden until then, and in the
-    // meter's own hover group, so the pointer on the meter is what reveals it.
+    // Hovering a meter lays a dark strip over the band explaining it; hidden until then, and inside
+    // the meter's keyed Box, so the pointer on the meter is what reveals it.
     if (surface === 'desktop') {
       // find() leaves out `hover`; the drawn tree keeps it.
       const byKey = (n: any, key: string): any => n?.props?.key === key ? n
         : (n?.children ?? []).reduce((hit: any, c: any) => hit ?? byKey(c, key), undefined)
-      const tree = await ui.drawn()
-      const scope = byKey(tree, 'Context')?.hover?.scope
-      expect(scope).toBeTruthy()
-      const strip = byKey(tree, scope)
+      const strip = byKey(await ui.drawn(), 'Context')?.children.find((c: any) => c.props?.display === 'none')
       expect(strip?.props).toMatchObject({ position: 'absolute', display: 'none', backgroundColor: TIP_BG })
-      expect(strip?.hover).toMatchObject({ scope, display: 'flex' })
+      expect(strip?.hover).toMatchObject({ display: 'flex' })
       expect(await ui.find({ text: /50k of 330k tokens used/ })).toBeDefined()
     }
 

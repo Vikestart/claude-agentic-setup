@@ -242,10 +242,11 @@ export const register: Register = on => {
     const [usage, settings, kept] = got ?? []
     const context = usage?.context
     const cost = usage?.cost
-    // Until the session's first reply the engine has no limit figures; the last ones any session saw
-    // stand in, drawn faint.
+    // The kept figures are the newest any session saw, so they win over this session's own: a chat
+    // left idle keeps the reading of its last reply, hours behind (owner, 2026-10-04). Until the
+    // session's first reply they are drawn faint.
     const old = !usage?.rateLimits.length
-    const rateLimits = (old ? kept : usage?.rateLimits) ?? []
+    const rateLimits = (kept?.length ? kept : usage?.rateLimits) ?? []
 
     // The window the session compacts against is the setting when one is set, not the model's.
     const setting = settings?.autoCompactWindow
@@ -283,8 +284,8 @@ export const register: Register = on => {
       const pace = span && !Number.isNaN(resets)
         ? Math.min(1, Math.max(0, 1 - (resets - now) / span))
         : undefined
-      // A kept figure from a window that has since reset says nothing about the new one.
-      const gone = old && !(resets > now)
+      // A figure from a window that has since reset says nothing about the new one.
+      const gone = resets <= now
       const used = gone ? 0 : r.percentUsed / 100
       const ahead = pace !== undefined && used > pace
       const h = Math.max(0, Math.round((resets - now) / 3600_000))
@@ -298,13 +299,15 @@ export const register: Register = on => {
         ticks: pace === undefined ? [] : [{ at: pace, red: ahead }],
         ahead,
         pace,
-        value: gone ? '–' : `${r.percentUsed}%` + (when ? ` · ${when}` : ''),
-        detail: gone ? '–' : `${r.percentUsed}%` + (when ? ` · resets ${when}` : ''),
+        // Used, then the pace: how much it may have used by now and still last (owner, 2026-10-04).
+        // The reset time moves to the hover strip.
+        value: gone ? '–' : `${r.percentUsed}%` + (pace === undefined ? '' : ` / ${Math.round(pace * 100)}%`),
+        detail: gone ? '–' : `${r.percentUsed}%` + (pace === undefined ? '' : ` / ${Math.round(pace * 100)}%`),
         old,
         alt: (when ? `resets in ${when}` : '') + (pace === undefined ? '' : `, pace ${Math.round(pace * 100)}%${ahead ? ', ahead of pace' : ''}`),
         tip: `${gone ? 'Reset since the last figure' : `${r.percentUsed}% used`}${when ? `, resets in ${when}` : ''}`
           + (old && !gone ? ' (last known)' : '')
-          + (pace === undefined ? '' : ` · arrow: ${Math.round(pace * 100)}% of the window gone · `
+          + (pace === undefined ? '' : ` · second figure and arrow: ${Math.round(pace * 100)}% of the window gone · `
             + (ahead ? 'ahead of pace: at this rate it runs out before the reset' : 'left of it, it lasts until the reset')),
       })
     }
@@ -383,24 +386,32 @@ export const register: Register = on => {
     ])
     // Hovering a meter lays a dark strip over the band: the meter again, then what it means. Plugins
     // cannot raise the app's own tooltip, and a card is clipped to the band's single row, so it says
-    // it in one line over the band itself (owner's pick, 2026-10-04). The strip shares the meter's
-    // hover group, so it stays while the pointer rests on it.
-    const strips = [
-      ...list.map(r => ({ scope: `tip:${r.name}`, head: meter(r, true), text: r.tip })),
-      ...(cacheMeter ? [{ scope: 'tip:cache', head: cacheMeter(true), text: left > 0
-        ? `${cache.text} left · each reply renews it; once it expires, the next reply re-reads the whole context at full price`
-        : 'The next reply re-reads the whole context at full price, then the cache runs for an hour again' }] : []),
-    ]
+    // it in one line over the band itself (owner's pick, 2026-10-04). The strip sits unkeyed inside
+    // the meter's keyed Box: a keyed Box drawn hidden scopes its own hover, which the pointer can
+    // never reach, so it never showed live. Inside, the pointer resting on it still counts as on the meter.
+    const strip = (head: unknown[], text: string, fromRight?: boolean) => (
+      <Box position="absolute" top={0} {...(fromRight ? { right: 0 } : { left: 0 })} display="none"
+        hover={{ display: 'flex' }} backgroundColor={TIP_BG}
+        flexDirection="row" alignItems="center" gap={1} paddingX={1}>
+        {head}
+        <Text color={TIP_FG} wrap="truncate-end">{'· ' + text}</Text>
+      </Box>
+    )
     return (
       <Box flexDirection="row" flexWrap="wrap" alignItems="center" columnGap={2} rowGap={1}>
         {list.map(r => (
-          <Box key={r.name} flexDirection="row" alignItems="center" gap={1} hover={{ scope: `tip:${r.name}` }}>
+          <Box key={r.name} flexDirection="row" alignItems="center" gap={1}>
             {meter(r)}
+            {strip(meter(r, true), r.tip)}
           </Box>
         ))}
         {cacheMeter ? (
-          <Box key="cache" flexDirection="row" alignItems="center" gap={1} hover={{ scope: 'tip:cache' }}>
+          // Last in the row, so its strip grows leftwards rather than off the band's edge.
+          <Box key="cache" flexDirection="row" alignItems="center" gap={1}>
             {cacheMeter()}
+            {strip(cacheMeter(true), left > 0
+              ? `${cache.text} left · each reply renews it; once it expires, the next reply re-reads the whole context at full price`
+              : 'The next reply re-reads the whole context at full price, then the cache runs for an hour again', true)}
           </Box>
         ) : null}
         <Box key="end" flexDirection="row" alignItems="center" gap={1} flexGrow={1} justifyContent="flex-end">
@@ -413,15 +424,6 @@ export const register: Register = on => {
             <Svg source={shownTrick.svg()} alt={shownTrick.alt} width={STAGE_W} height={STAGE_H} isInteractive />
           </Box>
         ) : null}
-        {/* Last, so it paints over everything, Clawd included. */}
-        {strips.map(s => (
-          <Box key={s.scope} position="absolute" top={0} bottom={0} left={0} right={0} display="none"
-            hover={{ scope: s.scope, display: 'flex' }} backgroundColor={TIP_BG}
-            flexDirection="row" alignItems="center" gap={1} paddingX={1}>
-            {s.head}
-            <Text color={TIP_FG} wrap="truncate-end">{'· ' + s.text}</Text>
-          </Box>
-        ))}
       </Box>
     )
   })
@@ -446,13 +448,14 @@ export const register: Register = on => {
       Promise.all([$.session.usage(), $.store.get('limits') as Promise<SessionRateLimit[] | undefined>]),
       $.clock.sleep(FIRST_WAIT).then(() => undefined),
     ])
-    const fresh = got?.[0].rateLimits ?? []
-    const shown = fresh.length ? fresh : got?.[1] ?? []
+    // The kept figures are the newest any session saw, as in the band.
+    const kept = got?.[1] ?? []
+    const shown = kept.length ? kept : got?.[0].rateLimits ?? []
     const now = await $.clock.now()
     const used = (kind: string) => {
       const r = shown.find(x => x.kind === kind)
-      // A kept figure from a window that has since reset says nothing about the new one.
-      return !r || (!fresh.length && !(Date.parse(r.resetsAt ?? '') > now)) ? 0 : r.percentUsed / 100
+      // A figure from a window that has since reset says nothing about the new one.
+      return !r || Date.parse(r.resetsAt ?? '') <= now ? 0 : r.percentUsed / 100
     }
     const [hours, week] = [used('five_hour'), used('seven_day')]
     const show = () => update($, isCollapsed, () => false)
