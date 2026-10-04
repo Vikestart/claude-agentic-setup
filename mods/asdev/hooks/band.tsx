@@ -18,6 +18,9 @@ const CACHE_WARN = 10 * 60_000
 
 const GREEN = '#2e9e6a'
 export const RED = '#d9534f'
+// The hover strip, in the dark of the app's own tooltips.
+export const TIP_BG = '#1f1f1f'
+const TIP_FG = '#ffffff', TIP_DIM = '#b4b4b4'
 // The fill's colour says how full the bar is wherever it ends (design pick A5, owner 2026-10-03).
 const HEAT: [number, string][] = [[0, GREEN], [0.45, '#8cc152'], [0.7, '#e0b02a'], [1, RED]]
 // The bar sits in the middle of an image of height H, so it lines up with the text beside it; the
@@ -34,14 +37,14 @@ const cacheAt = atom({ plugin: 'asdev', key: 'cacheAt' } as const, 0)
 
 const k = (n: number) => `${Math.round(n / 1000)}k`
 
-// A hover tooltip over the whole drawing (owner asked, 2026-10-04). It shows only in an isInteractive
-// Svg, so those are sized; the transparent rect lets the gaps around the bar catch the pointer too.
+// The collapsed bars' hover tooltip. It shows only in an isInteractive Svg, so that one is sized; the
+// transparent rect lets the gaps around the bars catch the pointer too.
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 const tipped = (tip: string, w: number, h: number, body: string) =>
   `<g><title>${esc(tip)}</title><rect width="${w}" height="${h}" fill="transparent"/>${body}</g>`
 
 // One bar: `used` and the ticks are fractions of the whole (0..1); a tick is an arrow above it.
-function bar(width: number, used: number, ticks: { at: number; faint?: boolean; red?: boolean }[], tip: string): string {
+function bar(width: number, used: number, ticks: { at: number; faint?: boolean; red?: boolean }[]): string {
   const x = (f: number) => Math.min(width, Math.max(0, f * width))
   const stops = HEAT.map(([at, c]) => `<stop offset="${at}" stop-color="${c}"/>`).join('')
   const arrows = ticks
@@ -50,17 +53,17 @@ function bar(width: number, used: number, ticks: { at: number; faint?: boolean; 
     .join('')
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${H}" viewBox="0 0 ${width} ${H}">`
     + `<defs><linearGradient id="heat" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="${width}" y2="0">${stops}</linearGradient></defs>`
-    + tipped(tip, width, H, `<rect y="${BAR_Y}" width="${width}" height="${BAR}" rx="4" fill="#8884"/>`
-      + `<rect y="${BAR_Y}" width="${x(used)}" height="${BAR}" rx="4" fill="url(#heat)"/>` + arrows)
+    + `<rect y="${BAR_Y}" width="${width}" height="${BAR}" rx="4" fill="#8884"/>`
+    + `<rect y="${BAR_Y}" width="${x(used)}" height="${BAR}" rx="4" fill="url(#heat)"/>` + arrows
     + '</svg>'
 }
 
 // The cache ring empties as the cache runs out: `left` is the fraction of its life still to run.
-function ring(left: number, colour: string, tip: string): string {
+function ring(left: number, colour: string): string {
   const c = 2 * Math.PI * 7
   return '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 18 18">'
-    + tipped(tip, 18, 18, '<circle cx="9" cy="9" r="7" fill="none" stroke="#8884" stroke-width="3"/>'
-      + `<circle cx="9" cy="9" r="7" fill="none" stroke="${colour}" stroke-width="3" stroke-dasharray="${(c * left).toFixed(1)} ${c.toFixed(1)}" transform="rotate(-90 9 9)"/>`)
+    + '<circle cx="9" cy="9" r="7" fill="none" stroke="#8884" stroke-width="3"/>'
+    + `<circle cx="9" cy="9" r="7" fill="none" stroke="${colour}" stroke-width="3" stroke-dasharray="${(c * left).toFixed(1)} ${c.toFixed(1)}" transform="rotate(-90 9 9)"/>`
     + '</svg>'
 }
 
@@ -266,10 +269,9 @@ export const register: Register = on => {
       // the tidy and compaction points; the alt text names them.
       detail: shown + (usd ? ` · ${usd}` : ''),
       alt: limit ? `tidy at ${k(TIDY_AT)}, compacts ~${k(compactAt)}` : 'loading',
-      tip: !limit ? 'Context: waiting for the first reply'
-        : `Context: ${tokens === undefined ? 'unknown until the next reply' : `${k(tokens)} of ${k(limit)} tokens used`}\n`
-          + `Faint arrow: past ${k(TIDY_AT)} the session compacts at its next clean break\n`
-          + `Dark arrow: it compacts by itself at about ${k(compactAt)}`,
+      tip: !limit ? 'Waiting for the first reply'
+        : `${tokens === undefined ? 'Unknown until the next reply' : `${k(tokens)} of ${k(limit)} tokens used`}`
+          + ` · faint arrow ${k(TIDY_AT)}: compacts at the next clean break · dark arrow ~${k(compactAt)}: compacts by itself`,
       old: !limit,
     }]
 
@@ -300,16 +302,16 @@ export const register: Register = on => {
         detail: gone ? '–' : `${r.percentUsed}%` + (when ? ` · resets ${when}` : ''),
         old,
         alt: (when ? `resets in ${when}` : '') + (pace === undefined ? '' : `, pace ${Math.round(pace * 100)}%${ahead ? ', ahead of pace' : ''}`),
-        tip: `${LIMIT_NAME[r.kind] ?? r.kind} limit: ${gone ? 'reset since the last figure' : `${r.percentUsed}% used`}${when ? `, resets in ${when}` : ''}`
+        tip: `${gone ? 'Reset since the last figure' : `${r.percentUsed}% used`}${when ? `, resets in ${when}` : ''}`
           + (old && !gone ? ' (last known)' : '')
-          + (pace === undefined ? '' : `\nArrow: ${Math.round(pace * 100)}% of the window has gone by. Left of it, the limit lasts until the reset`
-            + (ahead ? '\nAhead of pace: at this rate it runs out before the reset' : '')),
+          + (pace === undefined ? '' : ` · arrow: ${Math.round(pace * 100)}% of the window gone · `
+            + (ahead ? 'ahead of pace: at this rate it runs out before the reset' : 'left of it, it lasts until the reset')),
       })
     }
     // Nothing to stand in yet: the rows still show, waiting.
     if (!got && !rateLimits.length) {
       for (const kind of ['five_hour', 'seven_day']) {
-        list.push({ name: LIMIT_NAME[kind], label: LIMIT_LABEL[kind], width: LIMIT_WIDTH[kind] ?? W, used: 0, ticks: [], value: '…', detail: '…', alt: 'loading', tip: `${LIMIT_NAME[kind]} limit: waiting for the first figure`, old: true })
+        list.push({ name: LIMIT_NAME[kind], label: LIMIT_LABEL[kind], width: LIMIT_WIDTH[kind] ?? W, used: 0, ticks: [], value: '…', detail: '…', alt: 'loading', tip: 'Waiting for the first figure', old: true })
       }
     }
 
@@ -367,23 +369,38 @@ export const register: Register = on => {
     const shownTrick = trick && TRICKS[trick.name]
 
     const { Box, Button, Svg, Text } = $.ui.resolve(e)
+    // Drawn twice: in the band, and in its hover strip, where the dark ground needs light text.
+    const meter = (r: Row, dark?: boolean) => [
+      <Text key="label" dimColor={!dark} color={dark ? TIP_DIM : undefined}>{r.label}</Text>,
+      <Svg key="bar" source={bar(r.width, r.used, r.ticks)} alt={`${r.name}: ${r.value}${r.old && r.alt !== 'loading' ? ' (last known)' : ''}${r.alt ? `, ${r.alt}` : ''}`} width={r.width} height={H} />,
+      r.old ? <Text key="value" dimColor={!dark} color={dark ? TIP_DIM : undefined}>{r.value}</Text>
+        : <Text key="value" bold color={r.ahead ? RED : dark ? TIP_FG : undefined}>{r.value}</Text>,
+    ]
+    const cacheMeter = cache && ((dark?: boolean) => [
+      <Svg key="ring" source={ring(cache.left, cache.colour)} alt={`Prompt cache: ${cache.text}${left > 0 ? ' left' : ''}`} width={18} height={18} />,
+      <Text key="label" dimColor={!dark} color={dark ? TIP_DIM : undefined}>Cache</Text>,
+      <Text key="value" bold color={cache.colour}>{cache.text}</Text>,
+    ])
+    // Hovering a meter lays a dark strip over the band: the meter again, then what it means. Plugins
+    // cannot raise the app's own tooltip, and a card is clipped to the band's single row, so it says
+    // it in one line over the band itself (owner's pick, 2026-10-04). The strip shares the meter's
+    // hover group, so it stays while the pointer rests on it.
+    const strips = [
+      ...list.map(r => ({ scope: `tip:${r.name}`, head: meter(r, true), text: r.tip })),
+      ...(cacheMeter ? [{ scope: 'tip:cache', head: cacheMeter(true), text: left > 0
+        ? `${cache.text} left · each reply renews it; once it expires, the next reply re-reads the whole context at full price`
+        : 'The next reply re-reads the whole context at full price, then the cache runs for an hour again' }] : []),
+    ]
     return (
       <Box flexDirection="row" flexWrap="wrap" alignItems="center" columnGap={2} rowGap={1}>
         {list.map(r => (
-          <Box key={r.name} flexDirection="row" alignItems="center" gap={1}>
-            <Text dimColor>{r.label}</Text>
-            <Svg source={bar(r.width, r.used, r.ticks, r.tip)} alt={`${r.name}: ${r.value}${r.old && r.alt !== 'loading' ? ' (last known)' : ''}${r.alt ? `, ${r.alt}` : ''}`} width={r.width} height={H} isInteractive />
-            {r.old ? <Text dimColor>{r.value}</Text> : <Text bold color={r.ahead ? RED : undefined}>{r.value}</Text>}
+          <Box key={r.name} flexDirection="row" alignItems="center" gap={1} hover={{ scope: `tip:${r.name}` }}>
+            {meter(r)}
           </Box>
         ))}
-        {cache ? (
-          <Box key="cache" flexDirection="row" alignItems="center" gap={1}>
-            <Svg source={ring(cache.left, cache.colour, left > 0
-              ? `Prompt cache: ${cache.text} left\nEach reply renews it. Once it expires, the next reply re-reads the whole context at full price`
-              : 'Prompt cache: expired\nThe next reply re-reads the whole context at full price, then the cache runs for an hour again')}
-              alt={`Prompt cache: ${cache.text}${left > 0 ? ' left' : ''}`} width={18} height={18} isInteractive />
-            <Text dimColor>Cache</Text>
-            <Text bold color={cache.colour}>{cache.text}</Text>
+        {cacheMeter ? (
+          <Box key="cache" flexDirection="row" alignItems="center" gap={1} hover={{ scope: 'tip:cache' }}>
+            {cacheMeter()}
           </Box>
         ) : null}
         <Box key="end" flexDirection="row" alignItems="center" gap={1} flexGrow={1} justifyContent="flex-end">
@@ -396,6 +413,15 @@ export const register: Register = on => {
             <Svg source={shownTrick.svg()} alt={shownTrick.alt} width={STAGE_W} height={STAGE_H} isInteractive />
           </Box>
         ) : null}
+        {/* Last, so it paints over everything, Clawd included. */}
+        {strips.map(s => (
+          <Box key={s.scope} position="absolute" top={0} bottom={0} left={0} right={0} display="none"
+            hover={{ scope: s.scope, display: 'flex' }} backgroundColor={TIP_BG}
+            flexDirection="row" alignItems="center" gap={1} paddingX={1}>
+            {s.head}
+            <Text color={TIP_FG} wrap="truncate-end">{'· ' + s.text}</Text>
+          </Box>
+        ))}
       </Box>
     )
   })
