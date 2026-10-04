@@ -18,9 +18,6 @@ const CACHE_WARN = 10 * 60_000
 
 const GREEN = '#2e9e6a'
 export const RED = '#d9534f'
-// The hover strip, in the dark of the app's own tooltips.
-export const TIP_BG = '#1f1f1f'
-const TIP_FG = '#ffffff', TIP_DIM = '#b4b4b4'
 // The fill's colour says how full the bar is wherever it ends (design pick A5, owner 2026-10-03).
 const HEAT: [number, string][] = [[0, GREEN], [0.45, '#8cc152'], [0.7, '#e0b02a'], [1, RED]]
 // The bar sits in the middle of an image of height H, so it lines up with the text beside it; the
@@ -372,29 +369,26 @@ export const register: Register = on => {
     const shownTrick = trick && TRICKS[trick.name]
 
     const { Box, Button, Svg, Text } = $.ui.resolve(e)
-    // Drawn twice: in the band, and in its hover strip, where the dark ground needs light text.
-    const meter = (r: Row, dark?: boolean) => [
-      <Text key="label" dimColor={!dark} color={dark ? TIP_DIM : undefined}>{r.label}</Text>,
+    const meter = (r: Row) => [
+      <Text key="label" dimColor>{r.label}</Text>,
       <Svg key="bar" source={bar(r.width, r.used, r.ticks)} alt={`${r.name}: ${r.value}${r.old && r.alt !== 'loading' ? ' (last known)' : ''}${r.alt ? `, ${r.alt}` : ''}`} width={r.width} height={H} />,
-      r.old ? <Text key="value" dimColor={!dark} color={dark ? TIP_DIM : undefined}>{r.value}</Text>
-        : <Text key="value" bold color={r.ahead ? RED : dark ? TIP_FG : undefined}>{r.value}</Text>,
+      r.old ? <Text key="value" dimColor>{r.value}</Text>
+        : <Text key="value" bold color={r.ahead ? RED : undefined}>{r.value}</Text>,
     ]
-    const cacheMeter = cache && ((dark?: boolean) => [
+    const cacheMeter = cache && (() => [
       <Svg key="ring" source={ring(cache.left, cache.colour)} alt={`Prompt cache: ${cache.text}${left > 0 ? ' left' : ''}`} width={18} height={18} />,
-      <Text key="label" dimColor={!dark} color={dark ? TIP_DIM : undefined}>Cache</Text>,
+      <Text key="label" dimColor>Cache</Text>,
       <Text key="value" bold color={cache.colour}>{cache.text}</Text>,
     ])
-    // Hovering a meter lays a dark strip over the band: the meter again, then what it means. Plugins
-    // cannot raise the app's own tooltip, and a card is clipped to the band's single row, so it says
-    // it in one line over the band itself (owner's pick, 2026-10-04). The strip sits unkeyed inside
-    // the meter's keyed Box: a keyed Box drawn hidden scopes its own hover, which the pointer can
-    // never reach, so it never showed live. Inside, the pointer resting on it still counts as on the meter.
-    const strip = (head: unknown[], text: string, fromRight?: boolean) => (
+    // Hovering a meter opens a card saying what it means, one point per line. The desktop draws it
+    // as its own light card above the band, so it keeps the card's colours (the dark strip planned
+    // over the band came out white on white, 2026-10-04). It sits unkeyed inside the meter's keyed
+    // Box: a keyed Box drawn hidden scopes its own hover, which the pointer can never reach.
+    const card = (title: string, text: string, fromRight?: boolean) => (
       <Box position="absolute" top={0} {...(fromRight ? { right: 0 } : { left: 0 })} display="none"
-        hover={{ display: 'flex' }} backgroundColor={TIP_BG}
-        flexDirection="row" alignItems="center" gap={1} paddingX={1}>
-        {head}
-        <Text color={TIP_FG} wrap="truncate-end">{'· ' + text}</Text>
+        hover={{ display: 'flex' }} flexDirection="column" paddingX={1}>
+        <Text bold>{title}</Text>
+        {text.split(' · ').map((line, i) => <Text key={String(i)} wrap="wrap">{line}</Text>)}
       </Box>
     )
     return (
@@ -402,14 +396,14 @@ export const register: Register = on => {
         {list.map(r => (
           <Box key={r.name} flexDirection="row" alignItems="center" gap={1}>
             {meter(r)}
-            {strip(meter(r, true), r.tip)}
+            {card(r.name, r.tip)}
           </Box>
         ))}
         {cacheMeter ? (
-          // Last in the row, so its strip grows leftwards rather than off the band's edge.
+          // Last in the row, so its card grows leftwards rather than off the band's edge.
           <Box key="cache" flexDirection="row" alignItems="center" gap={1}>
             {cacheMeter()}
-            {strip(cacheMeter(true), left > 0
+            {card('Prompt cache', left > 0
               ? `${cache.text} left · each reply renews it; once it expires, the next reply re-reads the whole context at full price`
               : 'The next reply re-reads the whole context at full price, then the cache runs for an hour again', true)}
           </Box>

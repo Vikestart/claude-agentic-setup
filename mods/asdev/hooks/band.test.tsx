@@ -1,5 +1,5 @@
 import { expect, mock, test } from 'claude-code/testing'
-import { RED, TIP_BG, TRICKS } from './band'
+import { RED, TRICKS } from './band'
 
 // The app gives no sign of a compaction it did not start, so the band says so, collapsed or not.
 for (const surface of ['terminal', 'desktop'] as const) {
@@ -116,16 +116,17 @@ for (const surface of ['terminal', 'desktop'] as const) {
     const find = async (ui: any) => (await ui.find({ key: 'clawd' }))?.children[0]
     const ui = await $.ui.mount({ plugin: 'asdev', surface, component: 'AbovePrompt', props: { hasSurvey: false } })
     expect(await find(ui)).toBeUndefined()
-    // Hovering a meter lays a dark strip over the band explaining it; hidden until then, and inside
+    // Hovering a meter opens a card explaining it; hidden until then, and inside
     // the meter's keyed Box, so the pointer on the meter is what reveals it.
     if (surface === 'desktop') {
       // find() leaves out `hover`; the drawn tree keeps it.
       const byKey = (n: any, key: string): any => n?.props?.key === key ? n
         : (n?.children ?? []).reduce((hit: any, c: any) => hit ?? byKey(c, key), undefined)
       const strip = byKey(await ui.drawn(), 'Context')?.children.find((c: any) => c.props?.display === 'none')
-      expect(strip?.props).toMatchObject({ position: 'absolute', display: 'none', backgroundColor: TIP_BG })
+      expect(strip?.props).toMatchObject({ position: 'absolute', display: 'none' })
       expect(strip?.hover).toMatchObject({ display: 'flex' })
-      expect(await ui.find({ text: /50k of 330k tokens used/ })).toBeDefined()
+      // One point per line, so a narrow card does not squeeze them into one.
+      expect(await ui.find({ text: /^50k of 330k tokens used$/ })).toBeDefined()
     }
 
     // The first comes at a random moment 2 to 6 minutes in; walk the clock until it shows.
