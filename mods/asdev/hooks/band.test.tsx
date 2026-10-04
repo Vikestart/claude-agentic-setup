@@ -20,7 +20,8 @@ for (const surface of ['terminal', 'desktop'] as const) {
     // On the desktop Clawd vacuums beside the timer; the terminal cannot animate a drawing.
     const vac = await ui.find({ type: 'Svg' })
     if (surface === 'terminal') expect(vac).toBeUndefined()
-    else expect(vac?.props).toMatchObject({ alt: 'Clawd vacuums up the old context', isInteractive: true })
+    // Sized, or the frame stands 150 px tall and the band with it (owner's screenshot, 2026-10-04).
+    else expect(vac?.props).toMatchObject({ alt: 'Clawd vacuums up the old context', isInteractive: true, width: 300, height: 24 })
 
     finish()
     await done
@@ -90,7 +91,7 @@ for (const surface of ['terminal', 'desktop'] as const) {
     }
     if (surface === 'terminal') { expect(shown).toBeUndefined(); return }
     expect(tricks).toContain(shown?.props.alt)
-    expect(shown?.props.isInteractive).toBe(true)
+    expect(shown?.props).toMatchObject({ isInteractive: true, width: 620, height: 24 })
 
     await clock.advance(12_000)
     await clock.settle()

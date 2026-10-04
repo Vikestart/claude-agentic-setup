@@ -158,15 +158,16 @@ export const register: Register = on => {
     if (since && !e.props.hasSurvey) {
       const { Text } = $.ui.resolve(e)
       const s = Math.round(((await $.clock.now()) - since) / 1000)
-      const text = <Text>Compacting the conversation… {s} s (about a minute; a message sent now waits)</Text>
+      const text = <Text>Compacting… {s} s (about a minute; messages wait)</Text>
       if (e.surface === 'terminal') {
         return text
       }
       // The drawing never changes while the seconds do, so the redraw each second leaves it playing.
+      // An interactive Svg is a frame that falls back to 150 px high without a size (owner, 2026-10-04).
       const { Box, Svg } = $.ui.resolve(e)
       return (
         <Box flexDirection="row" alignItems="center" gap={1}>
-          <Svg source={vacuum()} alt="Clawd vacuums up the old context" isInteractive />
+          <Svg source={vacuum()} alt="Clawd vacuums up the old context" width={300} height={STAGE_H} isInteractive />
           {text}
         </Box>
       )
@@ -331,7 +332,7 @@ export const register: Register = on => {
         {/* Over the meters without moving them; the drawing stays the same for the whole trick. */}
         {shownTrick ? (
           <Box key="clawd" position="absolute" top={0} left={0}>
-            <Svg source={shownTrick.svg()} alt={shownTrick.alt} isInteractive />
+            <Svg source={shownTrick.svg()} alt={shownTrick.alt} width={STAGE_W} height={STAGE_H} isInteractive />
           </Box>
         ) : null}
       </Box>
