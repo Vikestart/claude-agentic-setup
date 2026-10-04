@@ -127,6 +127,12 @@ for (const surface of ['terminal', 'desktop'] as const) {
       expect(strip?.hover).toMatchObject({ display: 'flex' })
       // One point per line, so a narrow card does not squeeze them into one.
       expect(await ui.find({ text: /^50k of 330k tokens used$/ })).toBeDefined()
+      // Each line starts with a capital; the explanation after the figure is dimmed.
+      expect((await ui.find({ text: /^Faint arrow/ }))?.props.dimColor).toBe(true)
+      // The fill keeps the track's rounded ends, and each arrow has a line down through the bar.
+      const source = (await ui.findAll({ type: 'Svg' })).find((s: any) => /^Context/.test(s.props.alt))?.props.source ?? ''
+      expect(source).toContain('clip-path="url(#track)"')
+      expect(source.match(/<rect x=/g)?.length).toBe(source.match(/<polygon/g)?.length)
     }
 
     // The first comes at a random moment 2 to 6 minutes in; walk the clock until it shows.

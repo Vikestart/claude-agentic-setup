@@ -40,18 +40,26 @@ const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replac
 const tipped = (tip: string, w: number, h: number, body: string) =>
   `<g><title>${esc(tip)}</title><rect width="${w}" height="${h}" fill="transparent"/>${body}</g>`
 
-// One bar: `used` and the ticks are fractions of the whole (0..1); a tick is an arrow above it.
+// One bar: `used` and the ticks are fractions of the whole (0..1); a tick is an arrow above it and a
+// line down through it (owner, 2026-10-04).
 function bar(width: number, used: number, ticks: { at: number; faint?: boolean; red?: boolean }[]): string {
   const x = (f: number) => Math.min(width, Math.max(0, f * width))
   const stops = HEAT.map(([at, c]) => `<stop offset="${at}" stop-color="${c}"/>`).join('')
   const arrows = ticks
     .filter(t => t.at > 0 && t.at < 1)
-    .map(t => `<polygon points="${x(t.at) - 4},0 ${x(t.at) + 4},0 ${x(t.at)},5" fill="${t.red ? RED : t.faint ? '#8888' : '#888'}"/>`)
+    .map(t => {
+      const fill = t.red ? RED : t.faint ? '#8888' : '#888'
+      return `<polygon points="${x(t.at) - 4},0 ${x(t.at) + 4},0 ${x(t.at)},5" fill="${fill}"/>`
+        + `<rect x="${x(t.at) - 0.75}" y="4" width="1.5" height="${BAR_Y + BAR - 4}" fill="${fill}"/>`
+    })
     .join('')
+  // The fill is clipped to the track's rounded shape: drawn rounded itself, a fill only a few pixels
+  // wide came out square at the left end (owner's screenshot, 2026-10-04).
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${H}" viewBox="0 0 ${width} ${H}">`
-    + `<defs><linearGradient id="heat" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="${width}" y2="0">${stops}</linearGradient></defs>`
+    + `<defs><linearGradient id="heat" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="${width}" y2="0">${stops}</linearGradient>`
+    + `<clipPath id="track"><rect y="${BAR_Y}" width="${width}" height="${BAR}" rx="4"/></clipPath></defs>`
     + `<rect y="${BAR_Y}" width="${width}" height="${BAR}" rx="4" fill="#8884"/>`
-    + `<rect y="${BAR_Y}" width="${x(used)}" height="${BAR}" rx="4" fill="url(#heat)"/>` + arrows
+    + `<rect y="${BAR_Y}" width="${x(used)}" height="${BAR}" clip-path="url(#track)" fill="url(#heat)"/>` + arrows
     + '</svg>'
 }
 
@@ -388,7 +396,10 @@ export const register: Register = on => {
       <Box position="absolute" top={0} {...(fromRight ? { right: 0 } : { left: 0 })} display="none"
         hover={{ display: 'flex' }} flexDirection="column" paddingX={1}>
         <Text bold>{title}</Text>
-        {text.split(' · ').map((line, i) => <Text key={String(i)} wrap="wrap">{line}</Text>)}
+        {/* The figure first, then the explanation dimmed: a Text has no size to set smaller. */}
+        {text.split(' · ').map((line, i) => (
+          <Text key={String(i)} wrap="wrap" dimColor={i > 0}>{line.charAt(0).toUpperCase() + line.slice(1)}</Text>
+        ))}
       </Box>
     )
     return (
