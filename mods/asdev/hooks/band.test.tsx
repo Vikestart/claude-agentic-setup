@@ -38,7 +38,8 @@ for (const surface of ['terminal', 'desktop'] as const) {
     on('settings.read', async () => ({ value: {} }) as never)
     on('store.get', async () => ({ value: undefined }) as never)
     const ui = await $.ui.mount({ plugin: 'asdev', surface, component: 'AbovePrompt', props: { hasSurvey: false } })
-    expect(await ui.find({ text: /– \/ 330k/})).toBeDefined()
+    expect(await ui.find({ text: /^–$/ })).toBeDefined()
+    if (surface === 'desktop') expect(await ui.find({ text: /^Unknown until the next reply$/ })).toBeDefined()
     // Used, then the pace: one hour left of five, so 80% (owner, 2026-10-04).
     expect(await ui.find({ text: /40% \/ 80%/ })).toBeDefined()
   })
@@ -127,6 +128,8 @@ for (const surface of ['terminal', 'desktop'] as const) {
       expect(strip?.hover).toMatchObject({ display: 'flex' })
       // One point per line, so a narrow card does not squeeze them into one.
       expect(await ui.find({ text: /^50k of 330k tokens used$/ })).toBeDefined()
+      // The band itself shows the share, to stay on one row.
+      expect(await ui.find({ text: new RegExp(`^${Math.round(50 / 330 * 100)}%$`) })).toBeDefined()
       // Each line starts with a capital; the explanation after the figure is dimmed.
       expect((await ui.find({ text: /^Faint arrow/ }))?.props.dimColor).toBe(true)
       // The fill keeps the track's rounded ends, and each arrow has a line down through the bar.

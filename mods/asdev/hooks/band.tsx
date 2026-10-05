@@ -263,7 +263,8 @@ export const register: Register = on => {
     const now = await $.clock.now()
     const usd = cost ? `$${cost.usd.toFixed(2)}` : ''
 
-    const shown = !limit ? '…' : `${tokens === undefined ? '–' : k(tokens)} / ${k(limit)}`
+    // A percentage keeps the band on one row; the tokens are in the hover card (owner, 2026-10-05).
+    const shown = !limit ? '…' : tokens === undefined ? '–' : `${Math.round(tokens / limit * 100)}%`
     const list: Row[] = [{
       name: 'Context',
       label: 'Context',
