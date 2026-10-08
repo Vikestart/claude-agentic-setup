@@ -29,7 +29,7 @@ session's effort. Each definition fixes model and effort together.
 
 | Definition | Use it for |
 |---|---|
-| `haiku-high-helper` | Run-and-report: suites, gates, falsify runs, sweeps; edits nothing. A job its safeguards decline (scanner findings) goes to `sonnet-medium-executor`. |
+| `haiku-high-helper` | Run-and-report: suites, gates, falsify runs, sweeps; edits nothing. A job its safeguards decline (scanner findings) goes to `sonnet-medium-executor`. One job each: spawn a fresh one, never continue it with SendMessage (above a 100k prompt Haiku costs 5×). |
 | `sonnet-medium-executor` | Mechanical writing: docs from given facts, exact-spec changes, viewport screenshots. Never sensitive code, never judgement. |
 | `opus-medium-executor` | **The default executor:** implementation, discovery, plans, tests, fix rounds — inside a sensitive phase too, for everything but the sensitive code itself. |
 | `opus-high-executor` | Significant sensitive code; debugging that resisted a `medium` attempt; a real design decision. |
