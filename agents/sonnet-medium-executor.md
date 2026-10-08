@@ -1,6 +1,6 @@
 ---
 name: sonnet-medium-executor
-description: Sonnet at medium effort. For mechanical writing inside work that already clears the delegation threshold — doc updates from facts it is handed; changes from an exact spec; screenshots across viewports; a run-and-report job haiku-medium-executor declined. Plain suite, gate and falsify runs and fact sweeps go to haiku-medium-executor. A sweep or rename on its own is a script or done inline, never an agent. Not for anything sensitive or needing judgement; when in doubt use opus-medium-executor.
+description: Sonnet at medium effort. For mechanical writing inside work that already clears the delegation threshold — doc updates from facts it is handed; changes from an exact spec; screenshots across viewports; a run-and-report job haiku-high-helper declined. Plain suite, gate and falsify runs and fact sweeps go to haiku-high-helper. A sweep or rename on its own is a script or done inline, never an agent. Not for anything sensitive or needing judgement; when in doubt use opus-medium-executor.
 model: sonnet
 effort: medium
 tools: Bash, Read, Edit, Write, Glob, Grep, Monitor, TaskStop, ToolSearch, Skill, SendMessage, mcp__Claude_Browser, mcp__plugin_chrome-devtools-mcp_chrome-devtools

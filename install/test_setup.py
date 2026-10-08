@@ -181,7 +181,7 @@ class AgentDefinitions(unittest.TestCase):
     @staticmethod
     def shared_agents():
         return [p for p in sorted((REPO / "agents").glob("*.md"))
-                if p.name.startswith(("opus-", "fable-", "sonnet-"))]
+                if p.name.startswith(("opus-", "fable-", "sonnet-", "haiku-"))]
 
     def test_no_agent_keeps_the_agent_tool(self):
         defs = self.shared_agents()
@@ -208,7 +208,7 @@ class AgentDefinitions(unittest.TestCase):
         never = {"Agent", "Task", "Artifact", "Workflow", "NotebookEdit", "PowerShell"}
         # The web tools stay only on the escalation agents (xhigh, max, Fable): the common ones
         # fetched a page about once in a hundred runs.
-        no_web = {"opus-medium-executor", "opus-high-executor", "sonnet-medium-executor", "haiku-medium-executor",
+        no_web = {"opus-medium-executor", "opus-high-executor", "sonnet-medium-executor", "haiku-high-helper",
                   "opus-high-reviewer", "opus-xhigh-reviewer"}
         never_prefix = ("mcp__computer-use", "mcp__claude-in-chrome", "mcp__visualize", "mcp__ccd_")
         defs = self.shared_agents()

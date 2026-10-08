@@ -37,7 +37,7 @@ EXCLUDED_SUFFIXES = {".pyc", ".pyo"}
 # Subagent definitions ride with the config: CLAUDE.md §6 routes every spawn through them. Only the
 # in-house ones: a person's own agents live untracked in the same linked folder and stay private.
 AGENT_DEFS = CLAUDE_HOME / "agents"
-AGENT_PATTERNS = ("opus-*.md", "fable-*.md", "sonnet-*.md")
+AGENT_PATTERNS = ("opus-*.md", "fable-*.md", "sonnet-*.md", "haiku-*.md")
 # The README quotes the depth the setup itself applies, so the two cannot drift apart.
 SHARED_SETTINGS = Path(__file__).resolve().parents[3] / "settings" / "shared-settings.json"
 

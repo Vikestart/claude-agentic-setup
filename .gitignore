@@ -9,6 +9,7 @@ agents/*
 !agents/opus-*.md
 !agents/fable-*.md
 !agents/sonnet-*.md
+!agents/haiku-*.md
 hooks/*
 !hooks/guard_credentials.py
 !hooks/test_guard_credentials.py

@@ -21,7 +21,7 @@ import sys
 ALLOWED = [
     "CLAUDE.shared.md", "CLAUDE.personal.example.md", "README.md", ".gitignore", ".gitattributes",
     "install-setup.cmd", "install/*", "githooks/*", "settings/*.json", "agents/opus-*.md",
-    "agents/fable-*.md", "agents/sonnet-*.md", "hooks/*.py", ".docs/*", "skills/asdev-*/*",
+    "agents/fable-*.md", "agents/sonnet-*.md", "agents/haiku-*.md", "hooks/*.py", ".docs/*", "skills/asdev-*/*",
     "mods/*", ".auditignore",
 ]
 FORBIDDEN_PARTS = {"local", "__pycache__", ".sandbox", "projects", "backups"}
