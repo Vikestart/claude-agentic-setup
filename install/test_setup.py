@@ -208,7 +208,7 @@ class AgentDefinitions(unittest.TestCase):
         never = {"Agent", "Task", "Artifact", "Workflow", "NotebookEdit", "PowerShell"}
         # The web tools stay only on the escalation agents (xhigh, max, Fable): the common ones
         # fetched a page about once in a hundred runs.
-        no_web = {"opus-medium-executor", "opus-high-executor", "sonnet-medium-executor",
+        no_web = {"opus-medium-executor", "opus-high-executor", "sonnet-medium-executor", "haiku-medium-executor",
                   "opus-high-reviewer", "opus-xhigh-reviewer"}
         never_prefix = ("mcp__computer-use", "mcp__claude-in-chrome", "mcp__visualize", "mcp__ccd_")
         defs = self.shared_agents()

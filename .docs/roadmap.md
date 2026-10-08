@@ -34,13 +34,6 @@ Outcomes and order only; active work goes in `implementation_plan.md` when a pha
 
 ## Later
 
-- **Models after Haiku 5.5 and the Sonnet 5.5 cache-read cut (2026-10-08) — owner's decision open.**
-  Per MTok, in / out / cache read: Opus 5.5 $4 / $20 / $0.20; Sonnet 5.5 $2 / $10 / $0.10 (halved);
-  Haiku 5.5 $0.10 / $0.50 / $0.01 (up to 100k prompt; 5× above), well behind Sonnet on agentic coding
-  (Terminal-Bench 39% vs 71%), stricter cyber safeguards. Proposed: (a) a `haiku` executor for run-and-report
-  and fact sweeps only, Sonnet keeps writing from an exact spec; (b) the owner may pick Sonnet 5.5 in
-  the app for routine sessions, about half of Opus since cache reads dominate. Policy files if (a):
-  CLAUDE.shared.md §6, `agents/`, the `asdev-orchestrator` roster table, memory `agent-model-effort-policy`.
 
 - **Commit the AGENTS.md scanner-path fix** — done in the working tree 2026-09-30: xampp-pulse
   (on `main`) and tilspire-com (on `staging`) now point at the global audit rule instead of a

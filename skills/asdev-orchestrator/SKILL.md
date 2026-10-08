@@ -29,7 +29,8 @@ session's effort. Each definition fixes model and effort together.
 
 | Definition | Use it for |
 |---|---|
-| `sonnet-medium-executor` | Mechanical work: suite, gate and falsify runs reported back; fact collection (sweeps, inventories, screenshots); doc updates from facts you hand it; changes from an exact spec. Never sensitive code, never judgement. |
+| `haiku-medium-executor` | Run-and-report: suites, gates, falsify runs, sweeps; edits nothing. A job its safeguards decline (scanner findings) goes to `sonnet-medium-executor`. |
+| `sonnet-medium-executor` | Mechanical writing: docs from given facts, exact-spec changes, viewport screenshots. Never sensitive code, never judgement. |
 | `opus-medium-executor` | **The default executor:** implementation, discovery, plans, tests, fix rounds — inside a sensitive phase too, for everything but the sensitive code itself. |
 | `opus-high-executor` | Significant sensitive code; debugging that resisted a `medium` attempt; a real design decision. |
 | `opus-xhigh-executor` | Only after `opus-high-executor` has failed at the same work. |
@@ -70,7 +71,7 @@ Cost ≈ context size × turns, plus a full re-cache after any pause longer than
 - **In a planned phase you stay the orchestrator.** Write the brief from the plan and the reference
   docs — reading the code first means it is read twice. Code and test edits beyond a glance-sized
   correction go to a fresh `opus-medium-executor`; suite, gate and falsify runs and fact sweeps to
-  `sonnet-medium-executor`. Your own checks stay small: the diff stat, one targeted read, a run's
+  `haiku-medium-executor`. Your own checks stay small: the diff stat, one targeted read, a run's
   summary line — at ~230k context, each turn you add costs about a small agent's whole start.
   Outside a plan, "directly by default" still governs.
 

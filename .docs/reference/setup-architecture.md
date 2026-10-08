@@ -111,8 +111,14 @@ The roster is in CLAUDE.md §6 and `agents/`; these are the reasons behind it, s
 - **Nothing below Opus, except Sonnet for trivial work.** Sonnet and Haiku were retired on 2026-09-25
   (Opus 5.5 better and cheaper). On 2026-10-01 the owner brought Sonnet back for one role:
   `sonnet-medium-executor` takes the trivial work `opus-low-executor` did (suite runs, doc edits,
-  well-specified mechanical fixes). The Opus `low` file stays but is no longer proposed. Haiku stays
-  retired; nothing sensitive or needing judgement goes below Opus.
+  well-specified mechanical fixes). The Opus `low` file stays but is no longer proposed. Nothing
+  sensitive or needing judgement goes below Opus.
+- **Haiku back for run-and-report only** (owner, 2026-10-08). Haiku 5.5 costs $0.10 / $0.50 / $0.01
+  per MTok in / out / cache read up to a 100k prompt (5× above), against Sonnet 5.5's $2 / $10 / $0.10,
+  but trails it on agentic coding (Terminal-Bench 39% vs 71%) and its cyber safeguards are stricter.
+  So `haiku-medium-executor` runs suites, gates, falsify batches and fact sweeps and edits nothing;
+  Sonnet keeps writing from an exact spec or given facts and takes any job Haiku declines. The gain
+  is modest: most mechanical work here is already a script.
 - **`medium` is the default effort:** on the benchmarks Opus at `medium` keeps very high intelligence at
   low cost. `high` for very complex work; trivial work goes to Sonnet at `medium` (above).
 - **Effort by role, not by phase** (owner, 2026-10-01): "Opus 5.5 is now really powerful even on
