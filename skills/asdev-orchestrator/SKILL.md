@@ -38,7 +38,7 @@ session's effort. Each definition fixes model and effort together.
 | `opus-high-reviewer` | **Every review:** plan attacks, detached reviews between rounds and phases, the end of a sensitive, high-impact or cross-cutting wave. |
 | `opus-xhigh-reviewer` | Only the final pre-release review of sensitive material, when Fable is unavailable. |
 | `fable-xhigh-reviewer` | The one final review of sensitive material (see Reviews). |
-| `opus-max-*`, `fable-max-*` | **Only when the owner names them.** |
+| `opus-max-*`, `fable-max-*`, `sonnet-medium-reviewer` | **Only when the owner names them.** |
 
 Nothing that needs judgement runs below Opus, not even high-volume fan-out — volume is not
 triviality. The phase leads and `opus-low-executor` are archived (`.docs/reference/archive/agents/`
