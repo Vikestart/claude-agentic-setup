@@ -34,6 +34,17 @@ Outcomes and order only; active work goes in `implementation_plan.md` when a pha
 
 ## Later
 
+- **Long sessions, analysed 2026-10-16 — owner's decisions open.** The four open main chats (Tilspire,
+  Nebulingo, Framvis since 1–2 Oct; TSWDB since 15 Sep) compact as designed: about every 60 calls,
+  ~163k → ~83k, average prompt ~132k (the 1M-window chats of September averaged ~530k). API-equivalent
+  over their lives: Tilspire $540, TSWDB $565, Nebulingo $278, Framvis $126; cache reads ~98% of tokens.
+  (1) Of the ~83k left after a compaction, ~72k is fixed start-up (system tools 37k, MCP tools 18.5k,
+  skills 8k, memory 5k): trimming unused MCP tools is the biggest lever left. (2) Optional: compact from
+  ~120k instead of 150k (`TRIGGER_FROM`, `mods/asdev/hooks/compaction.ts`), about 15% fewer cache reads
+  for twice as many compactions. (3) Transcripts hold the same entries up to ~10× over (Nebulingo
+  1.13 GB, 115 MB unique; Tilspire 3.6 GB; TSWDB 5 GB; 14 GB in `~/.claude/projects`): the app's doing,
+  not the mod's, harmless to cost; owner may report it with `/bug`.
+
 
 - **Commit the AGENTS.md scanner-path fix** — done in the working tree 2026-09-30: xampp-pulse
   (on `main`) and tilspire-com (on `staging`) now point at the global audit rule instead of a
