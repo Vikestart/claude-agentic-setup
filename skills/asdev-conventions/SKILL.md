@@ -52,6 +52,11 @@ arbitrary until they break, and the deep references for first-of-kind work with 
   `convention_audit` RANDOM_CACHE_BUST)*
 - **Save/apply confirmations use the project's toast component** (lower-right, auto-dismiss), never
   inline "Saved" spans. Inline messages stay for validation errors and persistent warnings.
+- **Every project with sign-in has dev seed accounts**, so an agent signs in on the local dev site
+  without the owner: a `tools/dev` script creates or resets one throwaway account per role,
+  refuses any database but the local dev one, and reads the logins from a committed file that
+  `AGENTS.md` names (two-factor handled on dev only). A project lacking them gets them before its
+  first signed-in browser check. Never the owner's real login, never a bypass route.
 
 ## Match the project, not a canon
 
@@ -80,7 +85,7 @@ author's.
 
 ## A project's CLAUDE.md / AGENTS.md
 
-**A project's `CLAUDE.md` / `AGENTS.md` stays under ~20 kB and 100 lines.** It is re-read every turn there, and past a point the rules that matter drown — the limit is attention, not disk. When it outgrows that, split it as nebulingo was: a short core (invariants, environment, routing) plus one `.docs/reference/` file per system, read only when that system is touched; never re-inline them. The global `~/.claude/CLAUDE.md` is exempt.
+**A project's `CLAUDE.md` / `AGENTS.md` stays under ~20 kB and 100 lines.** It is re-read every turn there, and past a point the rules that matter drown — the limit is attention, not disk. When it outgrows that, split it as nebulingo was: a short core (invariants, environment, routing) plus one `.docs/reference/` file per system, read only when that system is touched; never re-inline them. The global `~/.claude/CLAUDE.md` is exempt.
 
 ## Where the rules live
 
