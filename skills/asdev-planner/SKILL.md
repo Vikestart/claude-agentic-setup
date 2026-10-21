@@ -54,7 +54,7 @@ specific to this work.
 - Gate: `audit_all.py --changed`, or `--since main` for release scope.
 
 ## Subagents
-None — <why one writer is right> | a table: role · agent definition · exact model release · files owned · checks it runs
+None — <why one writer is right> | a table: role · agent definition · exact model release · files and functions owned, each share sized to fit one agent (`asdev-orchestrator`) · checks it runs
 
 ## Release
 local → staging → production (or which stage is excluded, and why)

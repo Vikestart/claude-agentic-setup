@@ -44,8 +44,8 @@ triviality.
 
 ## Keeping contexts small
 
-Cost ≈ context size × turns, plus a full re-cache after any pause longer than the cache lives (agents
-1 hour via `subagentPromptCacheTtl`; 5 minutes while the subscription is in overage).
+Cost ≈ context size × turns, plus a full re-cache after any pause longer than the cache lives (5 minutes
+for agents, an hour for the main chat).
 
 - **One role per agent.** Planner, plan attacker and builder are separate fresh agents. A builder
   gets the plan's path and a compact brief, never the planner's thread.
@@ -138,8 +138,8 @@ verification to run and quote.
 - **High-impact or cross-cutting waves** end with a **detached review**: a fresh read-only
   `opus-medium-reviewer` given only the commits and the claimed properties, never your reasoning,
   told to break the claims and above all to find a legitimate user flow the change breaks.
-- **Sensitive material:** the same, but one `opus-high-reviewer`, **after all planned work is built
-  and before production release** — never between rounds.
+- **Sensitive material:** the same, but one `opus-high-reviewer` **per release**, after all its planned work is
+  built and before production — never per phase or round (those get `opus-medium-reviewer`).
 - **Run the mechanical sweeps first and give the reviewer their output** — a grep finds a whole
   class in seconds that a review can miss.
 - Act on the findings; if one is wrong, say so with evidence. Plan reviews are in `asdev-planner`.

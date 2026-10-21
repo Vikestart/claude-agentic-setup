@@ -1,6 +1,6 @@
 ---
 name: opus-high-reviewer
-description: Read-only review at Opus high effort. The one review that ends sensitive work as CLAUDE.md §6 defines it, after all planned work is built and before production release, and a sensitive plan's attack; every other review goes to opus-medium-reviewer. Tries to break the claimed properties and find a legitimate user flow the change breaks.
+description: Read-only review at Opus high effort. The one review that ends sensitive work as CLAUDE.md §6 defines it, once per release, after all its planned work is built and before production (never per phase), and a sensitive plan's attack; every other review goes to opus-medium-reviewer. Tries to break the claimed properties and find a legitimate user flow the change breaks.
 model: opus
 effort: high
 tools: Bash, Read, Glob, Grep, Monitor, TaskStop, ToolSearch, Skill, SendMessage, mcp__Claude_Browser, mcp__plugin_chrome-devtools-mcp_chrome-devtools

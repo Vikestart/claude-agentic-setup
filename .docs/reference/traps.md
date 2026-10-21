@@ -100,9 +100,12 @@ afterwards. Only the owner can raise it, in the app.
 **Subagents cache for 5 minutes by default; the main chat for an hour.**
 Verified 2026-09-30 from `usage.cache_creation` in transcripts. An agent that pauses longer — a long suite,
 a falsify run, a resume by message — writes its whole context again at the cache-write price; one Tilspire
-builder spent ~30M that way. → `settings.json` sets `"subagentPromptCacheTtl": "1h"` (Claude Code 2.1.284;
-`CLAUDE_CODE_SUBAGENT_PROMPT_CACHE_TTL` overrides it). It is ignored while the subscription is in overage,
-so agents fall back to 5 minutes then.
+builder spent ~30M that way. → `settings.json` set `"subagentPromptCacheTtl": "1h"` from 2026-09-30
+(Claude Code 2.1.284; `CLAUDE_CODE_SUBAGENT_PROMPT_CACHE_TTL` overrides it). Removed again 2026-10-21
+(owner): long runs now go to the background or to `haiku-high-helper`, so agents rarely pause — one
+Tilspire day, 33 agents, 2,269 requests, 4 pauses over 5 minutes; the 1-hour write premium cost 8.79M
+weighted against 6.22M with the 5-minute cache, those 4 re-caches included. Keep long waits out of
+large builders, or this trap comes back.
 
 **On Windows, `subprocess` with `shell=True` means cmd.exe, whatever shell the session uses.**
 cmd.exe passes single quotes through, so `python -c 'print(1)'` evaluates a string and exits 0 having

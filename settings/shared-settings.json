@@ -5,11 +5,12 @@
     "env.CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH": "1",
     "env.CLAUDE_CODE_PLUGIN_DIRS": "~/.claude/claude-agentic-setup/mods/asdev",
     "env.CLAUDE_CODE_PLUGIN_DIR_WATCH": "1",
-    "subagentPromptCacheTtl": "1h",
     "workflowSizeGuideline": "medium",
     "autoCompactWindow": 330000
   },
-  "unset": {},
+  "unset": {
+    "subagentPromptCacheTtl": "1h"
+  },
   "add": {
     "permissions.allow": [
       "Bash(python ~/.claude/skills/asdev-web-audit/scripts/audit_all.py *)",
