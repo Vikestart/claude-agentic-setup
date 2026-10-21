@@ -97,6 +97,13 @@ skill must still work without it.
   review that ends sensitive work. Fable left every roster, the escalation ladder ends at
   `opus-xhigh-executor`, and `opus-xhigh-reviewer` runs only when named. `Explore` is overridden by
   `agents/haiku-high-explore.md` (Haiku, `high`): a user agent with the built-in's name replaces it.
+- **Sonnet takes every job the brief can state exactly** (owner, 2026-10-21). Measured: the
+  long-running Tilspire session spawned 759 agents, only 31 of them Sonnet; browser checks, docs-only
+  jobs and strings went to Opus, because Sonnet's definition ended "when in doubt use
+  opus-medium-executor" and code jobs bundled their docs. Now: report-only browser checks, docs from
+  facts, strings and exact-spec changes go to Sonnet, split out of a code job once its code lands.
+  Canvases are always Opus (main chat or an Opus subagent). The same count showed 44% of spawns at
+  `opus-high-executor` for non-sensitive pages and dashboards, so §6 now says `high` is never for those.
 - **One scanner copy, never one per harness.** Codex and Claude call the same suite;
   `harness_parity.py` asserts it.
 - **Codex is decoupled** (owner, 2026-10-01: "We won't use it"). `~/.codex/AGENTS.md` was generated
