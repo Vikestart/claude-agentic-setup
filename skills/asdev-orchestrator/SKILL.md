@@ -29,8 +29,8 @@ session's effort. Each definition fixes model and effort together.
 
 | Definition | Use it for |
 |---|---|
-| `haiku-high-helper` | Run-and-report: suites, gates, falsify runs, sweeps; edits nothing. A job its safeguards decline (scanner findings) goes to `sonnet-medium-executor`. One job each: spawn a fresh one, never continue it with SendMessage (above a 100k prompt Haiku costs 5×). |
-| `sonnet-medium-executor` | Any job the brief can state exactly: docs and changelog from given facts, browser checks that report without fixing, strings from a list, exact-spec changes. Split these out of a code job once its code lands. Never sensitive code, judgement or a canvas. |
+| `haiku-high-helper` | Run-and-report: suites, gates, falsify runs, sweeps, yes/no page checks (loads, console errors, element present); edits nothing. A job its safeguards decline (scanner findings) goes to `sonnet-medium-executor`. One job each: spawn a fresh one, never continue it with SendMessage (above a 100k prompt Haiku costs 5×). |
+| `sonnet-medium-executor` | Any job the brief can state exactly: docs and changelog from given facts, browser checks that judge how a page looks, strings from a list, exact-spec changes. Split these out of a code job once its code lands. Never sensitive code, judgement or a canvas. |
 | `opus-medium-executor` | **The default executor:** implementation, discovery, plans, tests, fix rounds, design canvases — inside a sensitive phase too, for everything but the sensitive code itself. |
 | `Explore` | Read-only searches (Haiku, high; overrides the built-in). Locates, never judges. |
 | `opus-high-executor` | Significant sensitive code (CLAUDE.md §6's list — never an ordinary page, dashboard or theme); debugging that resisted a `medium` attempt. |

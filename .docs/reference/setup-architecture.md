@@ -137,6 +137,9 @@ The roster is in CLAUDE.md §6 and `agents/`; these are the reasons behind it, s
   per MTok in / out / cache read up to a 100k prompt (5× above), against Sonnet 5.5's $2 / $10 / $0.10,
   but trails it on agentic coding (Terminal-Bench 39% vs 71%) and its cyber safeguards are stricter.
   So `haiku-high-helper` runs suites, gates, falsify batches and fact sweeps and edits nothing;
+  since 2026-10-21 (owner, a trial) also yes/no browser checks — a URL loads, console errors, a
+  named element present — while checks that judge how a page looks stay on Sonnet, since a false
+  "looks fine" costs more than the tokens saved;
   Sonnet keeps writing from an exact spec or given facts and takes any job Haiku declines. The gain
   is modest: most mechanical work here is already a script. Effort `high`, not the default `medium`
   (owner, 2026-10-08): its thinking costs next to nothing, and the weakest model in the roster misreading
