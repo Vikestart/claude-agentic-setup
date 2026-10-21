@@ -96,8 +96,9 @@ applied and said once.
   with a real integration benefit. Shared files, live services and mutable databases stay
   single-writer. Where two workstreams reach one file, name an owner; the other reports the change
   and you apply it.
-- **The 10-agent cap** (§6) counts agents running at once: `settings.json` refuses an eleventh, so
-  an approved wave above 10 needs that setting raised first.
+- **The 10-agent cap** (CLAUDE.md §6) counts agents running at once, so a long phase spawns more
+  over time without asking; `settings.json` refuses an eleventh, so an approved wave above 10 needs
+  that setting raised first.
 - **Never run suites that share a disposable database concurrently** — two agents resetting one
   instance corrupt both runs and produce failures that look like real regressions.
 

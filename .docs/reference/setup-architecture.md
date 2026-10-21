@@ -103,7 +103,8 @@ skill must still work without it.
   opus-medium-executor" and code jobs bundled their docs. Now: report-only browser checks, docs from
   facts, strings and exact-spec changes go to Sonnet, split out of a code job once its code lands.
   Canvases are always Opus (main chat or an Opus subagent). The same count showed 44% of spawns at
-  `opus-high-executor` for non-sensitive pages and dashboards, so §6 now says `high` is never for those.
+  `opus-high-executor` for non-sensitive pages and dashboards, so §6's effort bullet and the
+  orchestrator's `opus-high-executor` row say `high` is never for those.
 - **Each rule lives in one place** (owner, 2026-10-21: "simplify … without losing any real
   quality"). §6 keeps only the guardrails (delegation, model families, effort, the floor, cap,
   falsify, verify, review); which definition does which job lives only in the orchestrator's table.
@@ -208,6 +209,19 @@ Moved out of `CLAUDE.shared.md` and the orchestrator skill on 2026-10-01 (budget
   a Nebulingo executor briefed with six steps over ~13 large files spent its whole 250k context
   reading for every step before step 1 and wrote nothing (1.57M) — hence step-at-a-time, the ~125k
   early stop and splitting large briefs up front.
+
+- **Audit suite tools** (moved out of the `asdev-web-audit` skill, 2026-10-21): `--changed` once
+  reported 93 blocking findings for a change that introduced none (old declarations in a touched
+  stylesheet, 2026-08-21) — hence `audit_delta.py`; an isolated copy of the ref scored 95 blocking /
+  116 advisory where the real worktree scores a fraction, and keying on the message alone collapsed
+  76 identical `CSS_SPACE_COLON` findings into one; its ref-side scan takes ~19 s on 594 files.
+  `quiet.py`: test output filling a builder's context was ~90% of a 31M-token phase. `code_map.py`:
+  agents spent 39–47% of their tool-result cost dumping 10–27k-line files, and plans, roadmaps and
+  reference docs were a third of their reads (Tilspire, 2026-10-01); run.php maps in 0.7 s.
+  `patch.py`: ~4,300 hand-written patch scripts in one month cost ~2.4M output tokens and failed
+  ~120 times. `token_analyzer.py`: only ~1.3% of comment lines were mechanically removable.
+  `agent_audit.py`: written after a reviewer read a forbidden `local/` overlay via `cat`; `fnmatch`
+  is case-insensitive on Windows. The `~/.claude/scripts/` launcher stubs were retired 2026-08-30.
 
 ## How the cost figures were measured
 
