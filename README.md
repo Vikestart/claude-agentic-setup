@@ -40,7 +40,7 @@ Start a new Claude Code session afterwards: a running one keeps the instructions
 - The `pre-commit` hook refuses private paths and credential-shaped text. Never bypass it with
   `--no-verify` without proof in the commit message that nothing private is staged.
 - `python install/verify.py` runs every check the setup has, one line each.
-- Your own agents need a name not starting with `opus-` or `fable-`: those are the shared ones.
+- Your own agents need a name not starting with `opus-`, `fable-`, `sonnet-` or `haiku-`: those are the shared ones.
 
 ## Never
 

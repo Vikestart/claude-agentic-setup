@@ -1,6 +1,6 @@
 ---
 name: asdev-orchestrator
-description: How to run subagents and reviews in the owner's setup — the agent definitions and what each is for, how to put a roster to the owner, spawn mechanics and effort checks, briefs, file ownership, supervision, verifying agent reports, and which reviewer runs when (including the one end-of-work Fable review). Read it before spawning any subagent, proposing a roster, or starting a detached review — including the detached review that ends sensitive work done directly.
+description: How to run subagents and reviews in the owner's setup — the agent definitions and what each is for, how to put a roster to the owner, spawn mechanics and effort checks, briefs, file ownership, supervision, verifying agent reports, and which reviewer runs when (including the one review that ends sensitive work). Read it before spawning any subagent, proposing a roster, or starting a detached review — including the detached review that ends sensitive work done directly.
 ---
 
 # Orchestration
@@ -32,13 +32,12 @@ session's effort. Each definition fixes model and effort together.
 | `haiku-high-helper` | Run-and-report: suites, gates, falsify runs, sweeps; edits nothing. A job its safeguards decline (scanner findings) goes to `sonnet-medium-executor`. One job each: spawn a fresh one, never continue it with SendMessage (above a 100k prompt Haiku costs 5×). |
 | `sonnet-medium-executor` | Mechanical writing: docs from given facts, exact-spec changes, viewport screenshots. Never sensitive code, never judgement. |
 | `opus-medium-executor` | **The default executor:** implementation, discovery, plans, tests, fix rounds — inside a sensitive phase too, for everything but the sensitive code itself. |
-| `opus-high-executor` | Significant sensitive code; debugging that resisted a `medium` attempt; a real design decision. |
-| `opus-xhigh-executor` | Only after `opus-high-executor` has failed at the same work. |
-| `fable-xhigh-executor` | Sensitive work that resists `opus-xhigh-executor`, or a genuinely novel sensitive design. |
-| `opus-high-reviewer` | **Every review:** plan attacks, detached reviews between rounds and phases, the end of a sensitive, high-impact or cross-cutting wave. |
-| `opus-xhigh-reviewer` | Only the final pre-release review of sensitive material, when Fable is unavailable. |
-| `fable-xhigh-reviewer` | The one final review of sensitive material (see Reviews). |
-| `opus-max-*`, `fable-max-*`, `sonnet-medium-reviewer` | **Only when the owner names them.** |
+| `Explore` | Read-only searches (Haiku, high; overrides the built-in). Locates, never judges. |
+| `opus-high-executor` | Significant sensitive code; debugging that resisted a `medium` attempt. |
+| `opus-xhigh-executor` | Only after `opus-high-executor` has failed at the same work: the top of the ladder. |
+| `opus-medium-reviewer` | **The default reviewer:** plan attacks, challenging work, detached reviews between rounds and phases, a high-impact or cross-cutting wave. |
+| `opus-high-reviewer` | The one review that ends sensitive work (see Reviews). |
+| `fable-*`, `*-max-*`, `opus-xhigh-reviewer`, `sonnet-medium-reviewer` | **Only when the owner names them** — never proposed in a roster. |
 
 Nothing that needs judgement runs below Opus, not even high-volume fan-out — volume is not
 triviality. The phase leads and `opus-low-executor` are archived (`.docs/reference/archive/agents/`
@@ -89,8 +88,8 @@ Cost ≈ context size × turns, plus a full re-cache after any pause longer than
   detached review and never satisfies an effort rule.
 - **A session opened before a definition existed** may not be offered it (`traps.md`). Then spawn
   `general-purpose` (executor) or `Plan` (reviewer) with the definition's rules in the brief; both
-  inherit the session's model and effort, so a Sonnet or Fable role then runs on the session's
-  model — say so, and never count such a fallback as the final Fable review.
+  inherit the session's model and effort, so a Sonnet or Haiku role then runs on the session's
+  model — say so, and never count such a fallback as the final sensitive review.
 - **Wherever effort is inherited,** check the session's effort before spawning for sensitive work;
   below `high`, say so and wait — only the owner can change it in the app.
 
@@ -138,13 +137,12 @@ verification to run and quote.
 
 ## Reviews
 
-- **Small work:** check it yourself. **Challenging work:** `opus-high-reviewer`.
-- **Sensitive, high-impact or cross-cutting waves** end with a **detached review**: a fresh read-only
-  `opus-high-reviewer` given only the commits and the claimed properties, never your reasoning, told
-  to break the claims and above all to find a legitimate user flow the change breaks.
-- **Fable, for sensitive material only:** one `fable-xhigh-reviewer` review, **after all planned work
-  is built and before production release** — never between rounds; `opus-xhigh-reviewer` when Fable
-  is unavailable.
+- **Small work:** check it yourself. **Challenging work:** `opus-medium-reviewer`.
+- **High-impact or cross-cutting waves** end with a **detached review**: a fresh read-only
+  `opus-medium-reviewer` given only the commits and the claimed properties, never your reasoning,
+  told to break the claims and above all to find a legitimate user flow the change breaks.
+- **Sensitive material:** the same, but one `opus-high-reviewer`, **after all planned work is built
+  and before production release** — never between rounds.
 - **Run the mechanical sweeps first and give the reviewer their output** — a grep finds a whole
   class in seconds that a review can miss.
 - Act on the findings; if one is wrong, say so with evidence. Plan reviews are in `asdev-planner`.

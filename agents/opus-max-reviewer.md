@@ -1,6 +1,6 @@
 ---
 name: opus-max-reviewer
-description: Read-only detached review at Opus max effort. Only when the user asks for it — opus-high-reviewer is the reviewer to propose; opus-xhigh-reviewer only as the Fable fallback.
+description: Read-only detached review at Opus max effort. Only when the user asks for it — opus-medium-reviewer is the reviewer to propose, opus-high-reviewer for sensitive work.
 model: opus
 effort: max
 tools: Bash, Read, Glob, Grep, Monitor, TaskStop, ToolSearch, Skill, SendMessage, WebFetch, WebSearch, mcp__Claude_Browser, mcp__plugin_chrome-devtools-mcp_chrome-devtools

@@ -1,6 +1,6 @@
 ---
 name: opus-xhigh-executor
-description: Opus at xhigh effort. A fallback only — after opus-high-executor has failed at the same work; never a first choice. The highest executor to propose; opus-max-executor only when the user asks for it.
+description: Opus at xhigh effort. A fallback only — after opus-high-executor has failed at the same work; never a first choice. The top of the escalation ladder and the highest executor to propose; opus-max-executor only when the user asks for it.
 model: opus
 effort: xhigh
 tools: Bash, Read, Edit, Write, Glob, Grep, Monitor, TaskStop, ToolSearch, Skill, SendMessage, WebFetch, WebSearch, mcp__Claude_Browser, mcp__plugin_chrome-devtools-mcp_chrome-devtools

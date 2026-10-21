@@ -1,6 +1,6 @@
 ---
 name: fable-xhigh-executor
-description: Fable at xhigh effort. The last step for sensitive work that has resisted opus-xhigh-executor, or the first for a genuinely novel sensitive design. Expensive; never the default. fable-max-executor only when the user asks for it.
+description: Fable at xhigh effort. Only when the user names it — never proposed in a roster; opus-xhigh-executor is the top of the ladder.
 model: fable
 effort: xhigh
 tools: Bash, Read, Edit, Write, Glob, Grep, Monitor, TaskStop, ToolSearch, Skill, SendMessage, WebFetch, WebSearch, mcp__Claude_Browser, mcp__plugin_chrome-devtools-mcp_chrome-devtools

@@ -1,6 +1,6 @@
 ---
 name: fable-max-reviewer
-description: Read-only detached review at Fable max effort. Only when the user asks for it — fable-xhigh-reviewer is the sensitive-material reviewer to propose.
+description: Read-only detached review at Fable max effort. Only when the user names it — never proposed in a roster.
 model: fable
 effort: max
 tools: Bash, Read, Glob, Grep, Monitor, TaskStop, ToolSearch, Skill, SendMessage, WebFetch, WebSearch, mcp__Claude_Browser, mcp__plugin_chrome-devtools-mcp_chrome-devtools

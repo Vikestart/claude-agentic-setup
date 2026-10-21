@@ -1,6 +1,6 @@
 ---
 name: sonnet-medium-reviewer
-description: Read-only review at Sonnet medium effort. Only when the user names it — no rule routes work here; every review goes to opus-high-reviewer, sensitive material to the reviewers above it.
+description: Read-only review at Sonnet medium effort. Only when the user names it — no rule routes work here; reviews go to opus-medium-reviewer, sensitive material to opus-high-reviewer.
 model: sonnet
 effort: medium
 tools: Bash, Read, Glob, Grep, Monitor, TaskStop, ToolSearch, Skill, SendMessage, mcp__Claude_Browser, mcp__plugin_chrome-devtools-mcp_chrome-devtools

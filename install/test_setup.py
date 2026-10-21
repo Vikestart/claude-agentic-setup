@@ -209,7 +209,8 @@ class AgentDefinitions(unittest.TestCase):
         # The web tools stay only on the escalation agents (xhigh, max, Fable): the common ones
         # fetched a page about once in a hundred runs.
         no_web = {"opus-medium-executor", "opus-high-executor", "sonnet-medium-executor", "haiku-high-helper",
-                  "opus-high-reviewer", "opus-xhigh-reviewer", "sonnet-medium-reviewer"}
+                  "opus-high-reviewer", "opus-xhigh-reviewer", "sonnet-medium-reviewer",
+                  "opus-medium-reviewer", "haiku-high-explore"}
         never_prefix = ("mcp__computer-use", "mcp__claude-in-chrome", "mcp__visualize", "mcp__ccd_")
         defs = self.shared_agents()
         self.assertTrue(defs, "no agent definitions found")

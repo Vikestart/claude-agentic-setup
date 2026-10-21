@@ -1,6 +1,6 @@
 ---
 name: fable-max-executor
-description: Fable at max effort. Only when the user asks for it — fable-xhigh-executor is the ceiling to propose.
+description: Fable at max effort. Only when the user names it — never proposed in a roster.
 model: fable
 effort: max
 tools: Bash, Read, Edit, Write, Glob, Grep, Monitor, TaskStop, ToolSearch, Skill, SendMessage, WebFetch, WebSearch, mcp__Claude_Browser, mcp__plugin_chrome-devtools-mcp_chrome-devtools
