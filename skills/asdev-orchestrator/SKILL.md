@@ -31,17 +31,16 @@ session's effort. Each definition fixes model and effort together.
 |---|---|
 | `haiku-high-helper` | Run-and-report: suites, gates, falsify runs, sweeps; edits nothing. A job its safeguards decline (scanner findings) goes to `sonnet-medium-executor`. One job each: spawn a fresh one, never continue it with SendMessage (above a 100k prompt Haiku costs 5×). |
 | `sonnet-medium-executor` | Any job the brief can state exactly: docs and changelog from given facts, browser checks that report without fixing, strings from a list, exact-spec changes. Split these out of a code job once its code lands. Never sensitive code, judgement or a canvas. |
-| `opus-medium-executor` | **The default executor:** implementation, discovery, plans, tests, fix rounds — inside a sensitive phase too, for everything but the sensitive code itself. |
+| `opus-medium-executor` | **The default executor:** implementation, discovery, plans, tests, fix rounds, design canvases — inside a sensitive phase too, for everything but the sensitive code itself. |
 | `Explore` | Read-only searches (Haiku, high; overrides the built-in). Locates, never judges. |
-| `opus-high-executor` | Significant sensitive code; debugging that resisted a `medium` attempt. |
+| `opus-high-executor` | Significant sensitive code (CLAUDE.md §6's list — never an ordinary page, dashboard or theme); debugging that resisted a `medium` attempt. |
 | `opus-xhigh-executor` | Only after `opus-high-executor` has failed at the same work: the top of the ladder. |
 | `opus-medium-reviewer` | **The default reviewer:** plan attacks, challenging work, detached reviews between rounds and phases, a high-impact or cross-cutting wave. |
 | `opus-high-reviewer` | The one review that ends sensitive work (see Reviews). |
 | `fable-*`, `*-max-*`, `opus-xhigh-reviewer`, `sonnet-medium-reviewer` | **Only when the owner names them** — never proposed in a roster. |
 
 Nothing that needs judgement runs below Opus, not even high-volume fan-out — volume is not
-triviality. The phase leads and `opus-low-executor` are archived (`.docs/reference/archive/agents/`
-in the setup repo).
+triviality.
 
 ## Keeping contexts small
 
@@ -68,19 +67,17 @@ Cost ≈ context size × turns, plus a full re-cache after any pause longer than
   started it. Only a background agent (the default) is woken: a
   foreground agent's end of turn kills its background commands, so never spawn one for a long run.
 - **In a planned phase you stay the orchestrator.** Write the brief from the plan and the reference
-  docs — reading the code first means it is read twice. Code and test edits beyond a glance-sized
-  correction go to a fresh `opus-medium-executor`; suite, gate and falsify runs and fact sweeps to
-  `haiku-high-helper`. Your own checks stay small: the diff stat, one targeted read, a run's
+  docs — reading the code first means it is read twice. Edits beyond a glance-sized correction go
+  to a fresh agent from the table above. Your own checks stay small: the diff stat, one targeted read, a run's
   summary line — at ~230k context, each turn you add costs about a small agent's whole start.
   Outside a plan, "directly by default" still governs.
 
 ## Proposing a roster
 
-- Outside a plan, when work clears the bar, ask once in one line: "this splits into 3 independent
-  pieces — spawn 3?" At the Planning Gate the roster is part of the plan's approval.
-- Name each agent's definition and the **exact model release, version included** (e.g. Opus 5.5).
-- Approving a roster IS the request to spawn it. The owner may override any model, effort or
-  parallelism, even below the effort floor: apply it and say once what it changes.
+Outside a plan, ask once in one line (CLAUDE.md §6); at the Planning Gate, the roster question in
+`asdev-planner`. Either way name each agent's definition and the **exact model release, version
+included** (e.g. Opus 5.5). Approving a roster IS the request to spawn it; an owner override is
+applied and said once.
 
 ## Spawning
 
@@ -99,9 +96,8 @@ Cost ≈ context size × turns, plus a full re-cache after any pause longer than
   with a real integration benefit. Shared files, live services and mutable databases stay
   single-writer. Where two workstreams reach one file, name an owner; the other reports the change
   and you apply it.
-- **The 10-agent cap is on agents running at once,** not a total: a long phase may spawn more over
-  time without asking. `settings.json` refuses an eleventh concurrent spawn and stops subagents
-  spawning; an approved wave above 10 at once needs that setting raised first.
+- **The 10-agent cap** (§6) counts agents running at once: `settings.json` refuses an eleventh, so
+  an approved wave above 10 needs that setting raised first.
 - **Never run suites that share a disposable database concurrently** — two agents resetting one
   instance corrupt both runs and produce failures that look like real regressions.
 

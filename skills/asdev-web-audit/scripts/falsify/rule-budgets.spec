@@ -5,7 +5,7 @@ expect: CLAUDE.shared.md is
 # 0. Proportionality & Cost
 ======= NEW
 # 0. Proportionality & Cost
-- A new rule added without removing one. A new rule added without removing one. A new rule added without removing one. A new rule added without removing one. A new rule added without removing one.
+- A new rule added without removing one. A new rule added without removing one. A new rule added without removing one. A new rule added without removing one. A new rule added without removing one. - A new rule added without removing one. A new rule added without removing one. A new rule added without removing one. A new rule added without removing one. A new rule added without removing one.
 >>>>>>> END
 
 @@@ agents/opus-medium-executor.md

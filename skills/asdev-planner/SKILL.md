@@ -76,9 +76,8 @@ Put the roster to the owner in chat **as its own question**, separate from point
   10-at-once cap applies, not a total; the `asdev-orchestrator` skill has the rule);
 - or "No subagents", with the one-line reason.
 
-Approving the roster IS the owner's request to spawn it; they may override roster, models, effort or
-parallelism. If any agent would inherit the session's effort (a built-in type rather than a
-definition) and the work is sensitive, check the session's effort first — below `high`, say so and wait.
+Approving the roster IS the owner's request to spawn it (spawn mechanics and effort checks:
+`asdev-orchestrator`).
 
 ## Plan review — only for an intricate, sensitive or complex plan
 
@@ -97,8 +96,7 @@ request from the owner; no separate ask.
 ## Presenting the plan
 
 Point to the file in a sentence or two — don't summarize it in chat — ask the roster question, then
-halt until the owner approves. Approval covers every listed phase and the full local → staging →
-production path unless the plan or the owner excludes one; don't re-ask at routine transitions.
+halt until the owner approves (what approval covers: CLAUDE.md §1).
 
 ## During the phase
 

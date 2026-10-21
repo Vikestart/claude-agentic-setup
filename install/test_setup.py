@@ -150,9 +150,9 @@ class RuleBudgets(unittest.TestCase):
     # Evidence and history live in `.docs/reference/setup-architecture.md`. Raise a budget only on
     # purpose, here.
     BUDGET_KB = {
-        "CLAUDE.shared.md": 11.75,
-        "skills/asdev-orchestrator/SKILL.md": 10.5,
-        "skills/asdev-planner/SKILL.md": 8,
+        "CLAUDE.shared.md": 11,
+        "skills/asdev-orchestrator/SKILL.md": 10.25,
+        "skills/asdev-planner/SKILL.md": 7.75,
         "skills/asdev-release/SKILL.md": 7,
         "skills/asdev-conventions/SKILL.md": 7,
         "skills/asdev-handover/SKILL.md": 12,

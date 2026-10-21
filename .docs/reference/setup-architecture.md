@@ -104,6 +104,12 @@ skill must still work without it.
   facts, strings and exact-spec changes go to Sonnet, split out of a code job once its code lands.
   Canvases are always Opus (main chat or an Opus subagent). The same count showed 44% of spawns at
   `opus-high-executor` for non-sensitive pages and dashboards, so §6 now says `high` is never for those.
+- **Each rule lives in one place** (owner, 2026-10-21: "simplify … without losing any real
+  quality"). §6 keeps only the guardrails (delegation, model families, effort, the floor, cap,
+  falsify, verify, review); which definition does which job lives only in the orchestrator's table.
+  Roster and approval wording live in §1 and `asdev-planner`, each pointing at the other instead of
+  repeating it. §0's five token-cost bullets became two. Nothing was dropped; budgets lowered to
+  hold the gain (CLAUDE.shared.md 11.75 → 11 kB, orchestrator 10.5 → 10.25, planner 8 → 7.75).
 - **One scanner copy, never one per harness.** Codex and Claude call the same suite;
   `harness_parity.py` asserts it.
 - **Codex is decoupled** (owner, 2026-10-01: "We won't use it"). `~/.codex/AGENTS.md` was generated
