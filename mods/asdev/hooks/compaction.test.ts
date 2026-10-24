@@ -84,6 +84,22 @@ test('no trigger: the line mid-reply, an aborted turn, a subagent', async ($: an
   expect(w.ran).toEqual([])
 })
 
+test('a reply that asks the owner is not compacted; the nudge comes back on the next tool call', async ($: any, on) => {
+  mock.clock(on)
+  const t = { now: 152_000 }
+  const w = world(on, t)
+  expect((await read($)).context?.[0]).toContain('Never in a reply that asks the owner')
+  expect((await read($)).context ?? []).toEqual([])
+  await $.turn.complete(turn('Canvas published.\n\n**Which directions do you pick?**\n\nready to compact'))
+  await tick()
+  expect(w.ran).toEqual([])
+  expect((await read($)).context?.[0]).toContain('next clean break')
+  // A question inside a fenced paste-ready note is not one to the owner.
+  await $.turn.complete(turn('Paste this:\n```\nWhich phase is next?\n```\nready to compact'))
+  await tick()
+  expect(w.ran.map(r => r.command)).toEqual(['compact'])
+})
+
 // Under /goal the goal's Stop hook blocks every stop: the turn never ends, so the trigger never reaches
 // turn.complete. The mod lets that one stop through and hands the goal's check back after the compaction.
 test('under /goal: the trigger stop is let through, and the goal is carried on after', async ($: any, on) => {

@@ -15,6 +15,10 @@ const TRIGGER_LINE = 'ready to compact'
 // Final messages measured 2026-10-01: median ~700 characters, longest 3,260.
 const REPLY_CAP = 6000
 const DOCS = ['implementation_plan.md', 'task.md', 'handover.md', 'roadmap.md']
+// A compaction started at the end of a reply that asks the owner something cuts in before they can
+// answer (seen 2026-10-24, a Tilspire chat asking for canvas picks). Said in the notes, and enforced.
+const NOT_WITH_A_QUESTION = 'Never in a reply that asks the owner a question or waits on their pick: '
+  + 'ask first, and compact at the break after they answer.'
 
 // Was the "When compacting" rule in CLAUDE.shared.md; given to every main-chat compaction without its own.
 const INSTRUCTIONS = 'Keep: the current phase and task, decisions with their reasons, open questions, and any '
@@ -55,14 +59,15 @@ function armed(tokens: number): string {
   return `This session's context is at ${k(tokens)}, so a compaction is now worth a break. At the `
     + 'next compaction checkpoint the plan marks (⟲), or the end of a phase, update the working docs '
     + 'so they hold the current state, then end that reply with a line telling the owner a compaction '
-    + `is starting and takes about a minute, and make the very last line exactly: ${TRIGGER_LINE}`
+    + `is starting and takes about a minute, and make the very last line exactly: ${TRIGGER_LINE}. `
+    + NOT_WITH_A_QUESTION
 }
 
 function nudge(tokens: number): string {
   return `This session's context is at ${k(tokens)}. At the next clean break (a commit, a phase `
     + 'boundary, a finished step; never mid-edit), update the working docs so they hold the current '
     + 'state, then end that reply with a line telling the owner a compaction is starting and takes '
-    + `about a minute, and make the very last line exactly: ${TRIGGER_LINE}`
+    + `about a minute, and make the very last line exactly: ${TRIGGER_LINE}. ${NOT_WITH_A_QUESTION}`
 }
 
 async function tick($: Engine, since: number) {
@@ -141,6 +146,13 @@ function isTrigger(answer: string): boolean {
   return lines[lines.length - 1].replace(/[`*_.!]/g, '').trim().toLowerCase() === TRIGGER_LINE
 }
 
+// A prose line ending in "?" (markdown emphasis stripped); fenced code, such as a paste-ready note, is
+// not the reply asking anything.
+function asksOwner(answer: string): boolean {
+  const prose = answer.replace(/```[\s\S]*?```/g, '')
+  return prose.split('\n').some(line => /\?$/.test(line.replace(/[`*_\s)]+$/g, '')))
+}
+
 // Set when a stop held by another Stop hook (a /goal) was let through to compact; that hook's reason
 // is the prompt that carries the work on once the compaction is done.
 let resume = ''
@@ -160,7 +172,12 @@ function carryOn($: Engine) {
 async function wantsCompact($: Engine, answer: string): Promise<boolean> {
   if (!isTrigger(answer)) return false
   const { context } = await $.session.usage()
-  return (context.tokens ?? 0) >= TRIGGER_FROM
+  const tokens = context.tokens ?? 0
+  if (tokens < TRIGGER_FROM) return false
+  if (!asksOwner(answer)) return true
+  // Held for the answer: the next tool call repeats the nudge, so the compaction is not lost.
+  await update($, nudgedAt, () => tokens - NUDGE_EVERY)
+  return false
 }
 
 export const register: Register = on => {
