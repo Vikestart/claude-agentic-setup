@@ -116,7 +116,10 @@ async function afterCompact($: Engine, cwd: string): Promise<string> {
   return text
 }
 
-type Agent = { tokens: number; readOnly?: boolean; wrote: boolean; scouted: boolean; notedAt: number }
+// `seen`: a fingerprint of each file the agent read whole. Rereading an unchanged file adds it to the
+// context a second time (2026-10-25: a Tilspire builder read two 35k-character docs twice each, about
+// 35k tokens, and stopped at 250k).
+type Agent = { tokens: number; readOnly?: boolean; wrote: boolean; scouted: boolean; notedAt: number; seen?: Map<string, string> }
 // Per loop, from each step's usage; a reload starts it over, which costs at most one repeated note.
 const agents = new Map<string, Agent>()
 
@@ -127,8 +130,12 @@ async function agentNote($: Engine, id: string, tool: string, r: ToolCallResult,
   let note = ''
   if (a.tokens >= (a.notedAt ? a.notedAt + NUDGE_EVERY : AGENT_LIMIT)) {
     a.notedAt = a.tokens
+    a.readOnly ??= READ_ONLY.test((await $.agent.list()).find(x => x.id === id)?.type ?? '')
+    // A builder that hands back with nothing committed leaves its successor to piece the work together.
     note = `Your context is at ${k(a.tokens)}, and every further turn re-reads all of it. Finish the `
-      + 'current step, then hand back: what is done, what is left, and the exact next step.'
+      + (a.readOnly ? 'current step, then hand back: '
+        : 'current step, commit what you have as a `wip` commit on your branch (never push), then hand back: ')
+      + 'what is done, what is left, and the exact next step.'
   } else if (a.tokens >= AGENT_SCOUT && !a.wrote && !a.scouted) {
     a.scouted = true
     a.readOnly ??= READ_ONLY.test((await $.agent.list()).find(x => x.id === id)?.type ?? '')
@@ -140,6 +147,16 @@ async function agentNote($: Engine, id: string, tool: string, r: ToolCallResult,
   }
   return note ? { ...r, context: [...(r.context ?? []), note] } : r
 }
+
+// FNV-1a over the text, with its length: enough to tell an unchanged file without keeping it.
+function fingerprint(text: string): string {
+  let h = 0x811c9dc5
+  for (let i = 0; i < text.length; i++) h = Math.imul(h ^ text.charCodeAt(i), 0x01000193)
+  return `${text.length}:${(h >>> 0).toString(16)}`
+}
+
+const wholeRead = (e: { tool: string; offset?: unknown; limit?: unknown; pages?: unknown; file_path?: unknown }) =>
+  e.tool === 'Read' && e.offset === undefined && e.limit === undefined && e.pages === undefined && typeof e.file_path === 'string'
 
 function isTrigger(answer: string): boolean {
   const lines = answer.trim().split('\n')
@@ -191,7 +208,23 @@ export const register: Register = on => {
     const why = await refusal(e.tool, e, readFile)
     if (why) return { deny: why }
     const kept = await keepEndings(e.tool, e, readFile)
+    const agent = e.agentId ? agents.get(e.agentId) : undefined
+    let print = ''
+    if (agent && wholeRead(e)) {
+      const path = String(e.file_path)
+      try {
+        print = fingerprint(await readFile(path))
+      } catch {
+        // Unreadable here (missing, binary): the Read tool reports that itself.
+      }
+      if (print && agent.seen?.get(path) === print) {
+        return { deny: `You already read all of ${path} earlier in this task and it has not changed since, `
+          + 'so it is still in your context: use that copy. To look at part of it again, read only those '
+          + 'lines (offset and limit).' }
+      }
+    }
     let r = await next((kept ?? e) as typeof e)
+    if (agent && print && r.deny === undefined) (agent.seen ??= new Map()).set(String(e.file_path), print)
     if (r.deny !== undefined) return r
     // Said, so a Write meant to turn the file LF does not pass for done.
     if (kept) r = { ...r, context: [...(r.context ?? []), `Saved with CRLF endings to match the existing file. If LF was intended, run \`python ~/.claude/skills/asdev-web-audit/scripts/crlf.py --fix --lf ${String(e.file_path)}\`.`] }
@@ -252,8 +285,9 @@ export const register: Register = on => {
   on('session.compact', async ($, e, next) => {
     if (e.agentId) {
       // Best effort: whether the engine compacts a subagent at all is unverified (probe c).
+      // After a compaction the agent no longer holds what it read.
       const a = agents.get(e.agentId)
-      if (a) a.notedAt = 0
+      if (a) { a.notedAt = 0; a.seen = undefined }
       return next(e.instructions ? e : { ...e, instructions: AGENT_INSTRUCTIONS })
     }
     const since = await $.clock.now()

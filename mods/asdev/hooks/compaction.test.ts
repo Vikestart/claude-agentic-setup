@@ -228,6 +228,40 @@ test('no split note for an agent that wrote, or one that only reads by design', 
   expect(notes(await call($, 'r'))).toContain('hand back')
 })
 
+test('a builder at 250k is told to commit wip first; a reviewer is not', async ($: any, on) => {
+  mock.clock(on)
+  const t = { now: 0, step: 260_000, types: { b: 'opus-medium-executor', r: 'opus-medium-reviewer' } }
+  world(on, t)
+  await step($, 'b')
+  await step($, 'r')
+  expect(notes(await call($, 'b'))).toContain('`wip` commit')
+  const review = notes(await call($, 'r'))
+  expect(review).toContain('hand back')
+  expect(review).not.toContain('wip')
+})
+
+test('a subagent rereading a whole unchanged file is refused; changed, partial, main chat and after a compaction run', async ($: any, on) => {
+  mock.clock(on)
+  world(on, { now: 0, step: 50_000 })
+  const files: Record<string, string> = { '/p/doc.md': 'v1', '/p/other.md': 'x' }
+  on('fs.read', async (_$, e: any) => ({ value: Object.entries(files).find(([n]) => String(e.path).replace(/\\/g, '/').endsWith(n))?.[1] ?? 'x' }) as never)
+  on('session.cwd', async () => ({ value: '/p' }) as never)
+  const rd = (agentId: string | undefined, extra: object = {}) =>
+    $.tool.call({ tool: 'Read', tool_use_id: `u${Math.random()}`, file_path: '/p/doc.md', ...(agentId ? { agentId } : {}), ...extra })
+  await step($, 'a1')
+  await step($, 'a2')
+  expect((await rd('a1')).deny).toBeUndefined()
+  expect((await rd('a1')).deny).toContain('already read all of /p/doc.md')
+  expect((await rd('a1', { offset: 10, limit: 20 })).deny).toBeUndefined()
+  expect((await rd('a2')).deny).toBeUndefined()
+  expect((await rd(undefined)).deny).toBeUndefined()
+  expect((await rd(undefined)).deny).toBeUndefined()
+  files['/p/doc.md'] = 'v2'
+  expect((await rd('a1')).deny).toBeUndefined()
+  await $.session.compact({ trigger: 'auto', agentId: 'a1', messages: MSGS })
+  expect((await rd('a1')).deny).toBeUndefined()
+})
+
 // A reload mid-compaction leaves the old ticker's status line behind; the next load clears it, or
 // picks the count back up while the compaction is still running.
 test('a reload clears a frozen compaction status, or resumes a running one', async ($: any, on) => {
