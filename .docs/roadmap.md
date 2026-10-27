@@ -32,6 +32,17 @@ Outcomes and order only; active work goes in `implementation_plan.md` when a pha
    - Smaller: JSON config writes (~100 runs), a `git diff --numstat` check (~200 runs). Rerun the
      miner after `patch.py` lands; fold in "Generalise the suite helpers" below if it ranks them.
 
+3. **Gemini as a second provider** (owner approved 2026-10-27; Google AI Pro). The bridge is
+   Gemini CLI run non-interactively; Antigravity has no command line or API to hand it a task
+   (checked 2026-10-27), and driving its window is too fragile. Steps: (a) owner installs Gemini CLI
+   and signs in, and checks the Gemini privacy setting on training use; (b) one test task confirms
+   which models the CLI offers on AI Pro (3.8 Flash unverified) and that it draws on the plan's
+   allowance; (c) a wrapper script (brief in, report out, refuses `.env` and secrets) and a narrow
+   rule in `asdev-orchestrator`. Uses: clearly specified low-risk work (Sonnet/Haiku-class), and
+   **cross-provider detached reviews** (owner, 2026-10-27) as a second opinion beside the Claude
+   reviewer, never replacing `opus-high-reviewer` at the end of sensitive work. Open: whether
+   sensitive code may be sent to Google for review at all.
+
 ## Later
 
 - **Long sessions, analysed 2026-10-16 — owner's decisions open.** The four open main chats (Tilspire,
