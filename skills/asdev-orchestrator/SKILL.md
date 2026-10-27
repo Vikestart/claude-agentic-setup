@@ -5,9 +5,7 @@ description: How to run subagents and reviews in the owner's setup — the agent
 
 # Orchestration
 
-CLAUDE.md §6 holds the rules that always apply (direct by default, the owner's request before
-delegating, models, effort, the 10-agent cap, falsification, "sensitive"). This skill is how to
-carry them out. The measurements behind these rules are in
+CLAUDE.md §6 holds the rules that always apply; this skill is how to carry them out. The measurements behind these rules are in
 `~/.claude/claude-agentic-setup/.docs/reference/setup-architecture.md` ("Evidence behind the rules").
 
 **You are the orchestrator.** Synthesis, scope, integration and release stay with you. Use the
@@ -18,7 +16,7 @@ smallest useful roster, and give each agent concrete work that can be checked on
 Work directly unless the pieces need independent judgement or real parallelism: unrelated
 subsystems, an exploratory read too wide for one pass, concurrent workstreams. One kind of change
 across many files is still direct, and a mechanical sweep is a script. An agent costs ~40–50k tokens
-to start and much more before it can work, plus a brief, its result and your verification. Never
+to start, plus a brief, its result and your verification. Never
 spawn one for a single small task — except a significant sensitive change in a session below the
 effort floor.
 
@@ -37,6 +35,7 @@ session's effort. Each definition fixes model and effort together.
 | `opus-xhigh-executor` | Only after `opus-high-executor` has failed at the same work: the top of the ladder. |
 | `opus-medium-reviewer` | **The default reviewer:** plan attacks, challenging work, detached reviews between rounds and phases, a high-impact or cross-cutting wave. |
 | `opus-high-reviewer` | The one review that ends sensitive work (see Reviews). |
+| Gemini, `gemini.py` | Outside Claude, asked for like an agent: a second-opinion review beside the Claude one, or exact-brief work. Nothing sensitive (roadmap). |
 | `fable-*`, `*-max-*`, `opus-xhigh-reviewer`, `sonnet-medium-reviewer` | **Only when the owner names them** — never proposed in a roster. |
 
 Nothing that needs judgement runs below Opus, not even high-volume fan-out — volume is not

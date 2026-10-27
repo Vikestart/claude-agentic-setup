@@ -37,6 +37,16 @@ skill must still work without it.
 
 ## Decisions, with their reasons
 
+- **Gemini as a second provider, through `gemini.py`** (owner, 2026-10-27; Google AI Pro). The
+  bridge is Antigravity CLI's headless `agy -p`: Gemini CLI stopped serving AI Pro accounts on
+  2026-06-18, and the Antigravity desktop app takes no task from outside. Runs draw on the plan's
+  quota, not the AI Credits (overage only). Gemini works in a git worktree, so only committed files
+  reach Google and `.env` never does. Headless agy refuses shell commands unless allowed in its
+  settings, and they stay refused: a command could read files outside the worktree, the login
+  tokens included. So Gemini reads and edits, and Claude runs the checks. Uses: a second-opinion
+  review from another model family (it has other blind spots) beside the Claude reviewer, never
+  instead of it; and exact-brief work. Nothing sensitive goes to it until the owner decides (roadmap).
+
 - **Compaction, not fresh chats** (owner, 2026-09-30). Sessions never propose a handover or ask the
   owner to `/compact`: the owner wants no manual steps, and a session cannot start its successor
   (`traps.md`, "A cleared session wakes only on a message"; the relay was tried and rolled back).
