@@ -33,10 +33,11 @@ Outcomes and order only; active work goes in `implementation_plan.md` when a pha
      miner after `patch.py` lands; fold in "Generalise the suite helpers" below if it ranks them.
 
 3. **Gemini as a second provider** (owner approved 2026-10-27; Google AI Pro). The bridge is
-   Gemini CLI run non-interactively; Antigravity has no command line or API to hand it a task
-   (checked 2026-10-27), and driving its window is too fragile. Steps: (a) owner installs Gemini CLI
+   Antigravity CLI (`agy`, headless `agy -p`; it replaced Gemini CLI for AI Pro accounts on
+   2026-06-18), not the Antigravity desktop app, which takes no tasks from outside and is too
+   fragile to drive by its window. Steps: (a) owner installs it from antigravity.google/download
    and signs in, and checks the Gemini privacy setting on training use; (b) one test task confirms
-   which models the CLI offers on AI Pro (3.8 Flash unverified) and that it draws on the plan's
+   which model `agy` runs (third-party guides say it is fixed, with no model flag; 3.8 Flash unverified) and that it draws on the plan's
    allowance; (c) a wrapper script (brief in, report out, refuses `.env` and secrets) and a narrow
    rule in `asdev-orchestrator`. Uses: clearly specified low-risk work (Sonnet/Haiku-class), and
    **cross-provider detached reviews** (owner, 2026-10-27) as a second opinion beside the Claude
