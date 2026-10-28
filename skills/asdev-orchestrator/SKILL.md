@@ -36,7 +36,7 @@ session's effort. Each definition fixes model and effort together.
 | `opus-medium-reviewer` | **The default reviewer:** plan attacks, challenging work, detached reviews between rounds and phases, a high-impact or cross-cutting wave. |
 | `opus-high-reviewer` | The one review that ends sensitive work (see Reviews). |
 | Gemini, `gemini.py` | Outside Claude, asked for like an agent: a second-opinion review beside the Claude one, or exact-brief work. Nothing sensitive (roadmap). |
-| `fable-*`, `*-max-*`, `opus-xhigh-reviewer`, `sonnet-medium-reviewer` | **Only when the owner names them** — never proposed in a roster. |
+| `fable-*`, `*-max-*`, `opus-xhigh-reviewer`, `sonnet-medium-reviewer`, `sonnet-high-executor` | **Only when the owner names them**, never proposed. |
 
 Nothing that needs judgement runs below Opus, not even high-volume fan-out — volume is not
 triviality.
