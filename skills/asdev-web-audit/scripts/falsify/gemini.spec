@@ -11,7 +11,7 @@ name: no committed-secret check
 expect: FAIL a committed .env stops the run
 @@@ skills/asdev-web-audit/scripts/gemini.py
 <<<<<<< OLD
-    secrets = [f for f in files if SECRET.search(f)]
+    secrets = [f for f in files if SECRET.search(f) or (PEM.search(f) and not public_pem(repo, a.rev, f))]
 ======= NEW
     secrets = []
 >>>>>>> END
@@ -32,4 +32,22 @@ expect: FAIL an empty answer after a refused command fails
     status = res.get("status", "?") if report else "FAILED (no answer)"
 ======= NEW
     status = res.get("status", "?")
+>>>>>>> END
+
+name: every committed .pem counts as public
+expect: FAIL a committed .pem with a private key stops the run
+@@@ skills/asdev-web-audit/scripts/gemini.py
+<<<<<<< OLD
+    return bool(blocks) and set(blocks) <= PUBLIC_BLOCKS and "PRIVATE" not in text.upper()
+======= NEW
+    return True
+>>>>>>> END
+
+name: a .pem is judged by its working-tree copy, not the commit
+expect: FAIL a committed .pem with a private key stops the run
+@@@ skills/asdev-web-audit/scripts/gemini.py
+<<<<<<< OLD
+    text = subprocess.run(["git", "show", f"{rev}:{path}"], cwd=repo, capture_output=True).stdout.decode("utf-8", "replace")
+======= NEW
+    text = (repo / path).read_text(encoding="utf-8", errors="replace")
 >>>>>>> END

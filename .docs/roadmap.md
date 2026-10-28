@@ -34,7 +34,9 @@ Outcomes and order only; active work goes in `implementation_plan.md` when a pha
 
 3. **Gemini as a second provider** — built 2026-10-27 (`gemini.py`; decision in
    `reference/setup-architecture.md`). Open: (a) whether sensitive code may go to Google for a
-   cross-provider review (owner; until then, nothing sensitive); (b) the owner checks the Gemini
+   cross-provider review (owner; until then, nothing sensitive; one exception so far: for
+   tilspire 1.19.0 the owner let Gemini review the whole release, sensitive code included,
+   beside the opus-high release review and never instead of it — that release only, 2026-10-28); (b) the owner checks the Gemini
    privacy setting on training use; (c) after the first real reviews, judge whether Gemini 3.8
    Flash finds things the Claude reviewer missed, or only adds noise.
 

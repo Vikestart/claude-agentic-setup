@@ -79,6 +79,26 @@ try:
           code == 1 and "FAILED (no answer)" in out and "refused RunCommand" in out)
     brief.write_text("Review a.py.")
 
+    def commit(msg):
+        sh("git", "add", "-A", cwd=repo)
+        sh("git", "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", msg, cwd=repo)
+
+    pub = "-----BEGIN PUBLIC KEY-----\nMFkw\n-----END PUBLIC KEY-----\n"
+    (repo / "claims-public-key.pem").write_text(pub)
+    commit("public key")
+    code, out, got = run(repo)
+    check("a committed .pem holding only a public key is let through", code == 0 and got is not None)
+
+    (repo / "server.pem").write_text("-----BEGIN CERTIFICATE-----\nMIIB\n-----END CERTIFICATE-----\n"
+                                     # Split so the precommit scan does not take the fixture for a real key.
+                                     "-----BEGIN " + "PRIVATE KEY-----\nMIIE\n-----END " + "PRIVATE KEY-----\n")
+    commit("cert and key")
+    (repo / "server.pem").write_text(pub)
+    code, out, got = run(repo)
+    check("a committed .pem with a private key stops the run, whatever the working tree holds",
+          code == 2 and "server.pem" in out and "claims-public-key.pem" not in out and got is None)
+    sh("git", "checkout", "--", "server.pem", cwd=repo)
+
     sh("git", "add", "-f", ".env", cwd=repo)
     sh("git", "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "leak", cwd=repo)
     code, out, got = run(repo)

@@ -18,7 +18,11 @@ the diffstat and the patch path. Exit 0 done, 1 agy failed, 2 refused.
 import argparse, json, os, re, shutil, subprocess, sys, tempfile, time
 from pathlib import Path
 
-SECRET = re.compile(r"(^|/)(\.env(\.(?!example$)[^/]+)?|[^/]+\.(pem|key|p12|pfx)|id_(rsa|ed25519|ecdsa)[^/]*|\.credentials\.json)$", re.I)
+SECRET = re.compile(r"(^|/)(\.env(\.(?!example$)[^/]+)?|[^/]+\.(key|p12|pfx)|id_(rsa|ed25519|ecdsa)[^/]*|\.credentials\.json)$", re.I)
+# A .pem may hold only a public key or certificate, safe to share (tilspire commits one, 2026-10-28):
+# it passes when every block is public and nothing says PRIVATE; anything else in a .pem is refused.
+PEM = re.compile(r"(^|/)[^/]+\.pem$", re.I)
+PUBLIC_BLOCKS = {"PUBLIC KEY", "RSA PUBLIC KEY", "CERTIFICATE", "TRUSTED CERTIFICATE"}
 # Windows caps a command line at 32,767 characters; the brief travels as one argument.
 BRIEF_MAX = 30_000
 
@@ -31,6 +35,13 @@ def agy_cmd() -> list[str]:
 
 def git(*args: str, cwd: Path) -> str:
     return subprocess.run(["git", *args], cwd=cwd, capture_output=True, text=True, check=True).stdout
+
+
+def public_pem(repo: Path, rev: str, path: str) -> bool:
+    # Read the committed blob, not the working tree: the commit is what Gemini would see.
+    text = subprocess.run(["git", "show", f"{rev}:{path}"], cwd=repo, capture_output=True).stdout.decode("utf-8", "replace")
+    blocks = re.findall(r"-----BEGIN ([A-Z0-9 ]+)-----", text)
+    return bool(blocks) and set(blocks) <= PUBLIC_BLOCKS and "PRIVATE" not in text.upper()
 
 
 def refuse(msg: str) -> int:
@@ -67,7 +78,7 @@ def main() -> int:
         files = git("ls-tree", "-r", "--name-only", a.rev, cwd=repo).splitlines()
     except subprocess.CalledProcessError:
         return refuse(f"no revision {a.rev} in {repo}")
-    secrets = [f for f in files if SECRET.search(f)]
+    secrets = [f for f in files if SECRET.search(f) or (PEM.search(f) and not public_pem(repo, a.rev, f))]
     if secrets:
         return refuse(f"{a.rev} contains committed secrets, which would go to Google: {', '.join(secrets[:5])}")
     model = pick_model(a.effort)
