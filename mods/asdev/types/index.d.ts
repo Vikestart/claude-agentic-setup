@@ -1,6 +1,6 @@
 declare module 'claude-code' {
   interface PluginState {
-    asdev: { isCollapsed: boolean; nudgedAt: number; lastReply: string; compactingSince: number; cacheAt: number; docsAt: number }
+    asdev: { isCollapsed: boolean; nudgedAt: number; lastReply: string; compactingSince: number; cacheAt: number; docsAt: number; rules: Record<string, { mtimeMs: number; text: string }> }
   }
 }
 

@@ -9,7 +9,9 @@ Source: `~/Downloads/personal-setup-backport.md`; extracted blocks in the sessio
 - [x] 2. Compaction stages: careful nudge from 230k, docs hold from 280k; tests 40/40, spec 87/87
       on a copy (one older anchor re-pointed); compaction rule in `CLAUDE.shared.md` (11,258 bytes).
       The mirror script (`sync_agents_md.py`) is paused since 2026-10-01, so step 5 does not run it.
-- [ ] 3. `rules.ts` + tests, without the `notes.ts` lines; wiring in `register.ts`, `types`, `compaction.ts`.
+- [x] 3. `rules.ts` + tests; tests 48/48, spec 92/92. Changed from the work version: this engine
+      refuses `$` passed to an imported function and a second `session.start`/`session.compact` hook,
+      so `compaction.ts` clears the stored rules on a compaction and the next prompt re-baselines.
 - [ ] 4. `tasks_done.py`, `docs_init.py` (+ `templates/docs/` written here), tests, SKILL rows, `verify.py`.
 - [ ] 5. `CLAUDE.shared.md`: designs with upsides/downsides and a recommendation; project facts into
       `.docs`, never memory — within the 11 kB budget; run the mirror script.

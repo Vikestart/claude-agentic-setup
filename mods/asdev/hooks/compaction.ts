@@ -65,6 +65,9 @@ const STALE_COMPACTION = 10 * 60_000
 const cacheAt = atom({ plugin: 'asdev', key: 'cacheAt' } as const, 0)
 // The context size at the last write to a .docs file in this main chat; a compaction clears it.
 const docsAt = atom({ plugin: 'asdev', key: 'docsAt' } as const, 0)
+// rules.ts's record of the instructions as loaded; declared again here because the engine reads only
+// atoms declared in the file that uses them.
+const rulesSeen = atom({ plugin: 'asdev', key: 'rules' } as const, {} as Record<string, { mtimeMs: number; text: string }>)
 
 const k = (n: number) => `${Math.round(n / 1000)}k`
 
@@ -350,6 +353,8 @@ export const register: Register = on => {
       await update($, compactingSince, () => 0)
       await update($, nudgedAt, () => 0)
       await update($, docsAt, () => 0)
+      // The compacted session reloads the instructions: rules.ts takes a new baseline on the next prompt.
+      await update($, rulesSeen, () => ({}))
       carryOn($)
     }
   })

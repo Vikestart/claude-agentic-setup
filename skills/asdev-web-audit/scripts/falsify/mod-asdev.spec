@@ -693,3 +693,43 @@ expect: (fail) past 280k with the docs not updated since 230k
 ======= NEW
 'Monitor'])
 >>>>>>> END
+
+@@@ mods/asdev/hooks/rules.ts
+name: a changed rule never rides a prompt
+expect: (fail) an edit to an imported file reaches the next prompt once
+<<<<<<< OLD
+    return next(notes.length ? { ...e, context: [...(e.context ?? []), ...notes] } : e)
+======= NEW
+    return next(e)
+>>>>>>> END
+
+name: the stored copy is never updated, so a note repeats
+expect: (fail) an edit to an imported file reaches the next prompt once
+<<<<<<< OLD
+  await update($, seen, () => after)
+======= NEW
+>>>>>>> END
+
+name: a changed rule is not told apart from an unchanged one
+expect: (fail) the note names changed, added and removed rules
+<<<<<<< OLD
+  const changed = [...b.keys()].filter(k => a.has(k) && a.get(k) !== b.get(k))
+======= NEW
+  const changed = [...b.keys()].filter(k => a.has(k))
+>>>>>>> END
+
+name: past the cap the whole text is quoted anyway
+expect: (fail) past the cap the note lists names and asks for a read
+<<<<<<< OLD
+  if (names.length <= LIST_CAP && quoted.length <= QUOTE_CAP) return
+======= NEW
+  if (true) return
+>>>>>>> END
+
+@@@ mods/asdev/hooks/compaction.ts
+name: a compaction keeps the old rules, so an earlier edit is told after it
+expect: (fail) a compaction reloads the rules
+<<<<<<< OLD
+      await update($, rulesSeen, () => ({}))
+======= NEW
+>>>>>>> END
