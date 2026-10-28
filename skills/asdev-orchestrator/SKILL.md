@@ -29,6 +29,7 @@ session's effort. Each definition fixes model and effort together.
 |---|---|
 | `haiku-high-helper` | Run-and-report: suites, gates, falsify runs, sweeps, yes/no page checks (loads, console errors, element present); edits nothing. A job its safeguards decline (scanner findings) goes to `sonnet-medium-executor`. One job each: spawn a fresh one, never continue it with SendMessage (above a 100k prompt Haiku costs 5×). |
 | `sonnet-medium-executor` | Any job the brief can state exactly: docs and changelog from given facts, browser checks that judge how a page looks, strings from a list, exact-spec changes. Split these out of a code job once its code lands. Never sensitive code, judgement or a canvas. |
+| `sonnet-high-executor` | Exact-spec work a `sonnet-medium-executor` attempt got wrong; and where the owner put Sonnet on a phase, its significant sensitive code. |
 | `opus-medium-executor` | **The default executor:** implementation, discovery, plans, tests, fix rounds, design canvases — inside a sensitive phase too, for everything but the sensitive code itself. |
 | `Explore` | Read-only searches (Haiku, high; overrides the built-in). Locates, never judges. |
 | `opus-high-executor` | Significant sensitive code (CLAUDE.md §6's list — never an ordinary page, dashboard or theme); debugging that resisted a `medium` attempt. |
@@ -36,10 +37,9 @@ session's effort. Each definition fixes model and effort together.
 | `opus-medium-reviewer` | **The default reviewer:** plan attacks, challenging work, detached reviews between rounds and phases, a high-impact or cross-cutting wave. |
 | `opus-high-reviewer` | The one review that ends sensitive work (see Reviews). |
 | Gemini, `gemini.py` | Outside Claude, asked for like an agent: a second-opinion review beside the Claude one, or exact-brief work. Nothing sensitive (roadmap). |
-| `fable-*`, `*-max-*`, `opus-xhigh-reviewer`, `sonnet-medium-reviewer`, `sonnet-high-executor` | **Only when the owner names them**, never proposed. |
+| `fable-*`, `*-max-*`, `opus-xhigh-reviewer`, `sonnet-medium-reviewer` | **Only when the owner names them**, never proposed. |
 
-Nothing that needs judgement runs below Opus, not even high-volume fan-out — volume is not
-triviality.
+Nothing that needs judgement runs below Opus: volume is not triviality.
 
 ## Keeping contexts small
 
@@ -63,8 +63,7 @@ for agents, an hour for the main chat).
 - **Keep an agent's waits short.** Agents run suite slices; a full battery or long falsify run that
   could outlast the cache is yours or a small fresh agent's, never a large builder's.
 - **A long run is started once, then the turn ends;** the completion notification wakes whoever
-  started it. Only a background agent (the default) is woken: a
-  foreground agent's end of turn kills its background commands, so never spawn one for a long run.
+  started it. A foreground agent's end of turn kills its background commands, so never spawn one for a long run.
 - **In a planned phase you stay the orchestrator.** Write the brief from the plan and the reference
   docs — reading the code first means it is read twice. Edits beyond a glance-sized correction go
   to a fresh agent from the table above. Your own checks stay small: the diff stat, one targeted read, a run's
@@ -75,8 +74,7 @@ for agents, an hour for the main chat).
 
 Outside a plan, ask once in one line (CLAUDE.md §6); at the Planning Gate, the roster question in
 `asdev-planner`. Either way name each agent's definition and the **exact model release, version
-included** (e.g. Opus 5.5). Approving a roster IS the request to spawn it; an owner override is
-applied and said once.
+included** (e.g. Opus 5.5).
 
 ## Spawning
 

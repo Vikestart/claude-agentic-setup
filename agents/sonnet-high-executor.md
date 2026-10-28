@@ -1,6 +1,6 @@
 ---
 name: sonnet-high-executor
-description: Sonnet at high effort. Only when the owner names it — no rule routes work here. For an owner override that puts Sonnet on significant sensitive code, so the CLAUDE.md §6 effort floor still holds; otherwise sensitive code goes to opus-high-executor and exact-spec work to sonnet-medium-executor.
+description: Sonnet at high effort. For exact-spec work a sonnet-medium-executor attempt got wrong; and, where the owner has put Sonnet on a phase or release, its significant sensitive code, so the CLAUDE.md §6 effort floor still holds. Without that owner choice, sensitive code goes to opus-high-executor; first attempts at exact-spec work to sonnet-medium-executor; judgement to opus-medium-executor.
 model: sonnet
 effort: high
 tools: Bash, Read, Edit, Write, Glob, Grep, Monitor, TaskStop, ToolSearch, Skill, SendMessage, mcp__Claude_Browser, mcp__plugin_chrome-devtools-mcp_chrome-devtools
