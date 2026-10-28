@@ -1,39 +1,24 @@
-# Walkthrough — Session mod: graceful compaction and enforced rules (2026-10-02)
+# Walkthrough — Back-port from the work setup (2026-10-28)
 
 ## What was built
 
-- **`mods/asdev`** (renamed from `context-band`), loaded in every session through
-  `env.CLAUDE_CODE_PLUGIN_DIRS`; `CLAUDE_CODE_PLUGIN_DIR_WATCH=1` makes desktop sessions reload it
-  when the folder changes.
-  - `band.tsx` — the usage band above the prompt; stays up when a measurement is missing.
-  - `compaction.ts` — `ready to compact` as a reply's last line queues `/compact` with keep/drop
-    instructions; 150k arms the plan's ⟲ checkpoints, then a nudge every +50k; under `/goal` the
-    blocked stop is let through and the goal re-sent after. Agents get a note at 125k with nothing
-    written and from 250k every +50k. Replaced `hooks/after_compact.py` and `hooks/context_guard.py`
-    (archived in `reference/archive/hooks/`).
-  - `guards.ts`, `shipped.ts` — refusals with the right tool named (see
-    `reference/setup-architecture.md`, the `guards.ts` row).
-- **Rule text removed** (step 6): from `CLAUDE.shared.md` "never poll", the heredoc clause, "When
-  compacting" and the piped-runner clause; from the 7 executors the code_map, wait/poll and
-  ~125k/~250k lines; from the orchestrator skill the polling sentence and the `model` line. Budgets
-  shrank: shared 11.75 kB, orchestrator 10.5 kB.
+- **Guards** (`mods/asdev/hooks/guards.ts`, ced1126): the work setup's three review rounds — a
+  runner piped to a filter inside compound commands and wrappers, PowerShell here-strings and wait
+  loops, whole `Get-Content` reads, and a `model` on any Agent call refused.
+- **Compaction stages** (`compaction.ts`, c313e00): a careful nudge from 230k; from 280k, with no
+  `.docs` write since 230k, the main chat is held to docs writes, searches and git reads.
+- **Rule-change notes** (`hooks/rules.ts`, e035a80): an edited CLAUDE.md rule reaches a running chat
+  on its next prompt. Redesigned for this engine (see `reference/setup-architecture.md`).
+- **`tasks_done.py`, `docs_init.py`** and `templates/docs/` in the audit suite (a93024c).
+- **Two rules** in `CLAUDE.shared.md` (2cf28e4): designs with pros, cons and a recommendation;
+  project facts into `.docs`, not memory.
 
 ## How it was verified
 
-- `claude plugin test mods/asdev`: 22 tests; `claude plugin validate`: passed.
-- `falsify.py --suite "claude plugin test mods/asdev" --mutations
-  skills/asdev-web-audit/scripts/falsify/mod-asdev.spec`: 43/43.
-- Detached `opus-high-reviewer` review: the guards covered Bash only (PowerShell now too), false
-  positives on ordinary commands (narrowed), a Write meant to make a file LF (told; `.sh`/`.sql`
-  exempt), a stranded `/goal` resume, and line endings flipped in 7 files (restored). Accepted gaps
-  are in `reference/setup-architecture.md`, the `guards.ts` row.
-- Live, in the desktop app: compaction trigger, `/goal` round-trip and Tilspire's real compaction
-  (saved 250k); heredoc, piped runner, whole Read, foreground wait loop and bare `cat` refused;
-  CRLF kept on Write; near-misses ran. Not live-tested: the Agent `model` guard and the shipped
-  claim (unit tests only).
-- `install/test_setup.py` OK; `doc_hygiene.py` clean.
+- Mod tests 48/48; `mod-asdev.spec` 92/92 RED for the right reason, on a copy of the mod first.
+- `test_tasks_done.py` 12/12, `test_docs_init.py` 18/18; `install/verify.py` 18/18; precommit scan
+  clean on every commit. Read-only runs on framvis and tilspire report as expected.
 
 ## Where to look
 
-- Live findings and API quirks: `reference/traps.md`, "Mods".
-- Next: none; the start-up trim in `roadmap.md` waits on a re-measurement.
+The decision bullet "Back-ported from the work setup" in `reference/setup-architecture.md`.

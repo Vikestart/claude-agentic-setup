@@ -137,6 +137,14 @@ skill must still work without it.
   change, and the repo sits in its own folder so the login tokens, memory and transcripts are never
   inside a git working tree at all. Junctions and a CLAUDE.md import stub need no admin rights or
   Developer Mode on Windows. Details in [`setup-repo.md`](setup-repo.md).
+- **Back-ported from the work setup** (owner, 2026-10-28; plan in git history): the guards' three
+  review rounds, a `model` on any Agent call refused (the definition picks the model), the compaction
+  stages (careful from 230k, docs hold from 280k), rule-change notes (`hooks/rules.ts`: an edited
+  CLAUDE.md rule reaches a running chat on its next prompt), `tasks_done.py` and `docs_init.py`.
+  Left out: `ship.py`, which ships through a feature branch against our `staging` → `main` rule, and
+  `notes.ts`, needed only for managed plugins. This engine refuses `$` passed to an imported function
+  and a second `session.start`/`session.compact` hook per plugin, so `compaction.ts` clears the
+  stored rules and the next prompt re-baselines.
 
 ## Agent policy — the owner's reasons (2026-09-25 to 09-30)
 

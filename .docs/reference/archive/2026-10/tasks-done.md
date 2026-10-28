@@ -1,0 +1,16 @@
+# Finished tasks, 2026-10
+
+## 2026-10-28
+
+- [x] 1. Guards merged (work `guards.ts` + our `AUDIT` path and `audit_all/self_test/verify.py`
+      runners), tests 38/38, `mod-asdev.spec` 73/73 on a copy (incl. two stale band/trigger anchors fixed).
+- [x] 2. Compaction stages: careful nudge from 230k, docs hold from 280k; tests 40/40, spec 87/87
+      on a copy (one older anchor re-pointed); compaction rule in `CLAUDE.shared.md` (11,258 bytes).
+      The mirror script (`sync_agents_md.py`) is paused since 2026-10-01, so step 5 does not run it.
+- [x] 3. `rules.ts` + tests; tests 48/48, spec 92/92. Changed from the work version: this engine
+      refuses `$` passed to an imported function and a second `session.start`/`session.compact` hook,
+      so `compaction.ts` clears the stored rules on a compaction and the next prompt re-baselines.
+- [x] 4. `tasks_done.py`, `docs_init.py` (+ `templates/docs/` written here), tests 12/12 and 18/18,
+      SKILL line, `verify.py` 18/18. `reference/README.md` dropped from the required set: no project has one.
+- [x] 5. `CLAUDE.shared.md`: designs with pros, cons and a recommendation; project facts into
+      `.docs`, not memory. 11,263 bytes: the duplicate "§3 never regresses" bullet in §4 and a few words came out.
