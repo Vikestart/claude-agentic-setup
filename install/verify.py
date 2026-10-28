@@ -27,6 +27,8 @@ def checks(gate_roots: list[Path]) -> list[tuple[str, list[str], str]]:
         ("credentials guard tests", [py, str(HOME / "hooks" / "test_guard_credentials.py")], r"^\d+/\d+ ok"),
         ("doc budget tests", [py, str(AUDIT / "test_doc_budget.py")], r"^\d+/\d+ ok"),
         ("gemini wrapper tests", [py, str(AUDIT / "test_gemini.py")], r"^\d+/\d+ ok"),
+        ("tasks_done tests", [py, str(AUDIT / "test_tasks_done.py")], r"^\d+/\d+ ok"),
+        ("docs_init tests", [py, str(AUDIT / "test_docs_init.py")], r"^\d+/\d+ ok"),
         ("asdev mod tests", ["claude", "plugin", "test", str(REPO / "mods" / "asdev")], r"^\s*\d+ pass"),
     ]
     setup_tests = REPO / "install" / "test_setup.py"

@@ -12,7 +12,8 @@ Source: `~/Downloads/personal-setup-backport.md`; extracted blocks in the sessio
 - [x] 3. `rules.ts` + tests; tests 48/48, spec 92/92. Changed from the work version: this engine
       refuses `$` passed to an imported function and a second `session.start`/`session.compact` hook,
       so `compaction.ts` clears the stored rules on a compaction and the next prompt re-baselines.
-- [ ] 4. `tasks_done.py`, `docs_init.py` (+ `templates/docs/` written here), tests, SKILL rows, `verify.py`.
+- [x] 4. `tasks_done.py`, `docs_init.py` (+ `templates/docs/` written here), tests 12/12 and 18/18,
+      SKILL line, `verify.py` 18/18. `reference/README.md` dropped from the required set: no project has one.
 - [ ] 5. `CLAUDE.shared.md`: designs with upsides/downsides and a recommendation; project facts into
       `.docs`, never memory — within the 11 kB budget; run the mirror script.
 - [ ] 6. Decision bullet in `setup-architecture.md`; FYI memory now "skill changes only"; FYI for running chats.
