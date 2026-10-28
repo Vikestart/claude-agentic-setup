@@ -6,8 +6,9 @@ Source: `~/Downloads/personal-setup-backport.md`; extracted blocks in the sessio
 
 - [x] 1. Guards merged (work `guards.ts` + our `AUDIT` path and `audit_all/self_test/verify.py`
       runners), tests 38/38, `mod-asdev.spec` 73/73 on a copy (incl. two stale band/trigger anchors fixed).
-- [ ] 2. Compaction stages: `CAREFUL_FROM` 230k, `DOCS_BY` 280k (our 330k window), `docsAt`,
-      `docsHold()`, careful nudge, tests and spec entries; compaction rule in `CLAUDE.shared.md`.
+- [x] 2. Compaction stages: careful nudge from 230k, docs hold from 280k; tests 40/40, spec 87/87
+      on a copy (one older anchor re-pointed); compaction rule in `CLAUDE.shared.md` (11,258 bytes).
+      The mirror script (`sync_agents_md.py`) is paused since 2026-10-01, so step 5 does not run it.
 - [ ] 3. `rules.ts` + tests, without the `notes.ts` lines; wiring in `register.ts`, `types`, `compaction.ts`.
 - [ ] 4. `tasks_done.py`, `docs_init.py` (+ `templates/docs/` written here), tests, SKILL rows, `verify.py`.
 - [ ] 5. `CLAUDE.shared.md`: designs with upsides/downsides and a recommendation; project facts into

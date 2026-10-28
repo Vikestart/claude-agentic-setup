@@ -12,6 +12,17 @@ import { unpushed } from './shipped'
 const TRIGGER_FROM = 150_000
 const NUDGE_EVERY = 50_000
 const TRIGGER_LINE = 'ready to compact'
+// Up to here, finishing the step in hand is a fine reason to wait for the break; past it the automatic
+// compaction (~300k of the 330k window) is close enough to cut in mid-step (work setup, back-ported 2026-10-28).
+const CAREFUL_FROM = 230_000
+// Past this a main chat may not go on with its working docs older than CAREFUL_FROM: the automatic
+// compaction would lose what only the chat holds. Until a .docs file is written, only the docs,
+// searches and git's read commands run.
+const DOCS_BY = 280_000
+const DOCS_PATH = /(^|[\\/])\.docs[\\/]/
+const GIT_READ = /^\s*git\s+(status|log|diff|show)\b/
+// Also the tools that only ask, stop or wait: none of them grows the context much.
+const SEARCH = new Set(['Glob', 'Grep', 'TodoWrite', 'AskUserQuestion', 'TaskStop', 'Monitor', 'ToolSearch'])
 // Final messages measured 2026-10-01: median ~700 characters, longest 3,260.
 const REPLY_CAP = 6000
 const DOCS = ['implementation_plan.md', 'task.md', 'handover.md', 'roadmap.md']
@@ -52,6 +63,8 @@ const lastReply = atom({ plugin: 'asdev', key: 'lastReply' } as const, '')
 const compactingSince = atom({ plugin: 'asdev', key: 'compactingSince' } as const, 0)
 const STALE_COMPACTION = 10 * 60_000
 const cacheAt = atom({ plugin: 'asdev', key: 'cacheAt' } as const, 0)
+// The context size at the last write to a .docs file in this main chat; a compaction clears it.
+const docsAt = atom({ plugin: 'asdev', key: 'docsAt' } as const, 0)
 
 const k = (n: number) => `${Math.round(n / 1000)}k`
 
@@ -64,10 +77,42 @@ function armed(tokens: number): string {
 }
 
 function nudge(tokens: number): string {
-  return `This session's context is at ${k(tokens)}. At the next clean break (a commit, a phase `
-    + 'boundary, a finished step; never mid-edit), update the working docs so they hold the current '
-    + 'state, then end that reply with a line telling the owner a compaction is starting and takes '
-    + `about a minute, and make the very last line exactly: ${TRIGGER_LINE}. ${NOT_WITH_A_QUESTION}`
+  const then = 'update the working docs so they hold the current state, then end that reply with a '
+    + 'line telling the owner a compaction is starting and takes about a minute, and make the very '
+    + `last line exactly: ${TRIGGER_LINE}. ${NOT_WITH_A_QUESTION}`
+  if (tokens < CAREFUL_FROM) {
+    return `This session's context is at ${k(tokens)}. At the next clean break (a commit, a phase `
+      + 'boundary, a finished step; never mid-edit), and finishing what you are doing first is fine up '
+      + `to about ${k(CAREFUL_FROM)}, ${then}`
+  }
+  return `This session's context is at ${k(tokens)}, past ${k(CAREFUL_FROM)}: the automatic compaction `
+    + 'is close and cuts in mid-step. Start nothing new and avoid large reads; finish only the step in '
+    + `hand, then at that next clean break ${then} Never pass ${k(DOCS_BY)} with the docs not updated: `
+    + 'past it, every other tool is refused until a .docs file is written.'
+}
+
+type Call = { tool: string; file_path?: unknown; notebook_path?: unknown; command?: unknown }
+
+// The refusal past DOCS_BY, or nothing. A project without working docs is never held.
+async function docsHold($: Engine, e: Call): Promise<string | undefined> {
+  const tokens = (await $.session.usage()).context.tokens ?? 0
+  if (tokens < DOCS_BY || (await read($, docsAt)) >= CAREFUL_FROM) return undefined
+  const path = String(e.file_path ?? e.notebook_path ?? '')
+  if ((WRITES.has(e.tool) || e.tool === 'Read') && DOCS_PATH.test(path)) return undefined
+  if (SEARCH.has(e.tool) || ((e.tool === 'Bash' || e.tool === 'PowerShell') && GIT_READ.test(String(e.command ?? '')))) return undefined
+  try {
+    const cwd = await $.session.cwd()
+    let any = false
+    for (const name of DOCS) any ||= await $.fs.exists(`${cwd}/.docs/${name}`)
+    if (!any) return undefined
+  } catch {
+    // No session folder or file access: nothing to hold the session to.
+    return undefined
+  }
+  return `Refused: this session is at ${k(tokens)}, past ${k(DOCS_BY)}, and its .docs have not been updated `
+    + `since ${k(CAREFUL_FROM)}. Update the working docs in .docs/ now - they are what survives the `
+    + 'compaction - then end that reply with a line telling the owner a compaction is starting, and make '
+    + `the very last line exactly: ${TRIGGER_LINE}. ${NOT_WITH_A_QUESTION}`
 }
 
 async function tick($: Engine, since: number) {
@@ -205,7 +250,7 @@ export const register: Register = on => {
     // A relative path (`cat notes.md`) is the session's; `$.fs` needs it whole.
     const readFile = async (path: string) =>
       $.fs.read(/^([A-Za-z]:|[\\/])/.test(path) ? path : `${await $.session.cwd()}/${path}`)
-    const why = await refusal(e.tool, e, readFile)
+    const why = (await refusal(e.tool, e, readFile)) ?? (e.agentId ? undefined : await docsHold($, e as Call))
     if (why) return { deny: why }
     const kept = await keepEndings(e.tool, e, readFile)
     const agent = e.agentId ? agents.get(e.agentId) : undefined
@@ -226,6 +271,10 @@ export const register: Register = on => {
     let r = await next((kept ?? e) as typeof e)
     if (agent && print && r.deny === undefined) (agent.seen ??= new Map()).set(String(e.file_path), print)
     if (r.deny !== undefined) return r
+    if (!e.agentId && WRITES.has(e.tool) && DOCS_PATH.test(String((e as Call).file_path ?? (e as Call).notebook_path ?? ''))) {
+      const at = (await $.session.usage()).context.tokens ?? 0
+      await update($, docsAt, () => at)
+    }
     // Said, so a Write meant to turn the file LF does not pass for done.
     if (kept) r = { ...r, context: [...(r.context ?? []), `Saved with CRLF endings to match the existing file. If LF was intended, run \`python ~/.claude/skills/asdev-web-audit/scripts/crlf.py --fix --lf ${String(e.file_path)}\`.`] }
     if (e.agentId) return agentNote($, e.agentId, e.tool, r, String((e as { command?: unknown }).command ?? ''))
@@ -300,6 +349,7 @@ export const register: Register = on => {
     } finally {
       await update($, compactingSince, () => 0)
       await update($, nudgedAt, () => 0)
+      await update($, docsAt, () => 0)
       carryOn($)
     }
   })

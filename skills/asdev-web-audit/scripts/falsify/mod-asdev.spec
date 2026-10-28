@@ -504,9 +504,9 @@ expect: (fail) a shell heredoc is refused
 name: the guards read e.input, which live calls lack
 expect: (fail) a shell heredoc is refused
 <<<<<<< OLD
-    const why = await refusal(e.tool, e, readFile)
+(await refusal(e.tool, e, readFile))
 ======= NEW
-    const why = await refusal(e.tool, (e as { input?: unknown }).input, readFile)
+(await refusal(e.tool, (e as { input?: unknown }).input, readFile))
 >>>>>>> END
 
 name: no checkpoint note at 150k
@@ -582,3 +582,114 @@ expect: (fail) no split note for an agent that wrote
   if (WRITES.has(tool)) a.wrote = true
 >>>>>>> END
 
+
+@@@ mods/asdev/hooks/compaction.ts
+name: past 230k the nudge no longer asks for care
+expect: (fail) checkpoints armed at 150k
+<<<<<<< OLD
+  if (tokens < CAREFUL_FROM) {
+======= NEW
+  if (true) {
+>>>>>>> END
+
+name: the nudge before 230k no longer allows finishing the step in hand
+expect: (fail) checkpoints armed at 150k
+<<<<<<< OLD
+      + 'boundary, a finished step; never mid-edit), and finishing what you are doing first is fine up '
+======= NEW
+      + 'boundary, a finished step; never mid-edit), '
+>>>>>>> END
+
+name: past 280k nothing is held any more
+expect: (fail) past 280k with the docs not updated since 230k
+<<<<<<< OLD
+    const why = (await refusal(e.tool, e, readFile)) ?? (e.agentId ? undefined : await docsHold($, e as Call))
+======= NEW
+    const why = await refusal(e.tool, e, readFile)
+>>>>>>> END
+
+name: a subagent is held too
+expect: (fail) past 280k with the docs not updated since 230k
+<<<<<<< OLD
+(e.agentId ? undefined : await docsHold($, e as Call))
+======= NEW
+(await docsHold($, e as Call))
+>>>>>>> END
+
+name: a docs write no longer lifts the hold
+expect: (fail) past 280k with the docs not updated since 230k
+<<<<<<< OLD
+      await update($, docsAt, () => at)
+======= NEW
+      void at
+>>>>>>> END
+
+name: a docs write before 230k counts as up to date
+expect: (fail) past 280k with the docs not updated since 230k
+<<<<<<< OLD
+  if (tokens < DOCS_BY || (await read($, docsAt)) >= CAREFUL_FROM) return undefined
+======= NEW
+  if (tokens < DOCS_BY || (await read($, docsAt)) > 0) return undefined
+>>>>>>> END
+
+name: a compaction no longer resets the docs mark
+expect: (fail) past 280k with the docs not updated since 230k
+<<<<<<< OLD
+      await update($, docsAt, () => 0)
+======= NEW
+>>>>>>> END
+
+name: a project without .docs is held too
+expect: (fail) past 280k a project without .docs is not held
+<<<<<<< OLD
+    if (!any) return undefined
+======= NEW
+>>>>>>> END
+
+name: reading a .docs file is held
+expect: (fail) past 280k with the docs not updated since 230k
+<<<<<<< OLD
+  if ((WRITES.has(e.tool) || e.tool === 'Read') && DOCS_PATH.test(path)) return undefined
+======= NEW
+  if (WRITES.has(e.tool) && DOCS_PATH.test(path)) return undefined
+>>>>>>> END
+
+name: git reads are held
+expect: (fail) past 280k with the docs not updated since 230k
+<<<<<<< OLD
+const GIT_READ = /^\s*git\s+(status|log|diff|show)\b/
+======= NEW
+const GIT_READ = /^$/
+>>>>>>> END
+
+name: AskUserQuestion is held past 280k
+expect: (fail) past 280k with the docs not updated since 230k
+<<<<<<< OLD
+'TodoWrite', 'AskUserQuestion', 'TaskStop',
+======= NEW
+'TodoWrite', 'TaskStop',
+>>>>>>> END
+
+name: TaskStop is held past 280k
+expect: (fail) past 280k with the docs not updated since 230k
+<<<<<<< OLD
+'AskUserQuestion', 'TaskStop', 'Monitor',
+======= NEW
+'AskUserQuestion', 'Monitor',
+>>>>>>> END
+
+name: Monitor is held past 280k
+expect: (fail) past 280k with the docs not updated since 230k
+<<<<<<< OLD
+'TaskStop', 'Monitor', 'ToolSearch'
+======= NEW
+'TaskStop', 'ToolSearch'
+>>>>>>> END
+
+name: ToolSearch is held past 280k
+expect: (fail) past 280k with the docs not updated since 230k
+<<<<<<< OLD
+'Monitor', 'ToolSearch'])
+======= NEW
+'Monitor'])
+>>>>>>> END

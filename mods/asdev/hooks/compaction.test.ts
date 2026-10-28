@@ -47,13 +47,53 @@ test('checkpoints armed at 150k, then a nudge every +50k, main chat only', async
   const second = (await read($)).context?.[0]
   expect(second).toContain('next clean break')
   expect(second).not.toContain('checkpoint the plan marks')
+  expect(second).toContain('fine up to about 230k')
+  expect(second).not.toContain('Start nothing new')
   t.now = 240_000
   expect((await read($)).context ?? []).toEqual([])
   t.now = 250_000
-  expect((await read($)).context?.[0]).toContain('250k')
+  const careful = (await read($)).context?.[0]
+  expect(careful).toContain('past 230k')
+  expect(careful).toContain('Start nothing new')
+  expect(careful).toContain('ready to compact')
+  expect(careful).toContain('Never pass 280k with the docs not updated')
   t.now = 400_000
   const agent = await $.tool.call({ tool: 'Read', tool_use_id: 'a1', agentId: 'agent-1', file_path: 'x' })
   expect(agent.context ?? []).toEqual([])
+})
+
+test('past 280k with the docs not updated since 230k, only the docs, searches, git reads and asking or waiting run', async ($: any, on) => {
+  mock.clock(on)
+  const t = { now: 290_000 }
+  world(on, t)
+  on('session.cwd', async () => ({ value: '/p' }) as never)
+  on('fs.exists', async (_$, e) => (String((e as any).path ?? e).replace(/\\/g, '/').endsWith('.docs/task.md') ? { value: true } : { value: false }) as never)
+  const call = (e: object) => $.tool.call({ tool_use_id: `u${Math.random()}`, ...e })
+  expect((await call({ tool: 'Bash', command: 'npm run build' })).deny).toContain('.docs have not been updated')
+  expect((await call({ tool: 'Read', file_path: 'src/app.ts' })).deny).toContain('past 280k')
+  for (const e of [{ tool: 'Read', file_path: '/p/.docs/task.md' }, { tool: 'Grep', pattern: 'x' }, { tool: 'Bash', command: 'git status --short' },
+    { tool: 'AskUserQuestion', questions: [] }, { tool: 'TaskStop', task_id: 'b1' }, { tool: 'Monitor', command: 'x' }, { tool: 'ToolSearch', query: 'select:Monitor' }]) {
+    expect((await call(e)).deny).toBeUndefined()
+  }
+  // A docs write before 230k does not count; one after it lifts the hold until the next compaction.
+  t.now = 220_000
+  await call({ tool: 'Edit', file_path: 'C:\\p\\.docs\\task.md', old_string: 'a', new_string: 'b' })
+  t.now = 290_000
+  expect((await call({ tool: 'Bash', command: 'npm run build' })).deny).toContain('past 280k')
+  await call({ tool: 'Write', file_path: '/p/.docs/task.md', content: 'state' })
+  expect((await call({ tool: 'Bash', command: 'npm run build' })).deny).toBeUndefined()
+  await $.session.compact({ messages: MSGS, trigger: 'manual' })
+  expect((await call({ tool: 'Bash', command: 'npm run build' })).deny).toContain('past 280k')
+  // A subagent is never held.
+  expect((await call({ tool: 'Bash', command: 'npm run build', agentId: 'agent-9' })).deny).toBeUndefined()
+})
+
+test('past 280k a project without .docs is not held', async ($: any, on) => {
+  mock.clock(on)
+  world(on, { now: 290_000 })
+  on('session.cwd', async () => ({ value: '/p' }) as never)
+  on('fs.exists', async () => ({ value: false }) as never)
+  expect((await $.tool.call({ tool: 'Bash', tool_use_id: 'b1', command: 'npm run build' })).deny).toBeUndefined()
 })
 
 const stop = ($: any, text: string) =>
