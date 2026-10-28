@@ -14,6 +14,6 @@ Source: `~/Downloads/personal-setup-backport.md`; extracted blocks in the sessio
       so `compaction.ts` clears the stored rules on a compaction and the next prompt re-baselines.
 - [x] 4. `tasks_done.py`, `docs_init.py` (+ `templates/docs/` written here), tests 12/12 and 18/18,
       SKILL line, `verify.py` 18/18. `reference/README.md` dropped from the required set: no project has one.
-- [ ] 5. `CLAUDE.shared.md`: designs with upsides/downsides and a recommendation; project facts into
-      `.docs`, never memory — within the 11 kB budget; run the mirror script.
+- [x] 5. `CLAUDE.shared.md`: designs with pros, cons and a recommendation; project facts into
+      `.docs`, not memory. 11,263 bytes: the duplicate "§3 never regresses" bullet in §4 and a few words came out.
 - [ ] 6. Decision bullet in `setup-architecture.md`; FYI memory now "skill changes only"; FYI for running chats.
