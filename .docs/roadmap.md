@@ -167,3 +167,5 @@ Outcomes and order only; active work goes in `implementation_plan.md` when a pha
   the engine does not report, so the ring still counts an hour.
 - **Generalise the suite helpers** — Nebulingo's `neighbour_suites.py` / `battery_gate.py` and Tilspire's slice runner into the audit suite with a small per-project config; when a third project needs one.
 - **Project follow-ups (unverified since 2026-09-01; belong in each project's own roadmap):** nebulingo — add `.tmp/` and `.docs/proofs/` to `.auditignore` and a `.token-limits.json` for `scripts/` (242 advisory findings → ~80); nebulingo — `includes/lesson_authoring.php` (819 KB, read 309 times by agents) is the costliest file to work near.
+
+- **Usage levers (measured 2026-10-28, Tilspire session 9e4faec8, 430M weighted since 2026-10-21; owner to pick):** agents are 55% and opus-high-executor alone 115M (80 runs, ~1.4M each), so check `high` went only to sensitive code; the main chat's fixed start-up context is ~33k tokens a turn (system prompt 29%, skill listing 7%, instructions 7%), so unused plugins and skills are the cheapest cut; whole-file `sed` and `grep` output is another 17%.
