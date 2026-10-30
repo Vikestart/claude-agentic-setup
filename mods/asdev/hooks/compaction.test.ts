@@ -84,6 +84,10 @@ test('past 280k with the docs not updated since 230k, only the docs, searches, g
   expect((await call({ tool: 'Bash', command: 'npm run build' })).deny).toBeUndefined()
   await $.session.compact({ messages: MSGS, trigger: 'manual' })
   expect((await call({ tool: 'Bash', command: 'npm run build' })).deny).toContain('past 280k')
+  // So does /clear: the chat before's docs write says nothing about this one's.
+  await call({ tool: 'Write', file_path: '/p/.docs/task.md', content: 'state' })
+  await $.classic.SessionStart({ source: 'clear', cwd: '/p' })
+  expect((await call({ tool: 'Bash', command: 'npm run build' })).deny).toContain('past 280k')
   // A subagent is never held.
   expect((await call({ tool: 'Bash', command: 'npm run build', agentId: 'agent-9' })).deny).toBeUndefined()
 })
@@ -175,9 +179,11 @@ test('a reply claiming a push while commits are unpushed is sent back once; true
   expect((await first('Merged and pushed.')).block).toBeUndefined()
 })
 
-// The store and session id the start is kept under; registered before the first `$` call.
-function kept(on: any, store: Record<string, unknown>) {
+// The store and session id the start is kept under, and how many replies the transcript holds;
+// registered before the first `$` call.
+function kept(on: any, store: Record<string, unknown>, replies = 0) {
   on('session.id', async () => ({ value: 's1' }) as never)
+  on('session.messages', async () => ({ value: Array.from({ length: replies }, () => ({ role: 'assistant', text: '', toolUses: [] })) }) as never)
   on('store.get', async (_$: any, e: any) => ({ value: store[e.key] }) as never)
   on('store.set', async (_$: any, e: any) => { store[e.key] = e.value; return { value: undefined } as never })
 }
@@ -200,6 +206,7 @@ test('the first note comes 100k past where the chat started, and never past 230k
   // A compaction measures again: a chat that comes back at 180k is first asked at 230k, not 280k.
   await $.session.compact({ trigger: 'auto', messages: MSGS })
   await tick()
+  await $.classic.SessionStart({ source: 'compact', cwd: '/p' })
   t.step = 180_000
   await step($, undefined as never)
   t.now = 229_000
@@ -227,6 +234,64 @@ test('a reopened chat keeps the start it had, and the trigger line waits for it 
   await tick()
   expect(w.ran.map(r => r.command)).toEqual(['compact'])
   expect(store.contextBases).toEqual({ s0: 40_000, s1: 120_000 })
+})
+
+test('a compaction that never finished keeps the start, and the note comes again at once', async ($: any, on) => {
+  mock.clock(on)
+  const store: Record<string, unknown> = {}
+  kept(on, store)
+  const t = { now: 0, step: 60_000 }
+  world(on, t)
+  await $.classic.SessionStart({ source: 'startup', cwd: '/p' })
+  await step($, undefined as never)
+  t.now = 170_000
+  expect(notes(await read($))).toContain('checkpoint the plan marks')
+  // Cancelled or failed: no compact start follows, and the context is still 170k.
+  await $.session.compact({ trigger: 'manual', messages: MSGS })
+  await tick()
+  t.step = 172_000
+  await step($, undefined as never)
+  t.now = 172_000
+  expect(notes(await read($))).toContain('checkpoint the plan marks')
+  expect(store.contextBases).toEqual({ s1: 60_000 })
+})
+
+test('a chat reopened with no start kept keeps the old 150k, not its size now', async ($: any, on) => {
+  mock.clock(on)
+  const store: Record<string, unknown> = {}
+  kept(on, store, 12)
+  const t = { now: 0, step: 180_000 }
+  world(on, t)
+  await $.classic.SessionStart({ source: 'startup', cwd: '/p' })
+  await step($, undefined as never)
+  t.now = 150_000
+  expect(notes(await read($))).toContain('checkpoint the plan marks')
+  expect(store.contextBases).toBeUndefined()
+})
+
+test('/clear and a resume start afresh: no stale start, nudge or docs mark from the chat before', async ($: any, on) => {
+  mock.clock(on)
+  const store: Record<string, unknown> = {}
+  kept(on, store)
+  const t = { now: 0, step: 40_000 }
+  world(on, t)
+  await $.classic.SessionStart({ source: 'startup', cwd: '/p' })
+  await step($, undefined as never)
+  t.now = 250_000
+  expect(notes(await read($))).toContain('ready to compact')
+  // Without the reset the next note would wait for 300k, past the automatic compaction.
+  await $.classic.SessionStart({ source: 'clear', cwd: '/p' })
+  t.step = 30_000
+  await step($, undefined as never)
+  t.now = 130_000
+  expect(notes(await read($))).toContain('checkpoint the plan marks')
+  // The resumed chat's kept start counts, not the one this process measured last.
+  store.contextBases = { s1: 120_000 }
+  await $.classic.SessionStart({ source: 'resume', cwd: '/p' })
+  t.now = 200_000
+  expect(notes(await read($))).toBe('')
+  t.now = 220_000
+  expect(notes(await read($))).toContain('checkpoint the plan marks')
 })
 
 test('without a blocking Stop hook, or below 150k, a stop is left alone', async ($: any, on) => {

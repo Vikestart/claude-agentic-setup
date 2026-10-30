@@ -635,8 +635,12 @@ expect: (fail) past 280k with the docs not updated since 230k
 name: a compaction no longer resets the docs mark
 expect: (fail) past 280k with the docs not updated since 230k
 <<<<<<< OLD
+      await update($, nudgedAt, () => 0)
       await update($, docsAt, () => 0)
+      // The compacted session reloads
 ======= NEW
+      await update($, nudgedAt, () => 0)
+      // The compacted session reloads
 >>>>>>> END
 
 name: a project without .docs is held too
@@ -1120,19 +1124,17 @@ expect: (fail) the first note comes 100k past where the chat started
 name: every reply measures the start again
 expect: (fail) the first note comes 100k past where the chat started
 <<<<<<< OLD
-        await update($, measureBase, () => false)
+      if (how) await update($, measureBase, () => '')
 ======= NEW
-        void 0
+      void how
 >>>>>>> END
 
 name: a compaction keeps the old start
 expect: (fail) the first note comes 100k past where the chat started
 <<<<<<< OLD
-      await update($, contextBase, () => 0)
-      await update($, measureBase, () => true)
-      // The compacted session reloads
+    const how = e.source === 'compact' || e.source === 'clear' ? 'now'
 ======= NEW
-      // The compacted session reloads
+    const how = e.source === 'clear' ? 'now'
 >>>>>>> END
 
 name: the start is not kept for a restart
@@ -1146,9 +1148,56 @@ expect: (fail) the first note comes 100k past where the chat started
 name: a reopened chat is measured again
 expect: (fail) a reopened chat keeps the start it had
 <<<<<<< OLD
-(e.source === 'startup' && !(await storedBase($, await $.session.id().catch(() => ''))))
+      : e.source === 'startup' && !(await storedBase($, await $.session.id().catch(() => ''))) ? 'if-new' : ''
 ======= NEW
-e.source === 'startup'
+      : e.source === 'startup' ? 'now' : ''
+>>>>>>> END
+
+name: a compaction that never finished measures the start
+expect: (fail) a compaction that never finished keeps the start
+<<<<<<< OLD
+      await update($, docsAt, () => 0)
+      // The compacted session reloads
+======= NEW
+      await update($, docsAt, () => 0)
+      await update($, measureBase, () => 'now')
+      // The compacted session reloads
+>>>>>>> END
+
+name: a chat reopened with no start kept is measured at its size now
+expect: (fail) a chat reopened with no start kept keeps the old 150k
+<<<<<<< OLD
+      if (how === 'now' || (how === 'if-new' && await isNewChat($))) {
+======= NEW
+      if (how) {
+>>>>>>> END
+
+name: /clear keeps the last chat's nudge mark
+expect: (fail) /clear and a resume start afresh
+<<<<<<< OLD
+    if (e.source === 'clear' || e.source === 'resume') {
+      await update($, nudgedAt, () => 0)
+======= NEW
+    if (e.source === 'clear' || e.source === 'resume') {
+>>>>>>> END
+
+name: /clear keeps the last chat's docs mark and lifts the hold
+expect: (fail) past 280k with the docs not updated since 230k
+<<<<<<< OLD
+      await update($, nudgedAt, () => 0)
+      await update($, docsAt, () => 0)
+    }
+======= NEW
+      await update($, nudgedAt, () => 0)
+    }
+>>>>>>> END
+
+name: a resume keeps the start this process measured last
+expect: (fail) /clear and a resume start afresh
+<<<<<<< OLD
+    if (how || e.source === 'resume') await update($, contextBase, () => 0)
+======= NEW
+    if (how) await update($, contextBase, () => 0)
 >>>>>>> END
 
 name: the start is lost on a restart

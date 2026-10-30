@@ -175,6 +175,11 @@ Outcomes and order only; active work goes in `implementation_plan.md` when a pha
   compaction note comes 100k past the chat's start: in a new chat the ring's hover names its first gap
   about 100k above the first reply's context, and the store's `contextBases` holds the chat. If it
   stays at 150k, the app does not send a `startup` start, and the old fixed point stands.
+- **asdev mod: two review leftovers** (detached review, 2026-10-30; the rest fixed): (a) with a
+  compaction window under ~263k (model or `autoCompactWindow`) the first note can fall after the
+  engine's own compaction, and the ring's marks draw out of order; all the fixed points assume 330k.
+  (b) Two chats replying at once can each overwrite the other's entry in `contextBases`/`cacheAts`
+  (read, then write); the lost chat falls back to 150k or loses its timer after a restart.
 - **`crlf.py --fix` honours `.gitattributes` `eol` pins** (2026-10-30, cut from the audit skill):
   today it converts pinned files too, and the skill says to keep them out by hand.
 - **Generalise the suite helpers** — Nebulingo's `neighbour_suites.py` / `battery_gate.py` and Tilspire's slice runner into the audit suite with a small per-project config; when a third project needs one.

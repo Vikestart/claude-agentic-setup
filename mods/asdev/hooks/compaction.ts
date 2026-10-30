@@ -84,8 +84,9 @@ const rulesSeen = atom({ plugin: 'asdev', key: 'rules' } as const, {} as Record<
 // The context the main chat started from, 0 until measured. Kept in the store under the session id
 // too, since the session state does not outlive the app; the oldest of BASE_KEEP chats drop out.
 const contextBase = atom({ plugin: 'asdev', key: 'contextBase' } as const, 0)
-// Set at a start or /clear, and by the compaction itself: the next main-thread reply is measured.
-const measureBase = atom({ plugin: 'asdev', key: 'measureBase' } as const, false)
+// Set at a start, /clear or compaction: the next main-thread reply is measured. 'if-new' for a startup
+// the store does not know, measured only when the chat has no earlier replies.
+const measureBase = atom({ plugin: 'asdev', key: 'measureBase' } as const, '' as '' | 'now' | 'if-new')
 const BASE_STORE = 'contextBases'
 const BASE_KEEP = 50
 
@@ -99,6 +100,14 @@ async function storedBase($: Engine, id: string): Promise<number> {
 export async function compactFrom($: Engine): Promise<number> {
   const base = (await read($, contextBase)) || await storedBase($, await $.session.id().catch(() => ''))
   return Math.min((base || START_UNKNOWN) + FIRST_GAP, CAREFUL_FROM)
+}
+
+// A chat the app reopens with no start kept (open across this change, or out of the last BASE_KEEP)
+// arrives as a startup too; its size now is not its start, and would push its first note to 230k
+// (review, 2026-10-30). The reply being measured may already be in the transcript.
+async function isNewChat($: Engine): Promise<boolean> {
+  const messages = await $.session.messages().catch(() => [])
+  return Array.isArray(messages) && messages.filter(m => m.role === 'assistant').length <= 1
 }
 
 const k = (n: number) => `${Math.round(n / 1000)}k`
@@ -363,10 +372,11 @@ export const register: Register = on => {
         const kept = Object.entries(asTimes(await $.store.get(CACHE_STORE))).filter(([, at]) => t - at < CACHE_TTL)
         await $.store.set(CACHE_STORE, { ...Object.fromEntries(kept), [id]: t })
       }
-      if (await read($, measureBase)) {
+      const how = await read($, measureBase)
+      if (how) await update($, measureBase, () => '')
+      if (how === 'now' || (how === 'if-new' && await isNewChat($))) {
         const u = r.usage
         const tokens = u.input_tokens + u.cache_read_input_tokens + u.cache_creation_input_tokens
-        await update($, measureBase, () => false)
         await update($, contextBase, () => tokens)
         if (id) {
           const kept = Object.entries(asTimes(await $.store.get(BASE_STORE))).filter(([key]) => key !== id).slice(1 - BASE_KEEP)
@@ -433,8 +443,6 @@ export const register: Register = on => {
       await update($, compactingSince, () => 0)
       await update($, nudgedAt, () => 0)
       await update($, docsAt, () => 0)
-      await update($, contextBase, () => 0)
-      await update($, measureBase, () => true)
       // The compacted session reloads the instructions: rules.ts takes a new baseline on the next prompt.
       await update($, rulesSeen, () => ({}))
       carryOn($)
@@ -459,11 +467,19 @@ export const register: Register = on => {
 
   on('classic.SessionStart', async ($, e, next) => {
     const r = await next(e)
-    // A start the store already holds is the app reopening the chat: its start stands. A resume keeps
-    // its start too; a fork's is unknown.
-    if (e.source === 'clear' || (e.source === 'startup' && !(await storedBase($, await $.session.id().catch(() => ''))))) {
-      await update($, contextBase, () => 0)
-      await update($, measureBase, () => true)
+    // Measured again only once a compaction is done: one cancelled or failed leaves the context as it
+    // was, and measuring that would put the first note off to 230k (review, 2026-10-30). A start the
+    // store already holds is the app reopening the chat: its start stands. A resume keeps its stored
+    // start; a fork keeps its parent's.
+    const how = e.source === 'compact' || e.source === 'clear' ? 'now'
+      : e.source === 'startup' && !(await storedBase($, await $.session.id().catch(() => ''))) ? 'if-new' : ''
+    if (how) await update($, measureBase, () => how)
+    // /clear and a resume in the same process go on under another session id with the last chat's
+    // state: its start, and the nudge and docs marks that would put off the next note or lift the hold.
+    if (how || e.source === 'resume') await update($, contextBase, () => 0)
+    if (e.source === 'clear' || e.source === 'resume') {
+      await update($, nudgedAt, () => 0)
+      await update($, docsAt, () => 0)
     }
     if (e.source !== 'compact') return r
     try {
