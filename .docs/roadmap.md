@@ -166,9 +166,9 @@ Outcomes and order only; active work goes in `implementation_plan.md` when a pha
   and turns red under 10 min. Known gap: a session in usage overage drops to a 5-minute cache, which
   the engine does not report, so the ring still counts an hour.
 - **Work-setup band: live check** (back-ported 2026-10-30; app restart needed, traps.md Mods): the
-  Context ring, hover cards and the narrow-window form draw; Today/Month rows show only if the
-  store's `monthStatus` is `ok` (extra usage enabled on the account). Open: keep Today's pace on the
-  work setup's weekday 08–16 hours, or drop it.
+  Context ring, the 5-hour and weekly bars, hover cards and the narrow-window form draw. Today/Month
+  stay hidden here (owner, 2026-10-30: not on the Enterprise plan, so no extra usage); their code and
+  the weekday 08–16 pace are kept as they are.
 - **`crlf.py --fix` honours `.gitattributes` `eol` pins** (2026-10-30, cut from the audit skill):
   today it converts pinned files too, and the skill says to keep them out by hand.
 - **Generalise the suite helpers** — Nebulingo's `neighbour_suites.py` / `battery_gate.py` and Tilspire's slice runner into the audit suite with a small per-project config; when a third project needs one.
