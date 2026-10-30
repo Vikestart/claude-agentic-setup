@@ -1,14 +1,198 @@
 import { atom, read, update } from 'claude-code'
-import type { Register, SessionRateLimit } from 'claude-code'
+import type { EngineInterface as Engine, Register, SessionRateLimit } from 'claude-code'
+import { TRIGGER_FROM } from './compaction'
 
 // Compaction lands about 33k below the window (measured 2026-10-01, main chats and agents alike).
 const COMPACT_MARGIN = 33_000
-// Past this a session should compact at its next clean break (roadmap: graceful compaction).
-const TIDY_AT = 200_000
 const WINDOW_MS: Record<string, number> = { five_hour: 5 * 3600_000, seven_day: 7 * 86400_000 }
 const LIMIT_NAME: Record<string, string> = { five_hour: '5 hours', seven_day: 'Week' }
 const LIMIT_LABEL: Record<string, string> = { five_hour: '5h', seven_day: 'Week' }
-const LIMIT_WIDTH: Record<string, number> = { five_hour: 40 }
+// Enterprise replaces Team's two windows with a monthly quota (owner, 2026-10-21). No monthly kind is
+// documented yet, so a gateway's spend_limit and any kind naming a month are taken as monthly until
+// the kinds stored under `kindsSeen` say otherwise.
+const isMonthly = (kind: string) => kind === 'spend_limit' || kind.includes('month')
+const limitName = (kind: string) => LIMIT_NAME[kind] ?? (isMonthly(kind) ? 'Month' : kind)
+const limitLabel = (kind: string) => LIMIT_LABEL[kind] ?? (isMonthly(kind) ? 'Month' : kind)
+// A monthly window is the calendar month that ends at its reset.
+function windowMs(kind: string, resets: number): number | undefined {
+  if (WINDOW_MS[kind] || !isMonthly(kind) || Number.isNaN(resets)) {
+    return WINDOW_MS[kind]
+  }
+  const start = new Date(resets)
+  start.setUTCMonth(start.getUTCMonth() - 1)
+  return resets - start.getTime()
+}
+const hasReset = (r: SessionRateLimit, now: number) => Date.parse(r.resetsAt ?? '') <= now
+// The limits to show. The kept figures are the newest any session saw, so a kept figure of a kind
+// this session reports wins unless its window has reset. Once the session has replied, a kind it does
+// not report is gone (Team's windows after the move to Enterprise); before that the kept ones stand
+// in, less any whose window has reset.
+function pickLimits(own: SessionRateLimit[], kept: SessionRateLimit[], replied: boolean, now: number): SessionRateLimit[] {
+  if (!replied) {
+    return kept.filter(r => !hasReset(r, now))
+  }
+  return own.map(r => kept.find(x => x.kind === r.kind && !hasReset(x, now)) ?? r)
+}
+
+// Enterprise reports no window: its monthly spend limit is the account figure the app's usage panel
+// shows, read where the engine reads it (amounts in cents; engine schema, 2.1.304). Fetched from a
+// measure at most every few minutes, failures too, never from a draw.
+const USAGE_URL = 'https://api.anthropic.com/api/oauth/usage'
+const USAGE_EVERY = 2 * 60_000
+// With no replies anywhere the figure would never move; once this old, the minute tick reads it.
+const USAGE_IDLE = 12 * 3600_000
+const USAGE_WAIT = 10_000
+// The daily allowance keeps 5% back, so what goes unspent builds a buffer (owner, 2026-10-26).
+const DAY_SHARE = 0.95
+// Today's pace runs over the working hours, in the system's own time zone, not over the whole day:
+// at 10:00 a midnight-based pace would already read 42% (owner, 2026-10-27).
+const WORK_FROM = 8, WORK_TO = 16
+type Month = { used: number; limit: number; at: number; currency: string }
+type DayStart = { day: string; used: number }
+const num = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v)
+// The store answers whatever a key holds (a test's mock one value for every key), so a figure counts
+// only in its own shape.
+const asMonth = (v: unknown): Month | undefined => {
+  const m = v as Month
+  return m && typeof m === 'object' && num(m.used) && num(m.limit) && num(m.at) && m.used >= 0 && m.limit > 0
+    && typeof m.currency === 'string' ? m : undefined
+}
+const asDay = (v: unknown): DayStart | undefined => {
+  const d = v as DayStart
+  return d && typeof d === 'object' && typeof d.day === 'string' && num(d.used) ? d : undefined
+}
+// Days, weekdays and months follow the runtime's local zone.
+const dayOf = (t: number) => {
+  const d = new Date(t)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+const sameMonth = (a: number, b: number) => dayOf(a).slice(0, 7) === dayOf(b).slice(0, 7)
+// Mon-Fri from day `from` to the month's end, that day included; public holidays are not known.
+function workDays(year: number, month: number, from: number): number {
+  let n = 0
+  for (let d = from, end = new Date(year, month + 1, 0).getDate(); d <= end; d++) {
+    const w = new Date(year, month, d).getDay()
+    n += w > 0 && w < 6 ? 1 : 0
+  }
+  return n
+}
+// What today may spend: what the month had left when today began, over the working days left. A
+// weekend counts none, so it shows the next working day's share; a weekend that ends the month shows
+// the next month's first.
+function allowance(m: Month, start: number, now: number): number {
+  const d = new Date(now), y = d.getFullYear(), mo = d.getMonth()
+  const days = workDays(y, mo, d.getDate())
+  return DAY_SHARE * (days ? Math.max(0, m.limit - start) / days : m.limit / workDays(y, mo + 1, 1))
+}
+const dollars = (n: number) => `$${Math.round(n).toLocaleString('en-US')}`
+const cents = (n: number) => `$${n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+
+// A read stuck past this (the credential or the store, not only the fetch) stops blocking the next.
+const USAGE_BUSY = 3 * USAGE_WAIT
+let fetching = 0
+// Reads the account figure into the store: `month` in dollars, or null when the read fails (no row then),
+// `monthStatus` saying why, and `dayStart`, the first figure of each local day (again after a fall, a
+// new month's reset).
+async function refreshMonth($: Engine, now: number, every = USAGE_EVERY): Promise<void> {
+  const tried = await $.store.get('monthTry')
+  // Either way round: a clock moved back must not stop the fetches until it catches up.
+  if ((fetching && Math.abs(now - fetching) < USAGE_BUSY) || (num(tried) && Math.abs(now - tried) < every)) {
+    return
+  }
+  fetching = now
+  let month: Month | null = null
+  let status = 'unknown'
+  try {
+    const auth = await $.session.authorize()
+    // A session without the account's own login says nothing about its spend: it leaves the figure, and
+    // the 5-minute slot, to the sessions that have one.
+    if (auth?.kind !== 'bearer') {
+      await $.store.set('monthStatus', auth ? 'api-key' : 'no credential')
+      return
+    } else {
+      await $.store.set('monthTry', now)
+      const res = await Promise.race([
+        $.http.fetch(USAGE_URL, { headers: { 'anthropic-beta': 'oauth-2025-04-20' }, auth: auth.handle }),
+        $.clock.sleep(USAGE_WAIT).then(() => undefined),
+      ])
+      status = res ? String(res.status) : 'timeout'
+      const x = res?.ok ? (JSON.parse(res.text) as { extra_usage?: Record<string, unknown> }).extra_usage : undefined
+      if (res?.ok) {
+        status = !x ? 'no extra_usage' : x.is_enabled !== true ? 'not enabled' : 'ok'
+      }
+      if (x && x.is_enabled === true) {
+        // Raw numbers only: Number() would read a null or an empty string as 0 and start the day there.
+        month = num(x.used_credits) && num(x.monthly_limit)
+          ? asMonth({ used: x.used_credits / 100, limit: x.monthly_limit / 100, at: now, currency: String(x.currency ?? 'USD') }) ?? null
+          : null
+        status = month ? status : 'bad figures'
+      }
+    }
+  } catch (err) {
+    status = `error: ${String(err).slice(0, 80)}`
+  } finally {
+    fetching = 0
+  }
+  await $.store.set('month', month)
+  await $.store.set('monthStatus', status)
+  if (month) {
+    const day = asDay(await $.store.get('dayStart'))
+    if (!day || day.day !== dayOf(now) || month.used < day.used) {
+      await $.store.set('dayStart', { day: dayOf(now), used: month.used })
+    }
+  }
+  $.ui.invalidate('ui.render')
+}
+
+// The Today and Month rows from the kept figure; none without one, or with one from an earlier month.
+function monthRows(m: Month | undefined, d: DayStart | undefined, now: number): Row[] {
+  if (!m || !sameMonth(m.at, now)) {
+    return []
+  }
+  // No figure yet today: today began where the last one stood.
+  const start = d?.day === dayOf(now) ? d.used : m.used
+  const may = allowance(m, start, now)
+  const spent = Math.max(0, m.used - start)
+  const over = spent > may
+  const share = may ? spent / may : 1
+  const d0 = new Date(now), first = new Date(d0.getFullYear(), d0.getMonth(), 1).getTime()
+  const pace = (now - first) / (new Date(d0.getFullYear(), d0.getMonth() + 1, 1).getTime() - first)
+  const ahead = m.used / m.limit > pace
+  const hour = d0.getHours() + d0.getMinutes() / 60
+  const dayPace = Math.min(1, Math.max(0, (hour - WORK_FROM) / (WORK_TO - WORK_FROM)))
+  const asOf = new Date(m.at).toTimeString().slice(0, 5)
+  const unit = m.currency === 'USD' ? '' : ` ${m.currency}`
+  return [{
+    name: 'Today',
+    label: 'Today',
+    used: share,
+    ticks: [{ at: dayPace, red: share > dayPace }],
+    pace: dayPace,
+    ahead: over,
+    // A share beside the bar, the dollars in the hover card: dollars wrapped the band (owner, 2026-10-27).
+    value: `${Math.round(share * 100)}% / ${Math.round(dayPace * 100)}%`,
+    detail: `${dollars(spent)} of ${dollars(may)}`,
+    alt: `pace ${Math.round(dayPace * 100)}%` + (over ? ', past today\'s allowance' : ''),
+    // Kept to the figure and what the two numbers mean: the allowance's rule is at DAY_SHARE (owner, 2026-10-27).
+    tip: `${cents(spent)} of ${cents(may)}${unit} today (as of ${asOf})`
+      + ` · allowed: the month's remaining budget over the working days left`
+      + ` · second figure and arrow: ${Math.round(dayPace * 100)}% of the working day (${WORK_FROM}:00-${WORK_TO}:00) gone`,
+  }, {
+    name: 'Month',
+    label: 'Month',
+    used: m.used / m.limit,
+    ticks: [{ at: pace, red: ahead }],
+    pace,
+    ahead,
+    // Used, then the pace, as the usage windows show it (owner, 2026-10-27).
+    value: `${Math.round(m.used / m.limit * 100)}% / ${Math.round(pace * 100)}%`,
+    detail: `${dollars(m.used)} of ${dollars(m.limit)}`,
+    alt: `pace ${Math.round(pace * 100)}%${ahead ? ', ahead of pace' : ''}`,
+    tip: `${cents(m.used)} of ${cents(m.limit)}${unit} this month (as of ${asOf})`
+      + ` · second figure and arrow: ${Math.round(pace * 100)}% of the month gone · `
+      + (ahead ? 'ahead of pace: at this rate the limit runs out before the month ends' : 'left of it, the limit lasts the month'),
+  }]
+}
 
 // The main chat's prompt cache lasts an hour from the last reply (the 1-hour TTL; a session in usage
 // overage drops to 5 minutes, which the engine does not report). Past it, the next message writes the
@@ -22,7 +206,22 @@ export const RED = '#d9534f'
 const HEAT: [number, string][] = [[0, GREEN], [0.45, '#8cc152'], [0.7, '#e0b02a'], [1, RED]]
 // The bar sits in the middle of an image of height H, so it lines up with the text beside it; the
 // arrows take the band above it. Widths are kept small enough for one row (owner, 2026-10-03).
-const W = 64, H = 18, BAR = 8, BAR_Y = (H - BAR) / 2
+// The limit bars went from 64 to 58 px to give the figures room, then to 112, the 5-hour bar too,
+// with the room the Context ring gave back (owner, 2026-10-27).
+const W = 112, H = 18, BAR = 8, BAR_Y = (H - BAR) / 2
+// A side panel narrows the band (107 to 86 cells with the browser open, owner's probe, 2026-10-27),
+// so the bars share what the rest leaves, between MIN_W and W; below that the band wraps. A tree
+// cannot measure its text, so the rest is counted in cells, labels by their letters, plus SLACK for what
+// the count misses: at 4 the bars still wrapped at 86 cells (owner, 2026-10-27), and 112 px fit at 107.
+const MIN_W = 24, CELL_PX = 10, SLACK = 18
+// Each figure's box holds its widest value - `~100%`, ` /100%` (caption size), `expired` - judged by
+// eye, since a tree cannot measure its text. A Box's width counts character cells, not pixels: the
+// first try in pixels made each meter a whole row wide, and 5/4/7 cells left wide gaps (owner's
+// screenshots, 2026-10-27): a desktop cell is about 10 px. Three cells for the pace wrapped it under
+// the figure as soon as the used share reached two digits (`10% / 53%`, owner, 2026-10-27).
+const USED_W = 4
+const PACE_W = 5
+const CACHE_W = 5
 // How long the first draw waits for the figures before drawing the band without them.
 const FIRST_WAIT = 150
 
@@ -72,19 +271,37 @@ function ring(left: number, colour: string): string {
     + '</svg>'
 }
 
-// The collapsed band: two thin bars, the first fraction above the second.
-function mini(top: number, bottom: number, tip: string): string {
+// The Context ring, the cache ring's size, in sections split at `cuts`: the gaps between them are the
+// marks, which stay visible at 18 px where ticks on so small a shape would not (owner's pick, 2026-10-27).
+// The fill takes the colour of the section it has reached.
+function sections(used: number, cuts: number[]): string {
+  const c = 2 * Math.PI * 7, gap = 1.4
+  const ends = [0, ...cuts.filter(f => f > 0 && f < 1), 1]
+  const at = ends.slice(1).findIndex(f => used < f)
+  const fill = [GREEN, '#e0b02a', RED][Math.min(2, at < 0 ? ends.length - 2 : at)]
+  const arc = (from: number, to: number, colour: string) => (to - from) * c > gap
+    ? `<circle cx="9" cy="9" r="7" stroke="${colour}" stroke-dasharray="${((to - from) * c - gap).toFixed(2)} ${c.toFixed(2)}" stroke-dashoffset="${(-(from * c + gap / 2)).toFixed(2)}"/>` : ''
+  const parts = ends.slice(1).map((to, i) => arc(ends[i], to, ['#8884', '#e0b02a55', '#d9534f55'][Math.min(2, i)])
+    + arc(ends[i], Math.min(to, used), fill)).join('')
+  return '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 18 18">'
+    + `<g transform="rotate(-90 9 9)" fill="none" stroke-width="3">${parts}</g></svg>`
+}
+
+// The collapsed band: a thin bar per fraction, the first on top; a single one sits in the middle.
+function mini(fractions: number[], tip: string): string {
   const stops = HEAT.map(([at, c]) => `<stop offset="${at}" stop-color="${c}"/>`).join('')
   const row = (y: number, f: number) => `<rect y="${y}" width="28" height="3" rx="1.5" fill="#8884"/>`
     + `<rect y="${y}" width="${(28 * Math.min(1, Math.max(0, f))).toFixed(1)}" height="3" rx="1.5" fill="url(#heat)"/>`
+  const ys = fractions.length === 1 ? [3.5] : [1, 6]
   return '<svg xmlns="http://www.w3.org/2000/svg" width="28" height="10" viewBox="0 0 28 10">'
     + `<defs><linearGradient id="heat" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="28" y2="0">${stops}</linearGradient></defs>`
-    + tipped(tip, 28, 10, row(1, top) + row(6, bottom)) + '</svg>'
+    + tipped(tip, 28, 10, fractions.map((f, i) => row(ys[i], f)).join('')) + '</svg>'
 }
 
 // Clawd, the Claude Code mascot, as pixels (X body, E eye), for the desktop's animated drawings:
 // idle tricks at random now and then, and the vacuum during a compaction (owner, 2026-10-04).
-// They run as SMIL in an isInteractive Svg; the terminal cannot animate one, so it gets neither.
+// They run as SMIL; the terminal cannot animate one, so it gets neither. A trick needs no
+// isInteractive frame, so it is drawn as an image.
 const CLAWD = ['..XXXXXXXX..', '..XXXXXXXX..', '..XEXXXXEX..', 'XXXXXXXXXXXX', 'XXXXXXXXXXXX', '..XXXXXXXX..', '..X.X..X.X..', '..X.X..X.X..']
 const ORANGE = '#d97757'
 
@@ -192,7 +409,7 @@ function blocks(used: number, pace?: number, cells = 20): string {
   return Array.from({ length: cells }, (_, i) => cell(i)).join('')
 }
 
-type Row = { name: string; label: string; width: number; used: number; ticks: { at: number; faint?: boolean; red?: boolean }[]; pace?: number; value: string; detail: string; alt: string; tip: string; old?: boolean; ahead?: boolean }
+type Row = { name: string; label: string; used: number; ticks: { at: number; faint?: boolean; red?: boolean }[]; pace?: number; value: string; detail: string; alt: string; tip: string; old?: boolean; ahead?: boolean; round?: boolean }
 
 // Module-level on purpose: a reload cancels the old timer and starts this over with it.
 let ticking = false
@@ -237,6 +454,8 @@ export const register: Register = on => {
       // Unreadable settings: the model's window still gives a usable bar.
       ($.settings.read() as Promise<{ autoCompactWindow?: number }>).catch(() => ({}) as { autoCompactWindow?: number }),
       $.store.get('limits') as Promise<SessionRateLimit[] | undefined>,
+      $.store.get('month'),
+      $.store.get('dayStart'),
     ])
     const got = answered ? await figures : await Promise.race([figures, $.clock.sleep(FIRST_WAIT).then(() => undefined)])
     if (got) {
@@ -244,49 +463,60 @@ export const register: Register = on => {
     } else {
       void figures.then(() => { answered = true; $.ui.invalidate('ui.render') })
     }
-    const [usage, settings, kept] = got ?? []
+    const [usage, settings, kept, keptMonth, keptDay] = got ?? []
     const context = usage?.context
     const cost = usage?.cost
-    // The kept figures are the newest any session saw, so they win over this session's own: a chat
-    // left idle keeps the reading of its last reply, hours behind (owner, 2026-10-04). Until the
-    // session's first reply they are drawn faint.
-    const old = !usage?.rateLimits.length
-    const rateLimits = (kept?.length ? kept : usage?.rateLimits) ?? []
+    // Absent in a fresh session and after a compaction or relaunch until the next reply; the band
+    // stays up rather than vanishing (it hid itself whole here before, 2026-10-02).
+    const tokens = context?.tokens
+    // Until then the local estimate /context and the app's rail show fills the gap, drawn as one
+    // (owner, 2026-10-27). Asked only in the gap: the plain call is free, this one counts.
+    const estimate = context && tokens === undefined
+      ? (await $.session.usage({ breakdown: 'summary' }).catch(() => undefined))?.context.breakdown?.totalTokens
+      : undefined
+    const fill = tokens ?? estimate
+    const now = await $.clock.now()
+    // The kept figures win over this session's own: a chat left idle keeps the reading of its last
+    // reply, hours behind (owner, 2026-10-04). Until the session's first reply they are drawn faint.
+    const own = usage?.rateLimits ?? []
+    const old = !own.length
+    const months = monthRows(asMonth(keptMonth), asDay(keptDay), now)
+    // The account figure is the month's own: a monthly window beside it would count it twice.
+    const rateLimits = pickLimits(own, kept ?? [], own.length > 0 || tokens !== undefined, now)
+      .filter(r => !months.length || !isMonthly(r.kind))
 
     // The window the session compacts against is the setting when one is set, not the model's.
     const setting = settings?.autoCompactWindow
     const limit = context ? Math.min(context.window, setting ?? context.window) : 0
     const compactAt = limit - COMPACT_MARGIN
-    // Absent in a fresh session and after a compaction or relaunch until the next reply; the band
-    // stays up rather than vanishing (it hid itself whole here before, 2026-10-02).
-    const tokens = context?.tokens
-    const now = await $.clock.now()
     const usd = cost ? `$${cost.usd.toFixed(2)}` : ''
 
     // A percentage keeps the band on one row; the tokens are in the hover card (owner, 2026-10-05).
-    const shown = !limit ? '…' : tokens === undefined ? '–' : `${Math.round(tokens / limit * 100)}%`
+    const shown = !limit ? '…' : fill === undefined ? '–' : `${tokens === undefined ? '~' : ''}${Math.round(fill / limit * 100)}%`
     const list: Row[] = [{
       name: 'Context',
       label: 'Context',
-      width: W,
-      used: limit ? (tokens ?? 0) / limit : 0,
-      ticks: limit ? [{ at: TIDY_AT / limit, faint: true }, { at: compactAt / limit }] : [],
+      // A ring split where it compacts, in place of the label and bar (owner's pick, 2026-10-27).
+      round: true,
+      used: limit ? (fill ?? 0) / limit : 0,
+      ticks: limit ? [{ at: TRIGGER_FROM / limit, faint: true }, { at: compactAt / limit }] : [],
       value: shown,
       // Kept short: a long line wraps the band onto an extra row (owner, 2026-10-02). The ticks show
-      // the tidy and compaction points; the alt text names them.
+      // where the mod first asks for a compaction and where the engine compacts; the alt text names them.
       detail: shown + (usd ? ` · ${usd}` : ''),
-      alt: limit ? `tidy at ${k(TIDY_AT)}, compacts ~${k(compactAt)}` : 'loading',
+      alt: limit ? `compacts at a checkpoint from ${k(TRIGGER_FROM)}, by itself ~${k(compactAt)}` : 'loading',
       tip: !limit ? 'Waiting for the first reply'
-        : `${tokens === undefined ? 'Unknown until the next reply' : `${k(tokens)} of ${k(limit)} tokens used`}`
-          + ` · faint arrow ${k(TIDY_AT)}: compacts at the next clean break · dark arrow ~${k(compactAt)}: compacts by itself`,
+        : `${fill === undefined ? 'Unknown until the next reply'
+          : `${tokens === undefined ? '~' : ''}${k(fill)} of ${k(limit)} tokens used${tokens === undefined ? ' (estimated until the next reply)' : ''}`}`
+          + ` · first gap ${k(TRIGGER_FROM)}: compacts at the next planned checkpoint · second gap ~${k(compactAt)}: compacts by itself`,
       old: !limit,
-    }]
+    }, ...months]
 
     // The pace arrow is the share of the window already elapsed: staying left of it means the
     // limit lasts until it resets.
     for (const r of rateLimits) {
-      const span = WINDOW_MS[r.kind]
       const resets = r.resetsAt ? Date.parse(r.resetsAt) : NaN
+      const span = windowMs(r.kind, resets)
       const pace = span && !Number.isNaN(resets)
         ? Math.min(1, Math.max(0, 1 - (resets - now) / span))
         : undefined
@@ -297,9 +527,8 @@ export const register: Register = on => {
       const h = Math.max(0, Math.round((resets - now) / 3600_000))
       const when = Number.isNaN(resets) ? '' : h < 48 ? `${h}h` : `${Math.round(h / 24)}d`
       list.push({
-        name: LIMIT_NAME[r.kind] ?? r.kind,
-        label: LIMIT_LABEL[r.kind] ?? r.kind,
-        width: LIMIT_WIDTH[r.kind] ?? W,
+        name: limitName(r.kind),
+        label: limitLabel(r.kind),
         used,
         // Past the pace line the arrow and the figure turn red (owner, 2026-10-04).
         ticks: pace === undefined ? [] : [{ at: pace, red: ahead }],
@@ -320,7 +549,7 @@ export const register: Register = on => {
     // Nothing to stand in yet: the rows still show, waiting.
     if (!got && !rateLimits.length) {
       for (const kind of ['five_hour', 'seven_day']) {
-        list.push({ name: LIMIT_NAME[kind], label: LIMIT_LABEL[kind], width: LIMIT_WIDTH[kind] ?? W, used: 0, ticks: [], value: '…', detail: '…', alt: 'loading', tip: 'Waiting for the first figure', old: true })
+        list.push({ name: LIMIT_NAME[kind], label: LIMIT_LABEL[kind], used: 0, ticks: [], value: '…', detail: '…', alt: 'loading', tip: 'Waiting for the first figure', old: true })
       }
     }
 
@@ -330,7 +559,11 @@ export const register: Register = on => {
     // minute. Started here rather than at session start, which a hot reload does not repeat.
     if (!ticking) {
       ticking = true
-      $.clock.every(60_000, () => $.ui.invalidate('ui.render'))
+      $.clock.every(60_000, async () => {
+        $.ui.invalidate('ui.render')
+        // Only after some session has read once: one without the login would otherwise ask every minute.
+        if (num(await $.store.get('monthTry'))) await refreshMonth($, await $.clock.now(), USAGE_IDLE).catch(() => {})
+      })
     }
     const left = at ? at + CACHE_TTL - now : 0
     const cache = at && {
@@ -349,8 +582,7 @@ export const register: Register = on => {
             <Box key={r.name} flexDirection="row" gap={1}>
               <Text dimColor>{r.name.padEnd(7)} {blocks(r.used, r.pace)}</Text>
               {r.ahead ? <Text color={RED}>{r.detail}</Text> : <Text dimColor>{r.detail}</Text>}
-              {i === 0 && cache ? <Text key="cache" color={cache.colour}>· cache {cache.text}</Text> : null}
-              {i === 0 ? <Button key="hide" label="x" plain onPress={collapse} /> : null}
+              {i === 0 && cache ? <Text key="cache" color={cache.colour}>· cache {cache.text}</Text> : null}              {i === 0 ? <Button key="hide" label="x" plain onPress={collapse} /> : null}
             </Box>
           ))}
         </Box>
@@ -378,16 +610,37 @@ export const register: Register = on => {
     const shownTrick = trick && TRICKS[trick.name]
 
     const { Box, Button, Svg, Text } = $.ui.resolve(e)
-    const meter = (r: Row) => [
-      <Text key="label" dimColor>{r.label}</Text>,
-      <Svg key="bar" source={bar(r.width, r.used, r.ticks)} alt={`${r.name}: ${r.value}${r.old && r.alt !== 'loading' ? ' (last known)' : ''}${r.alt ? `, ${r.alt}` : ''}`} width={r.width} height={H} />,
-      r.old ? <Text key="value" dimColor>{r.value}</Text>
-        : <Text key="value" bold color={r.ahead ? RED : undefined}>{r.value}</Text>,
-    ]
+    const bars = list.filter(r => !r.round).length
+    const cols = e.viewport?.columns
+    const meters = list.reduce((n, r) => n + (r.round ? 2 : r.label.length + 1) + 1 + USED_W + (r.value.includes(' / ') ? PACE_W : 0), 0)
+    const rest = (cost: boolean, ring: boolean) => meters + (ring ? 3 + CACHE_W : 0) + (cost ? usd.length + 1 : 0) + 2
+      + (list.length + (ring ? 1 : 0)) * 2 + SLACK
+    const fits = (n: number) => !cols || cols - n >= bars * MIN_W / CELL_PX
+    // Once the bars are at their narrowest, the cost goes first, then the cache ring (owner, 2026-10-27).
+    const showCost = !!usd && fits(rest(true, !!cache))
+    const showCache = !!cache && fits(rest(showCost, true))
+    const barW = !cols || !bars ? W
+      : Math.max(MIN_W, Math.min(W, Math.floor((cols - rest(showCost, showCache)) * CELL_PX / bars)))
+    const meter = (r: Row) => {
+      // The pace sits raised, smaller and grey after the figure, so the used share reads first
+      // (owner, 2026-10-27). No Text draws superscript: a top-aligned smaller run stands in for it.
+      // A fixed width, so a figure that gains a digit no longer shifts the meters after it (owner, 2026-10-27).
+      const [used, pace] = r.value.split(' / ')
+      const alt = `${r.name}: ${r.value}${r.old && r.alt !== 'loading' ? ' (last known)' : ''}${r.alt ? `, ${r.alt}` : ''}`
+      return [
+        ...r.round
+          ? [<Svg key="bar" source={sections(r.used, r.ticks.map(t => t.at))} alt={alt} width={18} height={18} />]
+          : [<Text key="label" dimColor>{r.label}</Text>, <Svg key="bar" source={bar(barW, r.used, r.ticks)} alt={alt} width={barW} height={H} />],
+        <Box key="value" flexDirection="row" alignItems="flex-start" width={USED_W + (pace ? PACE_W : 0)}>
+          {r.old ? <Text tabular dimColor>{used}</Text> : <Text tabular bold color={r.ahead ? RED : undefined}>{used}</Text>}
+          {/* Caption is the smallest size there is, so the pace is made bolder instead (owner, 2026-10-27). */}
+          {pace ? <Text size="caption" weight="semibold" tabular dimColor>{` / ${pace}`}</Text> : null}
+        </Box>,
+      ]
+    }
     const cacheMeter = cache && (() => [
       <Svg key="ring" source={ring(cache.left, cache.colour)} alt={`Prompt cache: ${cache.text}${left > 0 ? ' left' : ''}`} width={18} height={18} />,
-      <Text key="label" dimColor>Cache</Text>,
-      <Text key="value" bold color={cache.colour}>{cache.text}</Text>,
+      <Box key="value" width={CACHE_W}><Text tabular bold color={cache.colour}>{cache.text}</Text></Box>,
     ])
     // Hovering a meter opens a card saying what it means, one point per line. The desktop draws it
     // as its own light card above the band, so it keeps the card's colours (the dark strip planned
@@ -397,21 +650,21 @@ export const register: Register = on => {
       <Box position="absolute" top={0} {...(fromRight ? { right: 0 } : { left: 0 })} display="none"
         hover={{ display: 'flex' }} flexDirection="column" paddingX={1}>
         <Text bold>{title}</Text>
-        {/* The figure first, then the explanation dimmed: a Text has no size to set smaller. */}
+        {/* The figure first, then the explanation dimmed. */}
         {text.split(' · ').map((line, i) => (
           <Text key={String(i)} wrap="wrap" dimColor={i > 0}>{line.charAt(0).toUpperCase() + line.slice(1)}</Text>
         ))}
       </Box>
     )
     return (
-      <Box flexDirection="row" flexWrap="wrap" alignItems="center" columnGap={2} rowGap={1}>
+      <Box key="band" flexDirection="row" flexWrap="wrap" alignItems="center" columnGap={2} rowGap={1}>
         {list.map(r => (
           <Box key={r.name} flexDirection="row" alignItems="center" gap={1}>
             {meter(r)}
             {card(r.name, r.tip)}
           </Box>
         ))}
-        {cacheMeter ? (
+        {cacheMeter && showCache ? (
           // Last in the row, so its card grows leftwards rather than off the band's edge.
           <Box key="cache" flexDirection="row" alignItems="center" gap={1}>
             {cacheMeter()}
@@ -421,14 +674,16 @@ export const register: Register = on => {
           </Box>
         ) : null}
         <Box key="end" flexDirection="row" alignItems="center" gap={1} flexGrow={1} justifyContent="flex-end">
-          {usd ? <Text bold>{usd}</Text> : null}
-          <Button key="hide" label="✕" role="dismiss" onPress={collapse} />
+          {showCost ? <Text tabular bold>{usd}</Text> : null}
+          <Button key="hide" label="✕" role="dismiss" plain dimColor onPress={collapse} />
         </Box>
-        {/* Over the meters without moving them; the drawing stays the same for the whole trick. */}
+        {/* Over the meters without moving them; the drawing stays the same for the whole trick. Any
+            drawing there catches the pointer, so while it is on the band Clawd steps out of view: the
+            outer Box has no key, so its hover follows the band's, not the drawing's own. */}
         {shownTrick ? (
-          <Box key="clawd" position="absolute" top={0} left={0}>
-            <Svg source={shownTrick.svg()} alt={shownTrick.alt} width={STAGE_W} height={STAGE_H} isInteractive />
-          </Box>
+          <Box position="absolute" top={0} left={0} hover={{ top: -10 * STAGE_H }}><Box key="clawd">
+            <Svg source={shownTrick.svg()} alt={shownTrick.alt} width={STAGE_W} height={STAGE_H} />
+          </Box></Box>
         ) : null}
       </Box>
     )
@@ -437,9 +692,22 @@ export const register: Register = on => {
   // New figures redraw the band at once, not at the app's next unrelated redraw.
   on('session.measure', async ($, e, next) => {
     $.ui.invalidate('ui.render')
-    // Kept for the next session's first draw, before its own first reply.
-    if (e.changed.includes('rateLimits') && e.rateLimits.length) {
+    // Not awaited: the measure never waits on the network.
+    void refreshMonth($, await $.clock.now()).catch(() => {})
+    // Kept for the next session's first draw, before its own first reply. An empty list is kept too, so
+    // windows the account no longer has stop standing in. A session that never had a window does not
+    // name `rateLimits` as changed, so a reply with none clears the kept ones as well.
+    if (e.changed.includes('rateLimits')) {
       await $.store.set('limits', e.rateLimits)
+    } else if (!e.rateLimits.length && e.context.tokens !== undefined
+      && ((await $.store.get('limits')) as SessionRateLimit[] | undefined)?.length) {
+      await $.store.set('limits', [])
+    }
+    // Which kinds arrive and when last, to check the labels and pace against after the move to Enterprise.
+    if (e.changed.includes('rateLimits') && e.rateLimits.length) {
+      const at = new Date(await $.clock.now()).toISOString()
+      const seen = ((await $.store.get('kindsSeen')) ?? {}) as Record<string, string>
+      await $.store.set('kindsSeen', { ...seen, ...Object.fromEntries(e.rateLimits.map(r => [r.kind, at])) })
     }
     return next(e)
   })
@@ -449,21 +717,22 @@ export const register: Register = on => {
     if (!(await read($, isCollapsed))) {
       return next(e)
     }
-    // Two small bars, 5 hours above the week, in place of a word (owner, 2026-10-03).
+    // A small bar per limit, the first two the band shows, in place of a word (owner, 2026-10-03);
+    // Today and Month while the account figure shows.
     const got = await Promise.race([
-      Promise.all([$.session.usage(), $.store.get('limits') as Promise<SessionRateLimit[] | undefined>]),
+      Promise.all([$.session.usage(), $.store.get('limits') as Promise<SessionRateLimit[] | undefined>, $.store.get('month'), $.store.get('dayStart')]),
       $.clock.sleep(FIRST_WAIT).then(() => undefined),
     ])
-    // The kept figures are the newest any session saw, as in the band.
-    const kept = got?.[1] ?? []
-    const shown = kept.length ? kept : got?.[0].rateLimits ?? []
     const now = await $.clock.now()
-    const used = (kind: string) => {
-      const r = shown.find(x => x.kind === kind)
+    const own = got?.[0].rateLimits ?? []
+    const months = monthRows(asMonth(got?.[2]), asDay(got?.[3]), now).map(r => ({ name: r.name, used: r.used }))
+    // Usage windows first: on a plan that has them they bind sooner than the spend (Enterprise has none).
+    const rows = [...pickLimits(own, got?.[1] ?? [], own.length > 0 || got?.[0].context.tokens !== undefined, now)
+      .filter(r => !months.length || !isMonthly(r.kind))
       // A figure from a window that has since reset says nothing about the new one.
-      return !r || Date.parse(r.resetsAt ?? '') <= now ? 0 : r.percentUsed / 100
-    }
-    const [hours, week] = [used('five_hour'), used('seven_day')]
+      .map(r => ({ name: limitName(r.kind), used: hasReset(r, now) ? 0 : r.percentUsed / 100 })), ...months]
+      .slice(0, 2)
+    const pct = (f: number) => `${Math.round(f * 100)}%`
     const show = () => update($, isCollapsed, () => false)
     const { Box, Button, Text } = $.ui.resolve(e)
     const modes = e.props.modes.length ? <Text dimColor>{e.props.modes.join(' & ')}</Text> : null
@@ -471,16 +740,20 @@ export const register: Register = on => {
       return (
         <Box flexDirection="row" gap={1}>
           {modes}
-          <Button key="show" label={`${blocks(hours, undefined, 4)} ${blocks(week, undefined, 4)}`} plain onPress={show} />
+          <Button key="show" label={rows.map(r => blocks(r.used, undefined, 4)).join(' ') || '▴'} plain onPress={show} />
         </Box>
       )
     }
     // A desktop Button holds only a label, so the bars are drawn beside a one-glyph button that opens the band.
     const { Svg } = $.ui.resolve(e)
+    const where = rows.length > 1 ? [' (top)', ' (bottom)'] : ['']
     return (
       <Box flexDirection="row" alignItems="center" gap={1}>
         {modes}
-        <Svg source={mini(hours, week, `5-hour limit ${Math.round(hours * 100)}% used (top)\nWeek limit ${Math.round(week * 100)}% used (bottom)`)} alt={`5 hours ${Math.round(hours * 100)}%, week ${Math.round(week * 100)}%`} width={28} height={10} isInteractive />
+        {rows.length ? (
+          <Svg source={mini(rows.map(r => r.used), rows.map((r, i) => `${r.name}: ${pct(r.used)} used${where[i]}`).join('\n'))}
+            alt={rows.map((r, i) => `${i ? r.name.toLowerCase() : r.name} ${pct(r.used)}`).join(', ')} width={28} height={10} isInteractive />
+        ) : null}
         <Button key="show" label="▴" plain dimColor onPress={show} />
       </Box>
     )

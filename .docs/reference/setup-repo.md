@@ -68,7 +68,9 @@ every tracked file. There is only `main`: pull with `--rebase`, then push.
 
 ## Checks
 
-- `install/verify.py` — every check the setup has, one line each, through the linked paths.
+- `install/verify.py` — every check the setup has, one line each, through the linked paths. Test
+  files are found (`test_*.py` in the audit scripts and `hooks/`), not listed: `test_code_nav.py`
+  was never listed and never ran (2026-10-30). A suite that exits 0 without its summary line fails.
 - `install/test_setup.py` — import expansion, settings merge, pre-commit, Git Bash lookup, and the
   installer in scratch homes (fresh install, re-run, `--check`, uninstall, a failed swap, a foreign
   file), that no agent keeps the Agent tool or carries a dropped tool, and the rule files' size

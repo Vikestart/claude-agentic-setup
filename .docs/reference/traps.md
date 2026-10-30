@@ -314,6 +314,12 @@ them. Keep new procedures in a skill and give CLAUDE.md one line saying when to 
 - **Validator rules that bite:** a `turn.step` hook must be an async generator; `$` may only be
   passed to a function declared at the top of the module; a `types` contract exports nothing else.
 - **Mods load when the turn ends**, not mid-turn: a test needs one more turn.
+- **The `claude` on PATH can be older than the app's engine** (2026-10-30: PATH 2.1.287, the app
+  2.1.309 at `$CLAUDE_CODE_EXECPATH`). The older one refuses the band's Text props (`tabular`,
+  `size`, `weight`), so its `plugin test` failed 25 band tests that pass on the app's engine, and in
+  the app such a refusal means the engine draws its own band instead. 2.1.309 also wants a
+  `prompt.submit` hook to return `{ text }` or `{ drop }`. Test mods with the app's engine;
+  `install/verify.py` does.
 - **The desktop app may not hot-reload `mods/asdev`** even with `CLAUDE_CODE_PLUGIN_DIR_WATCH=1`:
   on 2026-10-03 the A5 band rewrite left no reload line and the old band stayed until an app
   restart. On 2026-10-04 it did reload without one, mid-compaction, and froze the status line until

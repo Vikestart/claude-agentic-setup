@@ -15,7 +15,7 @@ function world(on: On, tokens: { now: number; goal?: string; step?: number; type
   // A /goal's Stop hook, when `goal` is set: it blocks every stop with its check as the reason.
   on('classic.Stop', async () => (tokens.goal ? { block: tokens.goal } : {}) as never)
   const submitted: string[] = []
-  on('prompt.submit', async (_$, e) => { submitted.push(e.text); return {} as never })
+  on('prompt.submit', async (_$, e) => { submitted.push(e.text); return { text: e.text } as never })
   // A model request's usage: the context a subagent's loop is at.
   on('turn.step', async function* (_$, e) {
     const usage = { input_tokens: 1000, output_tokens: 10, cache_read_input_tokens: (tokens.step ?? 0) - 1000, cache_creation_input_tokens: 0, model: 'm' }
@@ -310,7 +310,7 @@ test('a reload clears a frozen compaction status, or resumes a running one', asy
   on('session.start', async (_$, e: any) => ({ cwd: e.cwd }) as never)
   const status: (string | undefined)[] = []
   on('ui.status', async (_$, e: any) => { status.push(e.text); return { value: undefined } as never })
-  on('prompt.submit', async () => ({}) as never)
+  on('prompt.submit', async (_$, e) => ({ text: e.text }) as never)
   let finish = () => {}
   on('session.compact', async (_$, e) => { await new Promise<void>(r => { finish = r }); return { messages: e.messages } as never })
   const start = () => $.session.start({ cwd: 'x', surface: null, isInteractive: true })
@@ -328,10 +328,65 @@ test('a reload clears a frozen compaction status, or resumes a running one', asy
   expect(status.length).toBeGreaterThan(0)
   expect(status.every(s => s?.includes('Compacting'))).toBe(true)
 
-  // Once it ends the line clears as before. (The branch for a flag whose clean-up never ran, older
-  // than STALE_COMPACTION, is not covered: a held compaction is cut off after 10 real seconds.)
+  // Once it ends the line clears as before.
   finish()
   await done
   await clock.advance(1000)
   expect(status.at(-1)).toBeUndefined()
+})
+
+// A compaction whose end is never seen (a reload lost the wait) stops counting after 10 minutes.
+test('a compaction never seen to end stops counting after 10 minutes', async ($: any, on) => {
+  const clock = mock.clock(on, { now: 10_000_000 })
+  for (const ev of ['ui.toast', 'ui.invalidate'] as const) on(ev, async () => ({ value: undefined }) as never)
+  const status: (string | undefined)[] = []
+  on('ui.status', async (_$, e: any) => { status.push(e.text); return { value: undefined } as never })
+  let finish = () => {}
+  on('session.compact', async (_$, e) => { await new Promise<void>(r => { finish = r }); return { messages: e.messages } as never })
+  const done = $.session.compact({ trigger: 'auto', messages: MSGS })
+  await clock.advance(9 * 60_000)
+  expect(status.at(-1)).toContain('Compacting')
+  await clock.advance(60_000 + 1000)
+  expect(status.at(-1)).toBeUndefined()
+  finish()
+  await done
+})
+
+test('what counts as asking: a closing ?, an aside after it, Y/N; not a ? mid-sentence or in code', async ($: any, on) => {
+  mock.clock(on)
+  const w = world(on, { now: 160_000 })
+  const asking = ['Merge now? (I will wait.)', 'Approve the plan (Y/N)', 'Proceed? Y/N', 'Klar？', '## What changed?']
+  const telling = ['It passed? Yes, all of it.', 'See `a?`.', 'It prints `[Y/N]` first.', '```\nok?\n```']
+  for (const [i, text] of [...asking, ...telling].entries()) {
+    await $.turn.complete(turn(`${text}\nready to compact`, { turnId: `t${i}` }))
+    await tick()
+  }
+  expect(w.ran.length).toBe(telling.length)
+})
+
+// A queued message ran before the mod's /compact and its reply ended with the trigger too: a second
+// /compact was queued and compacted the fresh summary again (work setup, seen 2026-10-27).
+test('a trigger while its own /compact waits queues no second one', async ($: any, on) => {
+  const clock = mock.clock(on, { now: 10_000_000 })
+  on('session.usage', async () => ({ value: { startedAt: 0, rateLimits: [], context: { tokens: 160_000, window: 1_000_000 } } }) as never)
+  on('turn.complete', async () => ({ text: '' }) as never)
+  for (const ev of ['ui.toast', 'ui.status', 'ui.invalidate'] as const) on(ev, async () => ({ value: undefined }) as never)
+  let runs = 0
+  let finish = () => {}
+  on('command.run', async () => {
+    runs++
+    await new Promise<void>(r => { finish = r })
+    return { text: '' } as never
+  })
+  await $.turn.complete(turn('Paused.\n\nready to compact'))
+  await clock.advance(2000)
+  await $.turn.complete(turn('Yes, done.\n\nready to compact', { turnId: 't2' }))
+  await clock.advance(2000)
+  expect(runs).toBe(1)
+  // Once it is done, a later trigger compacts again.
+  finish()
+  await clock.advance(2000)
+  await $.turn.complete(turn('Docs updated.\n\nready to compact', { turnId: 't3' }))
+  await clock.advance(2000)
+  expect(runs).toBe(2)
 })

@@ -1,24 +1,29 @@
-# Walkthrough — Back-port from the work setup (2026-10-28)
+# Walkthrough — The work setup's usage band, back-port 2 (2026-10-30)
 
 ## What was built
 
-- **Guards** (`mods/asdev/hooks/guards.ts`, ced1126): the work setup's three review rounds — a
-  runner piped to a filter inside compound commands and wrappers, PowerShell here-strings and wait
-  loops, whole `Get-Content` reads, and a `model` on any Agent call refused.
-- **Compaction stages** (`compaction.ts`, c313e00): a careful nudge from 230k; from 280k, with no
-  `.docs` write since 230k, the main chat is held to docs writes, searches and git reads.
-- **Rule-change notes** (`hooks/rules.ts`, e035a80): an edited CLAUDE.md rule reaches a running chat
-  on its next prompt. Redesigned for this engine (see `reference/setup-architecture.md`).
-- **`tasks_done.py`, `docs_init.py`** and `templates/docs/` in the audit suite (a93024c).
-- **Two rules** in `CLAUDE.shared.md` (2cf28e4): designs with pros, cons and a recommendation;
-  project facts into `.docs`, not memory.
+- **The band** (`mods/asdev/hooks/band.tsx` and its tests, from u4 af7af91): Context ring with the
+  150k mark, usage windows with pace, hover cards, a collapsed form for narrow windows, and Today /
+  Month spend rows when the account has extra usage.
+- **Compaction** (`compaction.ts`): one `/compact` per trigger while one waits; the Compacting
+  counter stops after 10 minutes unseen; question detection skips code, reads `(Y/N)` and a `?`
+  before an aside.
+- **Audit suite:** `prices.py` (per-model list prices in `session_cost.py` and `agent_audit.py`,
+  cdb102b), `hygiene.py` (BOM, endings, Python floor, f-string backslash), `repos.py` (every project
+  repo in one table; only commits outside `main` and `staging` count against a branch).
+- **`install/verify.py`** takes `gate.py`'s two lessons instead of a second runner: test files are
+  found rather than listed (`test_code_nav.py` had never run), and a suite without its summary line
+  fails. It tests the mod with the app's engine, which is newer than the `claude` on PATH.
 
 ## How it was verified
 
-- Mod tests 48/48; `mod-asdev.spec` 92/92 RED for the right reason, on a copy of the mod first.
-- `test_tasks_done.py` 12/12, `test_docs_init.py` 18/18; `install/verify.py` 18/18; precommit scan
-  clean on every commit. Read-only runs on framvis and tilspire report as expected.
+- Mod tests 87/87 on the app's engine 2.1.309, on a copy first; `mod-asdev.spec` 126/126 RED for
+  the right reason (30 of the work setup's band mutations, two retargeted; 4 new).
+- `verify.py` 19/19; its two new rules falsified (`falsify/verify.spec`, 2/2); `HygieneTests`,
+  `ReposTests`, `Verify` unit tests; the audit skill back under its 21 kB budget (cdb102b had put
+  it 61 bytes over).
+- Not yet seen live: the band needs an app restart (roadmap, "Work-setup band: live check").
 
 ## Where to look
 
-The decision bullet "Back-ported from the work setup" in `reference/setup-architecture.md`.
+`reference/setup-architecture.md`, the `band.tsx` row; `reference/traps.md`, Mods (the PATH engine).

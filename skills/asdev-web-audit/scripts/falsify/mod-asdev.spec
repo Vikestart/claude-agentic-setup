@@ -733,3 +733,279 @@ expect: (fail) a compaction reloads the rules
       await update($, rulesSeen, () => ({}))
 ======= NEW
 >>>>>>> END
+
+@@@ mods/asdev/hooks/compaction.ts
+name: [Y/N] asks nothing
+expect: (fail) what counts as asking
+<<<<<<< OLD
+    if (/[[(]\s*Y\s*\/\s*N\s*[\])]|\bY\/N[\s*_.]*$/i.test(plain)) return true
+======= NEW
+>>>>>>> END
+
+@@@ mods/asdev/hooks/band.tsx
+name: the account figure is read on every measure
+expect: (fail) the account figure is read into the store
+<<<<<<< OLD
+(num(tried) && Math.abs(now - tried) < every)
+======= NEW
+false
+>>>>>>> END
+
+name: a try stamped ahead of now stops the reads
+expect: (fail) the account figure is read into the store
+<<<<<<< OLD
+Math.abs(now - tried) < every
+======= NEW
+now - tried < every
+>>>>>>> END
+
+name: the try is never stamped
+expect: (fail) the account figure is read into the store
+<<<<<<< OLD
+      await $.store.set('monthTry', now)
+======= NEW
+>>>>>>> END
+
+name: a stuck read blocks every later one
+expect: (fail) a stuck read stops blocking the next
+<<<<<<< OLD
+(fetching && Math.abs(now - fetching) < USAGE_BUSY)
+======= NEW
+fetching
+>>>>>>> END
+
+name: the figure is taken as dollars, not cents
+expect: (fail) the account figure is read into the store
+<<<<<<< OLD
+used: x.used_credits / 100
+======= NEW
+used: x.used_credits
+>>>>>>> END
+
+name: an API key is sent to the usage read
+expect: (fail) a failed read stores no figure
+<<<<<<< OLD
+    if (auth?.kind !== 'bearer') {
+======= NEW
+    if (!auth) {
+>>>>>>> END
+
+name: a session without the login wipes the figure
+expect: (fail) a failed read stores no figure
+<<<<<<< OLD
+      await $.store.set('monthStatus', auth ? 'api-key' : 'no credential')
+      return
+======= NEW
+      status = auth ? 'api-key' : 'no credential'
+>>>>>>> END
+
+name: a session without the login uses up the slot
+expect: (fail) a failed read stores no figure
+<<<<<<< OLD
+    const auth = await $.session.authorize()
+======= NEW
+    await $.store.set('monthTry', now)
+    const auth = await $.session.authorize()
+>>>>>>> END
+
+name: a disabled figure is stored
+expect: (fail) a failed read stores no figure
+<<<<<<< OLD
+      if (x && x.is_enabled === true) {
+======= NEW
+      if (x) {
+>>>>>>> END
+
+name: a null figure reads as 0
+expect: (fail) a failed read stores no figure
+<<<<<<< OLD
+num(x.used_credits) && num(x.monthly_limit)
+======= NEW
+true
+>>>>>>> END
+
+name: a failed read keeps the last figure
+expect: (fail) a failed read stores no figure
+<<<<<<< OLD
+  await $.store.set('month', month)
+======= NEW
+  if (month) await $.store.set('month', month)
+>>>>>>> END
+
+name: a hung read never times out
+expect: (fail) a hung read times out
+<<<<<<< OLD
+        $.clock.sleep(USAGE_WAIT).then(() => undefined),
+======= NEW
+>>>>>>> END
+
+name: a new day keeps yesterday's start
+expect: (fail) the account figure is read into the store
+<<<<<<< OLD
+    if (!day || day.day !== dayOf(now) || month.used < day.used) {
+======= NEW
+    if (!day || month.used < day.used) {
+>>>>>>> END
+
+name: a fall keeps the day's start
+expect: (fail) the account figure is read into the store
+<<<<<<< OLD
+    if (!day || day.day !== dayOf(now) || month.used < day.used) {
+======= NEW
+    if (!day || day.day !== dayOf(now)) {
+>>>>>>> END
+
+name: the allowance keeps no buffer
+expect: (fail) terminal: the account figure is a Today and a Month row
+<<<<<<< OLD
+const DAY_SHARE = 0.95
+======= NEW
+const DAY_SHARE = 1
+>>>>>>> END
+
+name: weekends count as working days
+expect: (fail) terminal: the account figure is a Today and a Month row
+<<<<<<< OLD
+    n += w > 0 && w < 6 ? 1 : 0
+======= NEW
+    n += 1
+>>>>>>> END
+
+name: today is not counted among the working days left
+expect: (fail) terminal: the account figure is a Today and a Month row
+<<<<<<< OLD
+  const days = workDays(y, mo, d.getDate())
+======= NEW
+  const days = workDays(y, mo, d.getDate() + 1)
+>>>>>>> END
+
+name: a month-end weekend divides by this month's working days
+expect: (fail) terminal: a weekend that ends the month shows the next month's share
+<<<<<<< OLD
+m.limit / workDays(y, mo + 1, 1)
+======= NEW
+m.limit / workDays(y, mo, 1)
+>>>>>>> END
+
+name: the allowance reads what is left now, not this morning
+expect: (fail) terminal: Today turns red past its allowance
+<<<<<<< OLD
+Math.max(0, m.limit - start) / days
+======= NEW
+Math.max(0, m.limit - m.used) / days
+>>>>>>> END
+
+name: Today never turns red
+expect: (fail) terminal: Today turns red past its allowance
+<<<<<<< OLD
+  const over = spent > may
+======= NEW
+  const over = false
+>>>>>>> END
+
+name: yesterday's start counts as today's
+expect: (fail) terminal: no figure yet today counts nothing spent today
+<<<<<<< OLD
+  const start = d?.day === dayOf(now) ? d.used : m.used
+======= NEW
+  const start = d?.used ?? m.used
+>>>>>>> END
+
+name: a figure from an earlier month shows
+expect: (fail) terminal: a figure from an earlier month shows no row
+<<<<<<< OLD
+  if (!m || !sameMonth(m.at, now)) {
+======= NEW
+  if (!m) {
+>>>>>>> END
+
+name: a figure of the wrong shape shows
+expect: (fail) terminal: a figure of the wrong shape shows no row
+<<<<<<< OLD
+num(m.used) && num(m.limit) && num(m.at)
+======= NEW
+num(m.limit) && num(m.at)
+>>>>>>> END
+
+name: the monthly window shows beside the account figure
+expect: (fail) terminal: the account figure is a Today and a Month row
+<<<<<<< OLD
+|| tokens !== undefined, now)
+      .filter(r => !months.length || !isMonthly(r.kind))
+======= NEW
+|| tokens !== undefined, now)
+>>>>>>> END
+
+name: the collapsed band keeps the monthly window
+expect: (fail) terminal: the collapsed band shows Today and Month
+<<<<<<< OLD
+context.tokens !== undefined, now)
+      .filter(r => !months.length || !isMonthly(r.kind))
+======= NEW
+context.tokens !== undefined, now)
+>>>>>>> END
+
+name: the collapsed band leaves the spend out
+expect: (fail) terminal: the collapsed band shows Today and Month
+<<<<<<< OLD
+r.percentUsed / 100 })), ...months]
+======= NEW
+r.percentUsed / 100 }))]
+>>>>>>> END
+
+name: the collapsed band puts the spend before a usage window
+expect: (fail) terminal: the collapsed band puts a usage window before the spend
+<<<<<<< OLD
+    const rows = [...pickLimits(
+======= NEW
+    const rows = [...months, ...pickLimits(
+>>>>>>> END
+
+name: the Month figure leaves out the pace
+expect: (fail) desktop: the account figure is a Today and a Month row
+<<<<<<< OLD
+    value: `${Math.round(m.used / m.limit * 100)}% / ${Math.round(pace * 100)}%`,
+======= NEW
+    value: `${Math.round(m.used / m.limit * 100)}%`,
+>>>>>>> END
+
+name: the Today figure leaves out the pace
+expect: (fail) desktop: the account figure is a Today and a Month row
+<<<<<<< OLD
+    value: `${Math.round(share * 100)}% / ${Math.round(dayPace * 100)}%`,
+======= NEW
+    value: `${Math.round(share * 100)}%`,
+>>>>>>> END
+
+name: Today's pace runs on past the working day
+expect: (fail) desktop: Today's pace at 18:00 is 100%, the working hours only
+<<<<<<< OLD
+  const dayPace = Math.min(1, Math.max(0, (hour - WORK_FROM) / (WORK_TO - WORK_FROM)))
+======= NEW
+  const dayPace = Math.max(0, (hour - WORK_FROM) / (WORK_TO - WORK_FROM))
+>>>>>>> END
+
+@@@ mods/asdev/hooks/compaction.ts
+name: inline code asks
+expect: (fail) what counts as asking
+<<<<<<< OLD
+    const plain = line.replace(/`[^`]*`/g, '')
+======= NEW
+    const plain = line
+>>>>>>> END
+
+name: a second trigger queues a second /compact
+expect: (fail) a trigger while its own /compact waits queues no second one
+<<<<<<< OLD
+  await update($, compactingSince, s => (s && now - s < STALE_COMPACTION ? s : ((started = true), now)))
+======= NEW
+  await update($, compactingSince, () => ((started = true), now))
+>>>>>>> END
+
+name: a compaction never seen to end counts on forever
+expect: (fail) a compaction never seen to end stops counting after 10 minutes
+<<<<<<< OLD
+    if (now - since >= STALE_COMPACTION) {
+======= NEW
+    if (false) {
+>>>>>>> END

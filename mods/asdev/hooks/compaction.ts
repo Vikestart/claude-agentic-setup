@@ -9,7 +9,7 @@ import { unpushed } from './shipped'
 
 // Below this a compaction saves too little to be worth a break. The first note comes here (planned
 // checkpoints now count), then a nudge every +50k (~200k, 250k…) for any clean break.
-const TRIGGER_FROM = 150_000
+export const TRIGGER_FROM = 150_000
 const NUDGE_EVERY = 50_000
 const TRIGGER_LINE = 'ready to compact'
 // Up to here, finishing the step in hand is a fine reason to wait for the break; past it the automatic
@@ -120,13 +120,34 @@ async function docsHold($: Engine, e: Call): Promise<string | undefined> {
 
 async function tick($: Engine, since: number) {
   while ((await read($, compactingSince)) === since) {
-    const s = Math.round(((await $.clock.now()) - since) / 1000)
+    const now = await $.clock.now()
+    // A hot reload mid-compaction drops the wait that clears the flag, and nothing else clears it before
+    // the next prompt: the count ran on long after the compaction (work setup, seen 2026-10-27).
+    if (now - since >= STALE_COMPACTION) {
+      await update($, compactingSince, s => (s === since ? 0 : s))
+      break
+    }
+    const s = Math.round((now - since) / 1000)
     $.ui.status(`Compacting… ${s} s`)
     $.ui.invalidate('ui.render')
     await $.clock.sleep(1000)
   }
   $.ui.status(undefined)
   $.ui.invalidate('ui.render')
+}
+
+// The toast and the ticker, once per compaction: false when one is already under way or queued, so a
+// second trigger while our /compact waits queues no second one (work setup, seen 2026-10-27: it
+// compacted the fresh summary again).
+async function showCompacting($: Engine): Promise<boolean> {
+  const now = await $.clock.now()
+  let started = false
+  await update($, compactingSince, s => (s && now - s < STALE_COMPACTION ? s : ((started = true), now)))
+  if (!started) return false
+  $.ui.toast('Compacting the conversation — about a minute. A message sent now waits for it.', { timeoutMs: 15_000 })
+  // The ticker ends when the flag clears; an unload mid-wait is not an error.
+  void tick($, now).catch(() => undefined)
+  return true
 }
 
 async function budgetNote($: Engine, cwd: string): Promise<string> {
@@ -211,11 +232,19 @@ function isTrigger(answer: string): boolean {
   return lines[lines.length - 1].replace(/[`*_.!]/g, '').trim().toLowerCase() === TRIGGER_LINE
 }
 
-// A prose line ending in "?" (markdown emphasis stripped); fenced code, such as a paste-ready note, is
-// not the reply asking anything.
-function asksOwner(answer: string): boolean {
-  const prose = answer.replace(/```[\s\S]*?```/g, '')
-  return prose.split('\n').some(line => /\?$/.test(line.replace(/[`*_\s)]+$/g, '')))
+// A line that ends in a question mark (once trailing markdown or an aside in brackets is stripped), or
+// asks Y/N; code never asks, fenced or inline, so a paste-ready note asks nothing. A missed question is
+// the costlier error, so a heading ending in ? holds the compaction too (work setup, 2026-10-27).
+function asksOwner(text: string): boolean {
+  let fenced = false
+  for (const line of text.split('\n')) {
+    if (/^\s*(```|~~~)/.test(line)) { fenced = !fenced; continue }
+    if (fenced) continue
+    const plain = line.replace(/`[^`]*`/g, '')
+    if (/[[(]\s*Y\s*\/\s*N\s*[\])]|\bY\/N[\s*_.]*$/i.test(plain)) return true
+    if (/[?？](\s*\([^)]*\))?[\s*_)"'‘’“”]*$/.test(plain)) return true
+  }
+  return false
 }
 
 // Set when a stop held by another Stop hook (a /goal) was let through to compact; that hook's reason
@@ -315,7 +344,14 @@ export const register: Register = on => {
     // Not awaited: the command waits for this turn to end. `$.session.compact` is refused in the app.
     // Either way the goal is carried on: a compaction that never happened must not strand it, nor
     // leave its prompt for a later, unrelated compaction (a no-op once session.compact sent it).
-    $.command.run({ command: 'compact', args: INSTRUCTIONS }).catch(() => undefined).then(() => carryOn($))
+    // One already under way or queued is enough: its own end carries the goal on. The flag clears when
+    // the command resolves, even if session.compact never ran.
+    void showCompacting($)
+      .then(started => started && $.command.run({ command: 'compact', args: INSTRUCTIONS })
+        .catch(() => undefined)
+        .then(() => update($, compactingSince, () => 0))
+        .then(() => carryOn($)))
+      .catch(() => undefined)
     return r
   })
 
@@ -342,11 +378,7 @@ export const register: Register = on => {
       if (a) { a.notedAt = 0; a.seen = undefined }
       return next(e.instructions ? e : { ...e, instructions: AGENT_INSTRUCTIONS })
     }
-    const since = await $.clock.now()
-    await update($, compactingSince, () => since)
-    $.ui.toast('Compacting the conversation — about a minute. A message sent now waits for it.', { timeoutMs: 15_000 })
-    // The ticker ends when the flag clears; an unload mid-wait is not an error.
-    void tick($, since).catch(() => undefined)
+    await showCompacting($)
     try {
       return await next(e.instructions ? e : { ...e, instructions: INSTRUCTIONS })
     } finally {
