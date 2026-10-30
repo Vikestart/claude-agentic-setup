@@ -275,6 +275,21 @@ class PreCommit(unittest.TestCase):
         self.assertIn("private folder", r.stdout)
 
 
+class Verify(unittest.TestCase):
+    def test_every_test_file_runs(self):
+        import verify
+        listed = {Path(argv[-1]).name for _, argv, _ in verify.checks([])}
+        for folder in (verify.AUDIT, verify.HOME / "hooks"):
+            for suite in folder.glob("test_*.py"):
+                self.assertIn(suite.name, listed)
+
+    def test_exit_zero_without_its_summary_is_not_a_pass(self):
+        import verify
+        self.assertEqual(verify.last_line("3/3 ok\n", r"^\d+/\d+ ok"), ("3/3 ok", True))
+        self.assertFalse(verify.last_line("Traceback\n", r"^\d+/\d+ ok")[1])
+        self.assertTrue(verify.last_line("anything\n", "")[1])
+
+
 class Installer(unittest.TestCase):
     def installer(self, home):
         return [sys.executable, str(home / ".claude" / "claude-agentic-setup" / "install" / "install.py")]

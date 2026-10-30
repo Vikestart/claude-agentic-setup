@@ -632,7 +632,7 @@ def _md_items(lines: list) -> list:
         end = next((m[3] - 1 for m in marks[n + 1:] if m[1] <= level), len(lines))
         while end > start and not lines[end - 1].strip():
             end -= 1
-        name = re.sub(r"[ 	]+#+$", "", re.sub(r"<!--.*?-->", "", title).strip()) or "(untitled)"
+        name = re.sub(r"[ \t]+#+$", "", re.sub(r"<!--.*?-->", "", title).strip()) or "(untitled)"
         items.append(Item(kind, _label(name), start, end))
     return items
 

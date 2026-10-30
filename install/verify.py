@@ -21,15 +21,13 @@ AUDIT = HOME / "skills" / "asdev-web-audit" / "scripts"
 
 def checks(gate_roots: list[Path]) -> list[tuple[str, list[str], str]]:
     py = sys.executable
+    # Found, not listed: test_code_nav.py was written but never added here, so it never ran (2026-10-30).
+    suites = sorted([*AUDIT.glob("test_*.py"), *(HOME / "hooks").glob("test_*.py")])
     found = [
         ("web-audit self-test", [py, str(AUDIT / "self_test.py")], ""),
         ("blueprints self-test", [py, str(HOME / "skills" / "asdev-blueprints" / "scripts" / "self_test.py")], ""),
         ("harness parity", [py, str(AUDIT / "harness_parity.py")], ""),
-        ("credentials guard tests", [py, str(HOME / "hooks" / "test_guard_credentials.py")], r"^\d+/\d+ ok"),
-        ("doc budget tests", [py, str(AUDIT / "test_doc_budget.py")], r"^\d+/\d+ ok"),
-        ("gemini wrapper tests", [py, str(AUDIT / "test_gemini.py")], r"^\d+/\d+ ok"),
-        ("tasks_done tests", [py, str(AUDIT / "test_tasks_done.py")], r"^\d+/\d+ ok"),
-        ("docs_init tests", [py, str(AUDIT / "test_docs_init.py")], r"^\d+/\d+ ok"),
+        *[(t.stem, [py, str(t)], r"^\d+/\d+ ok") for t in suites],
         # The app's own engine: the band draws with props an older `claude` on PATH refuses (2026-10-30).
         ("asdev mod tests", [os.environ.get("CLAUDE_CODE_EXECPATH") or "claude", "plugin", "test", str(REPO / "mods" / "asdev")], r"^\s*\d+ pass"),
     ]
@@ -42,13 +40,14 @@ def checks(gate_roots: list[Path]) -> list[tuple[str, list[str], str]]:
     return found
 
 
-def last_line(text: str, pattern: str) -> str:
+def last_line(text: str, pattern: str) -> tuple[str, bool]:
+    """The line to show, and whether the summary the pattern asks for was there at all."""
     lines = [ln.strip() for ln in text.splitlines() if ln.strip()]
     if pattern:
         hits = [ln for ln in lines if re.search(pattern, ln)]
         if hits:
-            return hits[-1]
-    return lines[-1] if lines else "(no output)"
+            return hits[-1], True
+    return (lines[-1] if lines else "(no output)"), not pattern
 
 
 def main() -> int:
@@ -67,9 +66,12 @@ def main() -> int:
         output = proc.stdout + proc.stderr
         log = log_dir / (re.sub(r"[^\w.-]+", "_", name)[:80] + ".log")
         log.write_text(output, encoding="utf-8")
-        ok = proc.returncode == 0
+        shown, summarised = last_line(output, pattern)
+        # Exit 0 without its summary line is not a pass: a runner that crashed early or ran no
+        # cases can still exit 0.
+        ok = proc.returncode == 0 and summarised
         failed += not ok
-        print(f"{'PASS' if ok else 'FAIL'}  {name}: {last_line(output, pattern)}  "
+        print(f"{'PASS' if ok else 'FAIL'}  {name}: {shown}{'' if summarised else '  (no summary line)'}  "
               f"({time.monotonic() - start:.1f}s)")
         if not ok:
             for ln in output.splitlines()[-15:]:

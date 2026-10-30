@@ -24,6 +24,7 @@ import context_override
 import convention_audit
 import doc_hygiene
 import handover
+import hygiene
 import lint_rules
 import quiet
 import prices
@@ -493,6 +494,59 @@ class AutomationMineTests(unittest.TestCase):
         self.assertEqual(h("cd /c/repo && git status -sb"), "git status")
         self.assertEqual(h("python - <<'PY'\nprint(1)\nPY"), "python (inline)")
         self.assertEqual(h("python -X utf8 C:\\s\\falsify.py --suite x"), "python falsify.py")
+
+
+class HygieneTests(unittest.TestCase):
+    def scan(self, name: str, data: bytes, floor=(3, 10)) -> list:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / name
+            path.write_bytes(data)
+            return hygiene.check(path, floor)
+
+    def test_bom_and_endings(self):
+        self.assertIn("BOM", self.scan("m.txt", b"\xef\xbb\xbfsubject\n"))
+        self.assertTrue(any(i.startswith("mixed endings") for i in self.scan("a.md", b"a\r\nb\n")))
+        self.assertTrue(any("stray CR" in i for i in self.scan("a.md", b"a\rb\n")))
+        self.assertEqual(self.scan("a.md", b"a\r\nb\r\n"), [])
+
+    def test_fstring_backslash_only_in_a_real_field(self):
+        real = b'x = f"{chr(10).join([\'a\\n\'])}"\n'
+        quoted = b's = "f\\"{a\\\\n}\\""\n'          # the text of an f-string inside a plain string
+        self.assertTrue(any("f-string" in i for i in self.scan("r.py", real)))
+        self.assertFalse(any("f-string" in i for i in self.scan("q.py", quoted)))
+
+    def test_parses_against_the_floor_not_the_interpreter(self):
+        src = b"match 1:\n    case 1:\n        pass\n"
+        self.assertTrue(any("does not parse on 3.9" in i for i in self.scan("m.py", src, (3, 9))))
+        self.assertEqual(self.scan("m.py", src, (3, 10)), [])
+
+
+class ReposTests(unittest.TestCase):
+    def test_only_commits_outside_main_and_staging_count(self):
+        def git(*args):
+            subprocess.run(["git", "-C", str(repo), "-c", "user.name=t", "-c", "user.email=t@t",
+                            "-c", "commit.gpgsign=false", *args], check=True, capture_output=True)
+
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp) / "proj"
+            repo.mkdir()
+            git("init", "-q", "-b", "main")
+            git("commit", "-q", "--allow-empty", "-m", "base")
+            git("checkout", "-q", "-b", "staging")
+            git("checkout", "-q", "-b", "merged")
+            git("commit", "-q", "--allow-empty", "-m", "in staging")
+            git("checkout", "-q", "staging")
+            git("merge", "-q", "--ff-only", "merged")
+            git("checkout", "-q", "-b", "stray")
+            git("commit", "-q", "--allow-empty", "-m", "only here")
+            git("checkout", "-q", "staging")
+            env = {**os.environ, "PROJECTS_ROOT": tmp}
+            out = subprocess.run([sys.executable, str(Path(__file__).with_name("repos.py"))], env=env,
+                                 capture_output=True, text=True, encoding="utf-8").stdout
+            line = next(ln for ln in out.splitlines() if ln.strip().startswith("proj "))
+            self.assertIn("stray(1)", line)
+            self.assertNotIn("merged(", line)
+            self.assertIn("unreleased: staging(1)", line)
 
 
 class PatchTests(unittest.TestCase):
