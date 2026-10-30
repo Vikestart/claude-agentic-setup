@@ -1,6 +1,6 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface as Engine, Register, SessionRateLimit } from 'claude-code'
-import { asTimes, CACHE_STORE, CACHE_TTL, TRIGGER_FROM } from './compaction'
+import { asTimes, CACHE_STORE, CACHE_TTL, compactFrom } from './compaction'
 
 // Compaction lands about 33k below the window (measured 2026-10-01, main chats and agents alike).
 const COMPACT_MARGIN = 33_000
@@ -526,6 +526,7 @@ export const register: Register = on => {
     const setting = settings?.autoCompactWindow
     const limit = context ? Math.min(context.window, setting ?? context.window) : 0
     const compactAt = limit - COMPACT_MARGIN
+    const firstAt = limit ? await compactFrom($) : 0
     const usd = cost ? `$${cost.usd.toFixed(2)}` : ''
 
     // A percentage keeps the band on one row; the tokens are in the hover card (owner, 2026-10-05).
@@ -536,16 +537,16 @@ export const register: Register = on => {
       // A ring split where it compacts, in place of the label and bar (owner's pick, 2026-10-27).
       round: true,
       used: limit ? (fill ?? 0) / limit : 0,
-      ticks: limit ? [{ at: TRIGGER_FROM / limit, faint: true }, { at: compactAt / limit }] : [],
+      ticks: limit ? [{ at: firstAt / limit, faint: true }, { at: compactAt / limit }] : [],
       value: shown,
       // Kept short: a long line wraps the band onto an extra row (owner, 2026-10-02). The ticks show
       // where the mod first asks for a compaction and where the engine compacts; the alt text names them.
       detail: shown + (usd ? ` · ${usd}` : ''),
-      alt: limit ? `compacts at a checkpoint from ${k(TRIGGER_FROM)}, by itself ~${k(compactAt)}` : 'loading',
+      alt: limit ? `compacts at a checkpoint from ${k(firstAt)}, by itself ~${k(compactAt)}` : 'loading',
       tip: !limit ? 'Waiting for the first reply'
         : `${fill === undefined ? 'Unknown until the next reply'
           : `${tokens === undefined ? '~' : ''}${k(fill)} of ${k(limit)} tokens used${tokens === undefined ? ' (estimated until the next reply)' : ''}`}`
-          + ` · first gap ${k(TRIGGER_FROM)}: compacts at the next planned checkpoint · second gap ~${k(compactAt)}: compacts by itself`,
+          + ` · first gap ${k(firstAt)}: compacts at the next planned checkpoint · second gap ~${k(compactAt)}: compacts by itself`,
       old: !limit,
     }, ...months]
 

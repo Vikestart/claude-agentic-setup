@@ -175,6 +175,60 @@ test('a reply claiming a push while commits are unpushed is sent back once; true
   expect((await first('Merged and pushed.')).block).toBeUndefined()
 })
 
+// The store and session id the start is kept under; registered before the first `$` call.
+function kept(on: any, store: Record<string, unknown>) {
+  on('session.id', async () => ({ value: 's1' }) as never)
+  on('store.get', async (_$: any, e: any) => ({ value: store[e.key] }) as never)
+  on('store.set', async (_$: any, e: any) => { store[e.key] = e.value; return { value: undefined } as never })
+}
+
+test('the first note comes 100k past where the chat started, and never past 230k', async ($: any, on) => {
+  mock.clock(on)
+  const store: Record<string, unknown> = {}
+  kept(on, store)
+  const t = { now: 0, step: 90_000 }
+  world(on, t)
+  await $.classic.SessionStart({ source: 'startup', cwd: '/p' })
+  await step($, undefined as never)
+  // Only the first reply measures the start.
+  t.step = 150_000
+  await step($, undefined as never)
+  t.now = 160_000
+  expect(notes(await read($))).toBe('')
+  t.now = 190_000
+  expect(notes(await read($))).toContain('checkpoint the plan marks')
+  // A compaction measures again: a chat that comes back at 180k is first asked at 230k, not 280k.
+  await $.session.compact({ trigger: 'auto', messages: MSGS })
+  await tick()
+  t.step = 180_000
+  await step($, undefined as never)
+  t.now = 229_000
+  expect(notes(await read($))).toBe('')
+  t.now = 230_000
+  expect(notes(await read($))).toContain('ready to compact')
+  expect(store.contextBases).toEqual({ s1: 180_000 })
+})
+
+test('a reopened chat keeps the start it had, and the trigger line waits for it too', async ($: any, on) => {
+  mock.clock(on)
+  const store: Record<string, unknown> = { contextBases: { s0: 40_000, s1: 120_000 } }
+  kept(on, store)
+  const t = { now: 210_000, step: 210_000 }
+  const w = world(on, t)
+  await $.classic.SessionStart({ source: 'startup', cwd: '/p' })
+  await step($, undefined as never)
+  expect(notes(await read($))).toBe('')
+  await $.turn.complete(turn('Docs updated.\n\nready to compact'))
+  await tick()
+  expect(w.ran).toEqual([])
+  t.now = 220_000
+  expect(notes(await read($))).toContain('ready to compact')
+  await $.turn.complete(turn('Docs updated.\n\nready to compact'))
+  await tick()
+  expect(w.ran.map(r => r.command)).toEqual(['compact'])
+  expect(store.contextBases).toEqual({ s0: 40_000, s1: 120_000 })
+})
+
 test('without a blocking Stop hook, or below 150k, a stop is left alone', async ($: any, on) => {
   mock.clock(on)
   const t: { now: number; goal?: string } = { now: 300_000 }

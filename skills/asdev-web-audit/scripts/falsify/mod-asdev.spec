@@ -520,7 +520,7 @@ nudge(tokens)
 name: the trigger line compacts below 150k
 expect: (fail) the trigger line compacts with the instructions, from 150k only
 <<<<<<< OLD
-  if (tokens < TRIGGER_FROM) return false
+  if (tokens < await compactFrom($)) return false
   if (!asksOwner(answer)) return true
 ======= NEW
   if (!asksOwner(answer)) return true
@@ -1098,4 +1098,71 @@ expect: (fail) terminal: the cache timer counts down from the last reply
 ======= NEW
       const id = await $.session.id().catch(() => '')
       if (false) {
+>>>>>>> END
+
+@@@ mods/asdev/hooks/compaction.ts
+name: the first note ignores where the chat started
+expect: (fail) the first note comes 100k past where the chat started
+<<<<<<< OLD
+  return Math.min((base || START_UNKNOWN) + FIRST_GAP, CAREFUL_FROM)
+======= NEW
+  return Math.min(START_UNKNOWN + FIRST_GAP, CAREFUL_FROM)
+>>>>>>> END
+
+name: a chat that starts big is first asked past 230k
+expect: (fail) the first note comes 100k past where the chat started
+<<<<<<< OLD
+  return Math.min((base || START_UNKNOWN) + FIRST_GAP, CAREFUL_FROM)
+======= NEW
+  return (base || START_UNKNOWN) + FIRST_GAP
+>>>>>>> END
+
+name: every reply measures the start again
+expect: (fail) the first note comes 100k past where the chat started
+<<<<<<< OLD
+        await update($, measureBase, () => false)
+======= NEW
+        void 0
+>>>>>>> END
+
+name: a compaction keeps the old start
+expect: (fail) the first note comes 100k past where the chat started
+<<<<<<< OLD
+      await update($, contextBase, () => 0)
+      await update($, measureBase, () => true)
+      // The compacted session reloads
+======= NEW
+      // The compacted session reloads
+>>>>>>> END
+
+name: the start is not kept for a restart
+expect: (fail) the first note comes 100k past where the chat started
+<<<<<<< OLD
+          await $.store.set(BASE_STORE, { ...Object.fromEntries(kept), [id]: tokens })
+======= NEW
+          void kept
+>>>>>>> END
+
+name: a reopened chat is measured again
+expect: (fail) a reopened chat keeps the start it had
+<<<<<<< OLD
+(e.source === 'startup' && !(await storedBase($, await $.session.id().catch(() => ''))))
+======= NEW
+e.source === 'startup'
+>>>>>>> END
+
+name: the start is lost on a restart
+expect: (fail) a reopened chat keeps the start it had
+<<<<<<< OLD
+  const base = (await read($, contextBase)) || await storedBase($, await $.session.id().catch(() => ''))
+======= NEW
+  const base = await read($, contextBase)
+>>>>>>> END
+
+name: the trigger line compacts before the chat's own threshold
+expect: (fail) a reopened chat keeps the start it had
+<<<<<<< OLD
+  if (tokens < await compactFrom($)) return false
+======= NEW
+  if (tokens < START_UNKNOWN + FIRST_GAP) return false
 >>>>>>> END

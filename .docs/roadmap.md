@@ -47,9 +47,9 @@ Outcomes and order only; active work goes in `implementation_plan.md` when a pha
   ~163k → ~83k, average prompt ~132k (the 1M-window chats of September averaged ~530k). API-equivalent
   over their lives: Tilspire $540, TSWDB $565, Nebulingo $278, Framvis $126; cache reads ~98% of tokens.
   (1) Of the ~83k left after a compaction, ~72k is fixed start-up (system tools 37k, MCP tools 18.5k,
-  skills 8k, memory 5k): trimming unused MCP tools is the biggest lever left. (2) Optional: compact from
-  ~120k instead of 150k (`TRIGGER_FROM`, `mods/asdev/hooks/compaction.ts`), about 15% fewer cache reads
-  for twice as many compactions. (3) Transcripts hold the same entries up to ~10× over (Nebulingo
+  skills 8k, memory 5k): trimming unused MCP tools is the biggest lever left. (2) Settled 2026-10-30 (owner): the
+  first note now comes 100k past the chat's start (`FIRST_GAP`, `mods/asdev/hooks/compaction.ts`), not
+  a fixed 150k; with this ~83k start, at ~183k. (3) Transcripts hold the same entries up to ~10× over (Nebulingo
   1.13 GB, 115 MB unique; Tilspire 3.6 GB; TSWDB 5 GB; 14 GB in `~/.claude/projects`): the app's doing,
   not the mod's, harmless to cost; owner may report it with `/bug`.
 
@@ -171,7 +171,10 @@ Outcomes and order only; active work goes in `implementation_plan.md` when a pha
   the weekday 08–16 pace are kept as they are. Since 2026-10-30 the 5-hour and week bars also come
   from `/api/oauth/usage`, newest figure wins, read every 5 minutes while idle: check `limitsStatus`
   in the store reads `ok` (the field names were taken from the engine's usage panel, not seen live),
-  and that the cache timer shows the right minutes after a restart.
+  and that the cache timer shows the right minutes after a restart. Since 2026-10-30 the first
+  compaction note comes 100k past the chat's start: in a new chat the ring's hover names its first gap
+  about 100k above the first reply's context, and the store's `contextBases` holds the chat. If it
+  stays at 150k, the app does not send a `startup` start, and the old fixed point stands.
 - **`crlf.py --fix` honours `.gitattributes` `eol` pins** (2026-10-30, cut from the audit skill):
   today it converts pinned files too, and the skill says to keep them out by hand.
 - **Generalise the suite helpers** — Nebulingo's `neighbour_suites.py` / `battery_gate.py` and Tilspire's slice runner into the audit suite with a small per-project config; when a third project needs one.

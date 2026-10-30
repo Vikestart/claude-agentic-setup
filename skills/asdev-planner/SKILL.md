@@ -101,7 +101,7 @@ halt until the owner approves (what approval covers: CLAUDE.md §1).
 ## During the phase
 
 - Track tasks in `task.md`.
-- **Compaction checkpoints (⟲)** mark the clean breaks between steps. Past ~150k the `asdev` mod's
+- **Compaction checkpoints (⟲)** mark the clean breaks between steps. Once the chat is ~100k past its start, the `asdev` mod's
   note says how to compact at the next ⟲ or phase end (the work carries on after it, under `/goal`
   too). Never end a reply with `ready to compact` before the mod has said so.
 - If the scope changes materially, update the plan and ask again.
@@ -133,5 +133,5 @@ halt until the owner approves (what approval covers: CLAUDE.md §1).
    on (CLAUDE.md §1, "Compaction, not fresh chats"). If a handover raised this project's context
    limit for the phase just finished, clear it: `python $HOME/.claude/skills/asdev-web-audit/scripts/context_override.py status`,
    then `clear` when it reports `temporary` (a deliberate value is never touched). Start the next
-   approved phase, if any — but if the mod has said the session is past ~150k, the phase end is a
+   approved phase, if any — but after the mod's note, the phase end is a
    checkpoint: compact first ("During the phase"), and the next phase starts after it.

@@ -7,9 +7,13 @@ import { unpushed } from './shipped'
 // not mid-step at the 330k backstop. Replaces hooks/after_compact.py (archived). Subagents (step 4)
 // get notes on their own context size instead; replaces hooks/context_guard.py (archived).
 
-// Below this a compaction saves too little to be worth a break. The first note comes here (planned
-// checkpoints now count), then a nudge every +50k (~200k, 250k…) for any clean break.
-export const TRIGGER_FROM = 150_000
+// A compaction saves too little to be worth a break until the context has grown this much past where
+// the session started (its first reply after a start, /clear or compaction): with a fixed 150k, a chat
+// that starts big with knowledge or tools compacted early, and again soon after (owner, 2026-10-30).
+// The first note comes there (planned checkpoints now count), then a nudge every +50k for any clean break.
+const FIRST_GAP = 100_000
+// A start never measured (a chat open across this change, a fork): the fixed 150k it had before.
+const START_UNKNOWN = 50_000
 const NUDGE_EVERY = 50_000
 const TRIGGER_LINE = 'ready to compact'
 // Up to here, finishing the step in hand is a fine reason to wait for the break; past it the automatic
@@ -77,6 +81,25 @@ const docsAt = atom({ plugin: 'asdev', key: 'docsAt' } as const, 0)
 // rules.ts's record of the instructions as loaded; declared again here because the engine reads only
 // atoms declared in the file that uses them.
 const rulesSeen = atom({ plugin: 'asdev', key: 'rules' } as const, {} as Record<string, { mtimeMs: number; text: string }>)
+// The context the main chat started from, 0 until measured. Kept in the store under the session id
+// too, since the session state does not outlive the app; the oldest of BASE_KEEP chats drop out.
+const contextBase = atom({ plugin: 'asdev', key: 'contextBase' } as const, 0)
+// Set at a start or /clear, and by the compaction itself: the next main-thread reply is measured.
+const measureBase = atom({ plugin: 'asdev', key: 'measureBase' } as const, false)
+const BASE_STORE = 'contextBases'
+const BASE_KEEP = 50
+
+async function storedBase($: Engine, id: string): Promise<number> {
+  const v = id ? asTimes(await $.store.get(BASE_STORE).catch(() => undefined))[id] : undefined
+  return typeof v === 'number' && v > 0 ? v : 0
+}
+
+// Where the first compaction note comes. Never later than CAREFUL_FROM: past it the automatic
+// compaction is close, so a chat that starts very big still gets its clean break.
+export async function compactFrom($: Engine): Promise<number> {
+  const base = (await read($, contextBase)) || await storedBase($, await $.session.id().catch(() => ''))
+  return Math.min((base || START_UNKNOWN) + FIRST_GAP, CAREFUL_FROM)
+}
 
 const k = (n: number) => `${Math.round(n / 1000)}k`
 
@@ -276,7 +299,7 @@ async function wantsCompact($: Engine, answer: string): Promise<boolean> {
   if (!isTrigger(answer)) return false
   const { context } = await $.session.usage()
   const tokens = context.tokens ?? 0
-  if (tokens < TRIGGER_FROM) return false
+  if (tokens < await compactFrom($)) return false
   if (!asksOwner(answer)) return true
   // Held for the answer: the next tool call repeats the nudge, so the compaction is not lost.
   await update($, nudgedAt, () => tokens - NUDGE_EVERY)
@@ -323,7 +346,7 @@ export const register: Register = on => {
     const tokens = context.tokens
     if (tokens === undefined) return r
     const last = await read($, nudgedAt)
-    if (tokens < (last ? last + NUDGE_EVERY : TRIGGER_FROM)) return r
+    if (tokens < (last ? last + NUDGE_EVERY : await compactFrom($))) return r
     await update($, nudgedAt, () => tokens)
     return { ...r, context: [...(r.context ?? []), (last ? nudge : armed)(tokens)] }
   })
@@ -339,6 +362,16 @@ export const register: Register = on => {
         // Only the entries still inside the hour, so the map never grows past the chats in use.
         const kept = Object.entries(asTimes(await $.store.get(CACHE_STORE))).filter(([, at]) => t - at < CACHE_TTL)
         await $.store.set(CACHE_STORE, { ...Object.fromEntries(kept), [id]: t })
+      }
+      if (await read($, measureBase)) {
+        const u = r.usage
+        const tokens = u.input_tokens + u.cache_read_input_tokens + u.cache_creation_input_tokens
+        await update($, measureBase, () => false)
+        await update($, contextBase, () => tokens)
+        if (id) {
+          const kept = Object.entries(asTimes(await $.store.get(BASE_STORE))).filter(([key]) => key !== id).slice(1 - BASE_KEEP)
+          await $.store.set(BASE_STORE, { ...Object.fromEntries(kept), [id]: tokens })
+        }
       }
     }
     if (e.agentId && r.usage) {
@@ -400,6 +433,8 @@ export const register: Register = on => {
       await update($, compactingSince, () => 0)
       await update($, nudgedAt, () => 0)
       await update($, docsAt, () => 0)
+      await update($, contextBase, () => 0)
+      await update($, measureBase, () => true)
       // The compacted session reloads the instructions: rules.ts takes a new baseline on the next prompt.
       await update($, rulesSeen, () => ({}))
       carryOn($)
@@ -424,6 +459,12 @@ export const register: Register = on => {
 
   on('classic.SessionStart', async ($, e, next) => {
     const r = await next(e)
+    // A start the store already holds is the app reopening the chat: its start stands. A resume keeps
+    // its start too; a fork's is unknown.
+    if (e.source === 'clear' || (e.source === 'startup' && !(await storedBase($, await $.session.id().catch(() => ''))))) {
+      await update($, contextBase, () => 0)
+      await update($, measureBase, () => true)
+    }
     if (e.source !== 'compact') return r
     try {
       const text = await afterCompact($, e.cwd)
