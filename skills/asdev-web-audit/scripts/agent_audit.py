@@ -31,6 +31,8 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
+import prices
+
 USAGE_FIELDS = ("input_tokens", "output_tokens",
                 "cache_creation_input_tokens", "cache_read_input_tokens")
 # Tools whose input names a concrete path. Bash is excluded from path EXTRACTION — a shell command
@@ -38,11 +40,6 @@ USAGE_FIELDS = ("input_tokens", "output_tokens",
 # excluded from the forbidden check: the reviewer this tool was written for read a forbidden
 # directory with `cat`, and the first version reported "scope: clean", which is worse than no check
 # at all. Bash commands are therefore substring-matched against forbidden globs (see `mentions`).
-# Price weights relative to fresh input, from Opus 5.5's prices (a cache read is 0.05x; reports
-# before 2026-10-03 used 0.1). A 5-minute cache write is really 1.25x; 2x (the 1-hour price) keeps
-# figures comparable with the 2026-09-30 reports.
-WEIGHTS = {"input_tokens": 1.0, "cache_read_input_tokens": 0.05,
-           "cache_creation_input_tokens": 2.0, "output_tokens": 5.0}
 GAP_SECONDS = 300  # the default subagent cache lifetime
 PATH_TOOLS = {"Read": "read", "Write": "write", "Edit": "write", "NotebookEdit": "write"}
 
@@ -73,7 +70,7 @@ def read_agent(path: Path) -> dict:
     acc = {f: 0 for f in USAGE_FIELDS}
     acc.update(id=path.stem, model="", effort="", turns=0, tools=0, cold_start=0,
                first_ts="", last_ts="", reads={}, writes={}, bash=0, errors=0,
-               bash_cmds=[], inputs=[], peak_ctx=0, ctx_sum=0, gap_writes=0)
+               bash_cmds=[], inputs=[], peak_ctx=0, ctx_sum=0, gap_writes=0, cost=0.0, gap_cost=0.0)
     prev_at: datetime | None = None
     id_to_tool: dict[str, str] = {}
     seen_requests: set[str] = set()
@@ -115,11 +112,20 @@ def read_agent(path: Path) -> dict:
                           ("input_tokens", "cache_read_input_tokens", "cache_creation_input_tokens"))
                 acc["peak_ctx"] = max(acc["peak_ctx"], ctx)
                 acc["ctx_sum"] += ctx
+                # Each request at its own model's list price (prices.py), in dollars.
+                p = prices.rates(msg.get("model") or acc["model"], ctx)
+                cw = int(usage.get("cache_creation_input_tokens") or 0)
+                w1h = int((usage.get("cache_creation") or {}).get("ephemeral_1h_input_tokens") or 0)
+                write = p["w1h"] * w1h + p["w5"] * (cw - w1h)
+                acc["cost"] += (write + p["in"] * int(usage.get("input_tokens") or 0)
+                                + p["rd"] * int(usage.get("cache_read_input_tokens") or 0)
+                                + p["out"] * int(usage.get("output_tokens") or 0))
                 at = parse_ts(ts)
                 # A write straight after a pause longer than the cache lives is the whole context
                 # being cached again — the cost the 1-hour agent cache exists to remove.
                 if at and prev_at and (at - prev_at).total_seconds() > GAP_SECONDS:
-                    acc["gap_writes"] += int(usage.get("cache_creation_input_tokens") or 0)
+                    acc["gap_writes"] += cw
+                    acc["gap_cost"] += write
                 prev_at = at or prev_at
             if isinstance(usage, dict):
                 acc["model"] = msg.get("model") or acc["model"]
@@ -192,7 +198,8 @@ def parse_ts(ts: str) -> datetime | None:
 
 
 def weighted(a: dict) -> float:
-    return sum(a[f] * w for f, w in WEIGHTS.items())
+    """List-price dollars."""
+    return a["cost"]
 
 
 def fresh(a: dict) -> int:
@@ -247,7 +254,7 @@ def report_one(a: dict, owned: list[str], forbidden: list[str], top: int) -> int
           f"output {a['output_tokens']:,}   cache read {a['cache_read_input_tokens']:,}")
     avg = a["ctx_sum"] // a["turns"] if a["turns"] else 0
     print(f"  context avg {avg:,}   peak {a['peak_ctx']:,}   cache writes after >5-min gaps "
-          f"{a['gap_writes']:,}   weighted {weighted(a):,.0f}")
+          f"{a['gap_writes']:,}   cost ${weighted(a):,.2f}")
     if a["first_ts"]:
         print(f"  {a['first_ts']} -> {a['last_ts']}")
     for label, bucket in (("read", a["reads"]), ("written", a["writes"])):
@@ -295,8 +302,8 @@ def report_summary(agents: list[dict]) -> int:
     print(f"  output tokens   total {sum(a['output_tokens'] for a in agents):,}")
     peaks = sorted(a["peak_ctx"] for a in agents)
     print(f"  peak context    median {statistics.median(peaks):,.0f}  max {peaks[-1]:,}")
-    print(f"  weighted total  {sum(weighted(a) for a in agents):,.0f}   of which cache writes after "
-          f">5-min gaps {sum(a['gap_writes'] for a in agents) * WEIGHTS['cache_creation_input_tokens']:,.0f}")
+    print(f"  cost total      ${sum(weighted(a) for a in agents):,.2f}   of which cache writes after "
+          f">5-min gaps ${sum(a['gap_cost'] for a in agents):,.2f}")
     print(f"  tool calls      total {sum(a['tools'] for a in agents):,}")
     print(f"  distinct files read {len(seen):,}; repeat reads {repeat_reads:,} "
           f"({100 * repeat_reads / max(total_reads, 1):.0f}% of all reads were of a file "

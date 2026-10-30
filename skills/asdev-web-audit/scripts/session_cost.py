@@ -4,10 +4,8 @@
 `agent_audit.py` looks at one agent at a time; this looks at a session, so a night's work can be
 compared with an earlier one. Usage is deduped by `requestId` (each content block repeats it).
 
-Weights, relative to fresh input = 1, from Opus 5.5's prices ($4 input, $0.20 cache read, $5 / $8
-cache write, $20 output): cache read 0.05, cache write 1.25 (5-min) or 2 (1-hour), output 5.
-Figures before 2026-10-03 used 0.1 for a cache read, which doubled the re-reading's share.
-Each transcript's cost is split into:
+Each request is priced in dollars at its own model's list price (`prices.py`). Each transcript's
+cost is split into:
   * fixed  — the start-up context (system prompt, tool definitions, instructions, brief), re-read
              on every turn. Shrinks with a smaller tool set or shorter instructions.
   * growth — everything added after the first turn (tool results, own edits and commands),
@@ -34,9 +32,10 @@ import pathlib
 import sys
 from datetime import datetime, timezone
 
+import prices
+
 PARTS = ("fixed", "growth", "writes", "output")
 CHARS_PER_TOKEN = 4
-READ = 0.05  # a cache read, relative to fresh input (Opus 5.5: $0.20 against $4)
 # An image is stored as base64 (tens of thousands of characters) but costs the model ~1.6k tokens.
 IMAGE_TOKENS = 1_600
 
@@ -68,7 +67,7 @@ def load(path: pathlib.Path):
             first_user = " ".join(msg["content"].split())[:60]
         u, rid = msg.get("usage"), r.get("requestId")
         if u and rid:  # the last record of a request carries its final output count
-            reqs[rid] = (reqs.get(rid, (r.get("timestamp") or "",))[0], u)
+            reqs[rid] = (reqs.get(rid, (r.get("timestamp") or "",))[0], u, msg.get("model"))
     return sorted(reqs.values(), key=lambda x: x[0]), compactions, first_user, visible // CHARS_PER_TOKEN
 
 
@@ -76,26 +75,30 @@ def measure(rows, visible_tokens: int = 0) -> dict:
     m = dict.fromkeys(PARTS, 0.0) | {"turns": len(rows), "peak": 0, "ctx_sum": 0, "gaps": 0}
     cold = None
     prev = None
-    for ts, u in rows:
+    out_tokens, out_rate = 0, prices.rates(None)["out"]
+    for ts, u, model in rows:
         cr = u.get("cache_read_input_tokens", 0)
         cw = u.get("cache_creation_input_tokens", 0)
         inp = u.get("input_tokens", 0)
         ctx = inp + cr + cw
         cold = ctx if cold is None else cold
         w1h = (u.get("cache_creation") or {}).get("ephemeral_1h_input_tokens", 0)
-        m["fixed"] += inp + READ * min(cold, cr)
-        m["growth"] += READ * max(cr - cold, 0)
-        m["writes"] += 2 * w1h + 1.25 * max(cw - w1h, 0)
-        m["output"] += 5 * u.get("output_tokens", 0)
+        p = prices.rates(model, ctx)
+        m["fixed"] += p["in"] * inp + p["rd"] * min(cold, cr)
+        m["growth"] += p["rd"] * max(cr - cold, 0)
+        m["writes"] += p["w1h"] * w1h + p["w5"] * max(cw - w1h, 0)
+        m["output"] += p["out"] * u.get("output_tokens", 0)
+        out_tokens += u.get("output_tokens", 0)
+        out_rate = p["out"]
         m["peak"] = max(m["peak"], ctx)
         m["ctx_sum"] += ctx
         if ts and prev and (stamp(ts) - stamp(prev)).total_seconds() > 3600:
             m["gaps"] += 1
         prev = ts or prev
     m["cold"] = cold or 0
-    m["estimated"] = m["output"] < 5 * visible_tokens
+    m["estimated"] = out_tokens < visible_tokens
     if m["estimated"]:
-        m["output"] = 5.0 * visible_tokens
+        m["output"] = out_rate * visible_tokens
     m["cost"] = sum(m[p] for p in PARTS)
     return m
 
@@ -103,7 +106,7 @@ def measure(rows, visible_tokens: int = 0) -> dict:
 def line(label: str, m: dict) -> str:
     avg = m["ctx_sum"] // m["turns"] if m["turns"] else 0
     return (f"  {label:13} turns {m['turns']:>5} | start {m['cold']/1e3:>4.0f}k | peak {m['peak']/1e3:>4.0f}k"
-            f" | avg {avg/1e3:>4.0f}k | {m['cost']/1e6:>6.2f}M{'*' if m['estimated'] else ' '}| >1h gaps {m['gaps']}")
+            f" | avg {avg/1e3:>4.0f}k | ${m['cost']:>8.2f}{'*' if m['estimated'] else ' '}| >1h gaps {m['gaps']}")
 
 
 def agent_type(path: pathlib.Path) -> str:
@@ -135,8 +138,9 @@ def bash_key(cmd: str) -> str:
 
 
 def sources(path: pathlib.Path, by: dict, files: dict) -> None:
-    """Price every item that enters this context: its cache write (2) plus READ per later request
-    until a compaction drops it. Start-up attachments are counted as `attach <type>`."""
+    """Price every item that enters this context: its 1-hour cache write plus a cache read per later
+    request until a compaction drops it, at the list price of the transcript's last model (Haiku's
+    long-context rate is not applied). Start-up attachments are counted as `attach <type>`."""
     recs = []
     for raw in path.open(encoding="utf-8", errors="replace"):
         try:
@@ -172,12 +176,15 @@ def sources(path: pathlib.Path, by: dict, files: dict) -> None:
                     items.append((i, "result " + key, fp, result_chars(b.get("content", ""))))
         elif r.get("type") == "user" and isinstance(content, str):
             items.append((i, "user prompt", "", len(content)))
+    model = next((r["message"].get("model") for r in reversed(recs)
+                  if isinstance(r.get("message"), dict) and r["message"].get("model")), None)
+    p = prices.rates(model)
     for i, key, fp, chars in items:
         first = bisect.bisect_right(starts, i)
         nxt = next((b for b in bounds if b > i), None)
         last = bisect.bisect_left(starts, nxt) if nxt is not None else len(starts)
         n = last - first  # the first of these requests writes it, the rest re-read it
-        cost = chars / CHARS_PER_TOKEN * (2 + READ * (n - 1)) if n else 0
+        cost = chars / CHARS_PER_TOKEN * (p["w1h"] + p["rd"] * (n - 1)) if n else 0
         by[key] = by.get(key, 0) + cost
         if fp:
             files[fp] = files.get(fp, 0) + cost
@@ -190,12 +197,12 @@ def by_source(mains: list, top: int) -> None:
         for path in [main] + (sorted(sub.glob("agent-*.jsonl")) if sub.is_dir() else []):
             sources(path, by, files)
     total = sum(by.values()) or 1
-    print(f"\nBY SOURCE — {total/1e6:.1f}M weighted (context only: start-up attachments included, output not)")
+    print(f"\nBY SOURCE — ${total:,.2f} at list prices (context only: start-up attachments included, output not)")
     for key, cost in sorted(by.items(), key=lambda kv: -kv[1])[:top]:
-        print(f"  {cost/1e6:7.2f}M {cost/total*100:5.1f}%  {key}")
+        print(f"  ${cost:9.2f} {cost/total*100:5.1f}%  {key}")
     print("  costliest files read:")
     for fp, cost in sorted(files.items(), key=lambda kv: -kv[1])[:top // 2]:
-        print(f"  {cost/1e6:7.2f}M  {fp}")
+        print(f"  ${cost:9.2f}  {fp}")
 
 
 def report(main: pathlib.Path, top: int, by_type: bool = False) -> None:
@@ -217,7 +224,7 @@ def report(main: pathlib.Path, top: int, by_type: bool = False) -> None:
     if len(agents) > top:
         print(f"  … {len(agents) - top} more agents")
     total = mm["cost"] + sum(am["cost"] for _, am, _ in agents)
-    print(f"  TOTAL {total/1e6:.2f}M weighted; main {mm['cost']/total*100:.0f}%, {len(agents)} agents")
+    print(f"  TOTAL ${total:,.2f} at list prices; main {mm['cost']/total*100:.0f}%, {len(agents)} agents")
     if agents:
         acost = sum(am["cost"] for _, am, _ in agents) or 1
         split = ", ".join(f"{p} {sum(am[p] for _, am, _ in agents)/acost*100:.0f}%" for p in PARTS)
@@ -228,7 +235,7 @@ def report(main: pathlib.Path, top: int, by_type: bool = False) -> None:
             n, cost, turns = types.get(kind, (0, 0.0, 0))
             types[kind] = (n + 1, cost + am["cost"], turns + am["turns"])
         for kind, (n, cost, turns) in sorted(types.items(), key=lambda kv: -kv[1][1]):
-            print(f"  {kind:24} n={n:<3} {cost/1e6:6.2f}M  avg {cost/n/1e6:.2f}M, {turns // n} turns")
+            print(f"  {kind:24} n={n:<3} ${cost:8.2f}  avg ${cost/n:.2f}, {turns // n} turns")
     marked = sum(1 for m in [mm] + [am for _, am, _ in agents] if m["estimated"])
     if marked:
         print(f"  * {marked} transcript(s) recorded less output than their visible content needs: output "

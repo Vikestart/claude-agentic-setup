@@ -31,7 +31,7 @@ Context ring, the usage bars, the hover cards, the narrow-band adaptations, all 
 - Mod tests green; `mod-asdev.spec` RED for the right reason on every mutation; `verify.py` all pass.
 - The owner looks at the band at full width and with a side panel open.
 
-## Other work improvements — for the owner to pick (not in this phase)
+## Other work improvements — all taken (owner, 2026-10-30: "let's take all the optional extras too")
 - `prices.py`: per-model list prices for `session_cost.py` / `agent_audit.py` — ours weigh every
   model as Opus, so the Sonnet/Haiku experiment's savings would be mis-measured. Recommended.
 - Question detection in `compaction.ts` (u4 `asks()`): also catches `(Y/N)`, a trailing aside after

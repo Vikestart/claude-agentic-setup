@@ -26,6 +26,7 @@ import doc_hygiene
 import handover
 import lint_rules
 import quiet
+import prices
 import session_cost
 import token_analyzer
 import unused_css_detector
@@ -66,8 +67,21 @@ class CoordinationToolTests(unittest.TestCase):
         self.assertEqual(a["turns"], 3)
         self.assertEqual(a["peak_ctx"], 51_010)
         self.assertEqual(a["gap_writes"], 40_000)
-        # input 30 + read 50,000 x 0.05 + write 91,000 x 2 + output 300 x 5
-        self.assertEqual(agent_audit.weighted(a), 30 + 2_500 + 182_000 + 1_500)
+        # No model recorded, so the default rates; writes without a TTL split count as 5-minute.
+        p = prices.rates(None)
+        want = 30 * p["in"] + 50_000 * p["rd"] + 91_000 * p["w5"] + 300 * p["out"]
+        self.assertAlmostEqual(agent_audit.weighted(a), want, places=12)
+
+    def test_prices_per_model(self):
+        # Haiku 5.5 prices a request over 100k input entirely at its higher rates; nothing else has a tier.
+        low, high = prices.rates("claude-haiku-5-5", 100_000), prices.rates("claude-haiku-5-5", 100_001)
+        self.assertLess(low["in"], high["in"])
+        self.assertEqual(prices.rates("claude-opus-5-5", 900_000), prices.rates("claude-opus-5-5"))
+        for model, key in (("claude-sonnet-5-5-20261001", "claude-sonnet-5-5"), ("haiku", "claude-haiku-5-5"),
+                           ("claude-fable-6", "claude-fable-5-1"), ("<synthetic>", prices.DEFAULT), (None, prices.DEFAULT)):
+            self.assertEqual(prices.resolve(model), key)
+        # The point of the table: a Haiku helper is not priced as Opus.
+        self.assertLess(sum(prices.rates("claude-haiku-5-5").values()), sum(prices.rates(None).values()) / 10)
 
     def test_truncated_output_is_raised_to_the_visible_floor_and_marked(self):
         # 400 characters of tool input need ~100 output tokens; a record of 8 is a truncated one.
@@ -83,16 +97,16 @@ class CoordinationToolTests(unittest.TestCase):
             rows, _, _, visible = session_cost.load(low)
             m = session_cost.measure(rows, visible)
             self.assertTrue(m["estimated"])
-            self.assertEqual(m["output"], 5.0 * visible)
+            self.assertEqual(m["output"], prices.rates(None)["out"] * visible)
             rows, _, _, visible = session_cost.load(full)
             m = session_cost.measure(rows, visible)
             self.assertFalse(m["estimated"])
-            self.assertEqual(m["output"], 2_500)
+            self.assertEqual(m["output"], prices.rates(None)["out"] * 500)
 
     def test_a_tool_result_is_priced_by_its_write_and_later_rereads(self):
         # One result of 402 JSON characters (~100.5 tokens), written by the next request and re-read
-        # by the one after: 100.5 x (2 + 0.05). The compaction then stops later re-reads. A screenshot
-        # is priced flat, however long its base64.
+        # by the one after: 100.5 x (1-hour write + one read). The compaction then stops later
+        # re-reads. A screenshot is priced flat, however long its base64.
         def asst(rid, content):
             return {"type": "assistant", "requestId": rid, "message": {"content": content}}
         recs = [asst("r1", [{"type": "tool_use", "id": "t1", "name": "Bash", "input": {}}]),
@@ -108,8 +122,10 @@ class CoordinationToolTests(unittest.TestCase):
             path.write_text("\n".join(json.dumps(r) for r in recs), encoding="utf-8")
             by, files = {}, {}
             session_cost.sources(path, by, files)
-            self.assertAlmostEqual(by["result Bash:?"], 402 / 4 * 2.05)
-            self.assertAlmostEqual(by["result Read"], session_cost.IMAGE_TOKENS * 2.05)
+            p = prices.rates(None)
+            once = p["w1h"] + p["rd"]
+            self.assertAlmostEqual(by["result Bash:?"], 402 / 4 * once, places=12)
+            self.assertAlmostEqual(by["result Read"], session_cost.IMAGE_TOKENS * once, places=12)
         self.assertEqual(session_cost.bash_key('cd /x && S=1; python "a/b.py" --q'), "python b.py")
 
     def test_forbidden_read_is_caught_through_any_tool_not_just_read(self):

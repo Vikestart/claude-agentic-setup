@@ -6,6 +6,7 @@ through the links. Full output of each check goes to a log; only a failure's tai
 from __future__ import annotations
 
 import argparse
+import os
 import re
 import subprocess
 import sys
@@ -29,7 +30,8 @@ def checks(gate_roots: list[Path]) -> list[tuple[str, list[str], str]]:
         ("gemini wrapper tests", [py, str(AUDIT / "test_gemini.py")], r"^\d+/\d+ ok"),
         ("tasks_done tests", [py, str(AUDIT / "test_tasks_done.py")], r"^\d+/\d+ ok"),
         ("docs_init tests", [py, str(AUDIT / "test_docs_init.py")], r"^\d+/\d+ ok"),
-        ("asdev mod tests", ["claude", "plugin", "test", str(REPO / "mods" / "asdev")], r"^\s*\d+ pass"),
+        # The app's own engine: the band draws with props an older `claude` on PATH refuses (2026-10-30).
+        ("asdev mod tests", [os.environ.get("CLAUDE_CODE_EXECPATH") or "claude", "plugin", "test", str(REPO / "mods" / "asdev")], r"^\s*\d+ pass"),
     ]
     setup_tests = REPO / "install" / "test_setup.py"
     if setup_tests.is_file():
