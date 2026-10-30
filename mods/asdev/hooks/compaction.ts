@@ -63,6 +63,15 @@ const lastReply = atom({ plugin: 'asdev', key: 'lastReply' } as const, '')
 const compactingSince = atom({ plugin: 'asdev', key: 'compactingSince' } as const, 0)
 const STALE_COMPACTION = 10 * 60_000
 const cacheAt = atom({ plugin: 'asdev', key: 'cacheAt' } as const, 0)
+// The main chat's prompt cache lasts an hour from the last reply (the 1-hour TTL; a session in usage
+// overage drops to 5 minutes, which the engine does not report). Past it, the next message writes the
+// whole context to the cache again at the full write price.
+export const CACHE_TTL = 3600_000
+// The session state does not outlive the app, but the server's cache does: each chat's last reply is
+// also kept in the store under its session id, so the band's timer survives a restart (owner, 2026-10-30).
+export const CACHE_STORE = 'cacheAts'
+export const asTimes = (v: unknown): Record<string, number> =>
+  v && typeof v === 'object' && !Array.isArray(v) ? v as Record<string, number> : {}
 // The context size at the last write to a .docs file in this main chat; a compaction clears it.
 const docsAt = atom({ plugin: 'asdev', key: 'docsAt' } as const, 0)
 // rules.ts's record of the instructions as loaded; declared again here because the engine reads only
@@ -325,6 +334,12 @@ export const register: Register = on => {
     if (!e.agentId && r.usage) {
       const t = await $.clock.now()
       await update($, cacheAt, () => t)
+      const id = await $.session.id().catch(() => '')
+      if (id) {
+        // Only the entries still inside the hour, so the map never grows past the chats in use.
+        const kept = Object.entries(asTimes(await $.store.get(CACHE_STORE))).filter(([, at]) => t - at < CACHE_TTL)
+        await $.store.set(CACHE_STORE, { ...Object.fromEntries(kept), [id]: t })
+      }
     }
     if (e.agentId && r.usage) {
       const u = r.usage

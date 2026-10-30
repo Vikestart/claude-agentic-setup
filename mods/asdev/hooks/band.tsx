@@ -1,6 +1,6 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface as Engine, Register, SessionRateLimit } from 'claude-code'
-import { TRIGGER_FROM } from './compaction'
+import { asTimes, CACHE_STORE, CACHE_TTL, TRIGGER_FROM } from './compaction'
 
 // Compaction lands about 33k below the window (measured 2026-10-01, main chats and agents alike).
 const COMPACT_MARGIN = 33_000
@@ -23,13 +23,14 @@ function windowMs(kind: string, resets: number): number | undefined {
   return resets - start.getTime()
 }
 const hasReset = (r: SessionRateLimit, now: number) => Date.parse(r.resetsAt ?? '') <= now
-// The limits to show. The kept figures are the newest any session saw, so a kept figure of a kind
-// this session reports wins unless its window has reset. Once the session has replied, a kind it does
-// not report is gone (Team's windows after the move to Enterprise); before that the kept ones stand
-// in, less any whose window has reset.
+// The limits to show. The kept figures are the newest any session saw or the usage endpoint gave, so a
+// kept figure of a kind this session reports wins unless its window has reset. Once the session has
+// replied, a kind it does not report is gone (Team's windows after the move to Enterprise); before that
+// the kept ones stand in, one whose window has reset drawn empty until the next read rather than
+// dropped, so an idle chat's bars do not vanish (owner, 2026-10-30).
 function pickLimits(own: SessionRateLimit[], kept: SessionRateLimit[], replied: boolean, now: number): SessionRateLimit[] {
   if (!replied) {
-    return kept.filter(r => !hasReset(r, now))
+    return kept
   }
   return own.map(r => kept.find(x => x.kind === r.kind && !hasReset(x, now)) ?? r)
 }
@@ -39,8 +40,44 @@ function pickLimits(own: SessionRateLimit[], kept: SessionRateLimit[], replied: 
 // measure at most every few minutes, failures too, never from a draw.
 const USAGE_URL = 'https://api.anthropic.com/api/oauth/usage'
 const USAGE_EVERY = 2 * 60_000
-// With no replies anywhere the figure would never move; once this old, the minute tick reads it.
-const USAGE_IDLE = 12 * 3600_000
+// With no replies here the usage windows still move (another chat, claude.ai, the phone); once the last
+// read is this old, the minute tick reads again. The try is shared, so all sessions together read at most
+// this often (owner, 2026-10-30; it was 12 hours while only the month's spend was read).
+const USAGE_IDLE = 5 * 60_000
+// A kept window figure younger than this is drawn as current, not faint as the last known.
+const LIMITS_FRESH = 3 * USAGE_IDLE
+// The same reply carries the usage windows: utilization in percent, resets_at an ISO time or null
+// before the window's first use; a window set to null is one the account does not have.
+const WINDOWS = ['five_hour', 'seven_day']
+// Python's six-digit fractions, cut to the three every Date parser takes.
+const iso = (v: unknown) => {
+  const t = typeof v === 'string' ? Date.parse(v.replace(/(\.\d{3})\d+/, '$1')) : NaN
+  return Number.isNaN(t) ? undefined : new Date(t).toISOString()
+}
+// The newest figure wins, whichever way it came (owner, 2026-10-30): a reply's headers keep the figure
+// until a later read, and a read is dated when it was asked, so a reply that lands while it is out wins.
+async function keepWindows($: Engine, body: Record<string, unknown>, asked: number): Promise<string> {
+  if (!WINDOWS.some(kind => kind in body)) {
+    return 'no windows'
+  }
+  const at = await $.store.get('limitsAt')
+  if (num(at) && at > asked) {
+    return 'older than a reply'
+  }
+  const kept = ((await $.store.get('limits')) as SessionRateLimit[] | undefined) ?? []
+  const got = new Map(Array.isArray(kept) ? kept.map(r => [r.kind, r]) : [])
+  for (const kind of WINDOWS.filter(kind => kind in body)) {
+    const w = body[kind] as { utilization?: unknown; resets_at?: unknown } | null
+    if (!w) {
+      got.delete(kind)
+    } else if (num(w.utilization)) {
+      got.set(kind, { kind, percentUsed: Math.round(w.utilization * 10) / 10, resetsAt: iso(w.resets_at) })
+    }
+  }
+  await $.store.set('limits', [...got.values()])
+  await $.store.set('limitsAt', asked)
+  return 'ok'
+}
 const USAGE_WAIT = 10_000
 // The daily allowance keeps 5% back, so what goes unspent builds a buffer (owner, 2026-10-26).
 const DAY_SHARE = 0.95
@@ -116,9 +153,11 @@ async function refreshMonth($: Engine, now: number, every = USAGE_EVERY): Promis
         $.clock.sleep(USAGE_WAIT).then(() => undefined),
       ])
       status = res ? String(res.status) : 'timeout'
-      const x = res?.ok ? (JSON.parse(res.text) as { extra_usage?: Record<string, unknown> }).extra_usage : undefined
-      if (res?.ok) {
+      const body = res?.ok ? JSON.parse(res.text) as Record<string, unknown> : undefined
+      const x = body?.extra_usage as Record<string, unknown> | undefined
+      if (body && typeof body === 'object') {
         status = !x ? 'no extra_usage' : x.is_enabled !== true ? 'not enabled' : 'ok'
+        await $.store.set('limitsStatus', await keepWindows($, body, now))
       }
       if (x && x.is_enabled === true) {
         // Raw numbers only: Number() would read a null or an empty string as 0 and start the day there.
@@ -194,10 +233,6 @@ function monthRows(m: Month | undefined, d: DayStart | undefined, now: number): 
   }]
 }
 
-// The main chat's prompt cache lasts an hour from the last reply (the 1-hour TTL; a session in usage
-// overage drops to 5 minutes, which the engine does not report). Past it, the next message writes the
-// whole context to the cache again at the full write price.
-const CACHE_TTL = 3600_000
 const CACHE_WARN = 10 * 60_000
 
 const GREEN = '#2e9e6a'
@@ -456,6 +491,7 @@ export const register: Register = on => {
       $.store.get('limits') as Promise<SessionRateLimit[] | undefined>,
       $.store.get('month'),
       $.store.get('dayStart'),
+      $.store.get('limitsAt'),
     ])
     const got = answered ? await figures : await Promise.race([figures, $.clock.sleep(FIRST_WAIT).then(() => undefined)])
     if (got) {
@@ -463,7 +499,7 @@ export const register: Register = on => {
     } else {
       void figures.then(() => { answered = true; $.ui.invalidate('ui.render') })
     }
-    const [usage, settings, kept, keptMonth, keptDay] = got ?? []
+    const [usage, settings, kept, keptMonth, keptDay, keptAt] = got ?? []
     const context = usage?.context
     const cost = usage?.cost
     // Absent in a fresh session and after a compaction or relaunch until the next reply; the band
@@ -477,9 +513,10 @@ export const register: Register = on => {
     const fill = tokens ?? estimate
     const now = await $.clock.now()
     // The kept figures win over this session's own: a chat left idle keeps the reading of its last
-    // reply, hours behind (owner, 2026-10-04). Until the session's first reply they are drawn faint.
+    // reply, hours behind (owner, 2026-10-04). Until the session's first reply they are drawn faint,
+    // unless a reply or usage read elsewhere kept them a few minutes ago.
     const own = usage?.rateLimits ?? []
-    const old = !own.length
+    const old = !own.length && !(num(keptAt) && Math.abs(now - keptAt) < LIMITS_FRESH)
     const months = monthRows(asMonth(keptMonth), asDay(keptDay), now)
     // The account figure is the month's own: a monthly window beside it would count it twice.
     const rateLimits = pickLimits(own, kept ?? [], own.length > 0 || tokens !== undefined, now)
@@ -553,8 +590,11 @@ export const register: Register = on => {
       }
     }
 
-    // None before the first reply: there is no cache to time yet.
-    const at = await read($, cacheAt)
+    // None before the first reply: there is no cache to time yet. After a restart the session state is
+    // empty, and the time this chat's last reply was kept under its id stands in.
+    const stored = (await read($, cacheAt))
+      || asTimes(await $.store.get(CACHE_STORE))[await $.session.id().catch(() => '')]
+    const at = num(stored) ? stored : 0
     // The countdown and Clawd's tricks move with no new figures, so the band redraws itself each
     // minute. Started here rather than at session start, which a hot reload does not repeat.
     if (!ticking) {
@@ -697,11 +737,14 @@ export const register: Register = on => {
     // Kept for the next session's first draw, before its own first reply. An empty list is kept too, so
     // windows the account no longer has stop standing in. A session that never had a window does not
     // name `rateLimits` as changed, so a reply with none clears the kept ones as well.
+    // Dated, so a usage read asked before this reply does not overwrite it.
     if (e.changed.includes('rateLimits')) {
       await $.store.set('limits', e.rateLimits)
+      await $.store.set('limitsAt', await $.clock.now())
     } else if (!e.rateLimits.length && e.context.tokens !== undefined
       && ((await $.store.get('limits')) as SessionRateLimit[] | undefined)?.length) {
       await $.store.set('limits', [])
+      await $.store.set('limitsAt', await $.clock.now())
     }
     // Which kinds arrive and when last, to check the labels and pace against after the move to Enterprise.
     if (e.changed.includes('rateLimits') && e.rateLimits.length) {

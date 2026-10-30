@@ -161,6 +161,23 @@ for (const surface of ['terminal', 'desktop'] as const) {
     // Used, then the pace: one hour left of five, so 80% (owner, 2026-10-04).
     expect(await paced(ui, surface, '40%', '80%')).toBeDefined()
     expect(await ui.find({ text: /90%/ })).toBeUndefined()
+    // A reset window stays as an empty row until the next read, so an idle chat's bars do not vanish.
+    expect(await ui.find({ text: /^Week\b/ })).toBeDefined()
+  })
+
+  // Kept a few minutes ago by a reply or a usage read, the figures are current, not the last known.
+  if (surface === 'desktop') test(`${surface}: fresh kept limits are not drawn faint`, async ($: any, on) => {
+    const clock = mock.clock(on, { now: 1_000_000 })
+    const resetsAt = new Date(1_000_000 + 3600_000).toISOString()
+    const store: Record<string, unknown> = { limits: [{ kind: 'five_hour', percentUsed: 40, resetsAt }], limitsAt: 1_000_000 - 60_000 }
+    on('session.usage', async () => ({ value: { startedAt: 0, rateLimits: [], context: { window: 330_000 } } }) as never)
+    on('settings.read', async () => ({ value: {} }) as never)
+    on('store.get', async (_$, e) => ({ value: store[e.key] }) as never)
+    const ui = await $.ui.mount({ plugin: 'asdev', surface, component: 'AbovePrompt', props: { hasSurvey: false } })
+    expect((await ui.find({ text: /^40%$/ }))?.props.dimColor).toBeUndefined()
+    await clock.advance(20 * 60_000)
+    await clock.settle()
+    expect((await ui.find({ text: /^40%$/ }))?.props.dimColor).toBe(true)
   })
 
   // A chat left idle keeps the reading of its last reply; the newest any session saw wins.
@@ -285,6 +302,10 @@ for (const surface of ['terminal', 'desktop'] as const) {
     on('session.usage', async () => ({ value: { startedAt: 0, rateLimits: [], context: { tokens: 50_000, window: 330_000 } } }) as never)
     on('settings.read', async () => ({ value: {} }) as never)
     on('store.get', async () => ({ value: undefined }) as never)
+    // Each main-thread reply is also kept under the chat's id, for a restart.
+    const sets: any[] = []
+    on('session.id', async () => ({ value: 's1' }) as never)
+    on('store.set', async (_$, e) => { sets.push(e); return { value: undefined } as never })
     // A main-thread reply, as compaction.ts sees it; a subagent's leaves the timer alone.
     on('turn.step', async function* (_$, e) {
       const usage = { input_tokens: 1000, output_tokens: 10, cache_read_input_tokens: 0, cache_creation_input_tokens: 0, model: 'm' }
@@ -298,9 +319,11 @@ for (const surface of ['terminal', 'desktop'] as const) {
       if (s && typeof s[Symbol.asyncIterator] === 'function') { for await (const _ of s) { /* drain */ } } else await s
     }
     await step()
+    expect(sets.map(s => [s.key, s.value])).toEqual([['cacheAts', { s1: 1_000_000 }]])
     await clock.advance(18 * 60_000)
     await step('agent-1')
     await clock.settle()
+    expect(sets).toHaveLength(1)
     const fresh = await ui.find({ type: 'Text', text: /42m$/ })
     expect(fresh?.props.color).toBe('#2e9e6a')
 
@@ -311,6 +334,22 @@ for (const surface of ['terminal', 'desktop'] as const) {
     await clock.advance(10 * 60_000)
     await clock.settle()
     expect(await ui.find({ text: /expired/ })).toBeDefined()
+  })
+
+  // After a restart the session state is empty; the time kept under this chat's id stands in, and
+  // another chat's does not.
+  test(`${surface}: the cache timer survives a restart`, async ($: any, on) => {
+    mock.clock(on, { now: 1_000_000 + 18 * 60_000 })
+    on('session.usage', async () => ({ value: { startedAt: 0, rateLimits: [], context: { tokens: 50_000, window: 330_000 } } }) as never)
+    on('settings.read', async () => ({ value: {} }) as never)
+    let id = 's1'
+    on('session.id', async () => ({ value: id }) as never)
+    on('store.get', async (_$, e) => ({ value: e.key === 'cacheAts' ? { s1: 1_000_000 } : undefined }) as never)
+    const ui = await $.ui.mount({ plugin: 'asdev', surface, component: 'AbovePrompt', props: { hasSurvey: false } })
+    expect(await ui.find({ type: 'Text', text: /42m$/ })).toBeDefined()
+    id = 's2'
+    const other = await $.ui.mount({ plugin: 'asdev', surface, component: 'AbovePrompt', props: { hasSurvey: false } })
+    expect(await other.find({ text: /42m$/ })).toBeUndefined()
   })
 }
 
@@ -328,6 +367,7 @@ test('the kept limits follow what the session reports', async ($: any, on) => {
   await $.session.measure({ context, rateLimits: [{ kind: 'spend_limit', percentUsed: 5 }], changed: ['rateLimits'] })
   expect(store.limits).toEqual([{ kind: 'spend_limit', percentUsed: 5 }])
   expect(store.kindsSeen).toEqual({ five_hour: 'earlier', spend_limit: '2026-10-21T00:00:00.000Z' })
+  expect(store.limitsAt).toBe(Date.UTC(2026, 9, 21))
 
   await $.session.measure({ context, rateLimits: [], changed: ['rateLimits'] })
   expect(store.limits).toEqual([])
@@ -435,8 +475,9 @@ test('a failed read stores no figure', async ($: any, on) => {
   expect(fetched).toBe(6)
 })
 
-// With no replies, the open band reads the figure again once it is 12 hours old, and not before.
-test('an idle band reads the figure every 12 hours', async ($: any, on) => {
+// With no replies, the open band reads the figures again once they are 5 minutes old, and not before:
+// the usage windows move with use elsewhere.
+test('an idle band reads the figures every 5 minutes', async ($: any, on) => {
   const clock = mock.clock(on, { now: new Date(2026, 9, 21, 12).getTime() })
   const store: Record<string, unknown> = {}
   let fetched = 0
@@ -447,12 +488,56 @@ test('an idle band reads the figure every 12 hours', async ($: any, on) => {
   await $.ui.mount({ plugin: 'asdev', surface: 'desktop', component: 'AbovePrompt', props: { hasSurvey: false } })
   await measured($, clock)
   expect(fetched).toBe(1)
-  await clock.advance(11 * 3600_000)
+  await clock.advance(4 * 60_000)
   await clock.settle()
   expect(fetched).toBe(1)
-  await clock.advance(3600_000)
+  await clock.advance(60_000)
   await clock.settle()
   expect(fetched).toBe(2)
+})
+
+// The same read keeps the 5-hour and week windows: percent to one decimal, the reset as ISO, a window
+// set to null dropped, another kind left alone.
+test('the usage windows are read into the store', async ($: any, on) => {
+  const now = new Date(2026, 9, 21, 12).getTime()
+  const clock = mock.clock(on, { now })
+  const store: Record<string, unknown> = { limits: [{ kind: 'seven_day', percentUsed: 9 }, { kind: 'spend_limit', percentUsed: 5 }] }
+  let body: unknown = { five_hour: { utilization: 23.46, resets_at: '2026-10-21T14:00:00.123456+00:00' }, seven_day: null }
+  accountMocks(on, store)
+  on('session.authorize', async () => ({ value: { handle: 'h1', kind: 'bearer' } }) as never)
+  on('http.fetch', async () => ({ value: { status: 200, ok: true, headers: {}, text: JSON.stringify(body) } }) as never)
+  // A reply that reports the kept kinds, so the measure itself leaves them.
+  const measuredKeeping = async () => {
+    await $.session.measure({ context: { tokens: 50_000, window: 330_000 }, rateLimits: store.limits, changed: ['context'] })
+    await clock.settle()
+  }
+  await measuredKeeping()
+  expect(store.limits).toEqual([{ kind: 'spend_limit', percentUsed: 5 }, { kind: 'five_hour', percentUsed: 23.5, resetsAt: '2026-10-21T14:00:00.123Z' }])
+  expect(store.limitsAt).toBe(now)
+  expect(store.limitsStatus).toBe('ok')
+
+  body = { extra_usage: null }
+  await clock.advance(6 * 60_000)
+  await measuredKeeping()
+  expect(store.limits).toHaveLength(2)
+  expect(store.limitsStatus).toBe('no windows')
+})
+
+// The newest figure wins: a reply that lands while a read is out keeps its figure.
+test('a read asked before a reply does not overwrite it', async ($: any, on) => {
+  const clock = mock.clock(on, { now: new Date(2026, 9, 21, 12).getTime() })
+  const store: Record<string, unknown> = {}
+  accountMocks(on, store)
+  on('session.authorize', async () => ({ value: { handle: 'h1', kind: 'bearer' } }) as never)
+  on('http.fetch', async () => {
+    // Another chat's reply, kept while the read is out.
+    store.limits = [{ kind: 'five_hour', percentUsed: 30 }]
+    store.limitsAt = Number(store.monthTry) + 1000
+    return { value: { status: 200, ok: true, headers: {}, text: JSON.stringify({ five_hour: { utilization: 20, resets_at: null } }) } } as never
+  })
+  await measured($, clock)
+  expect(store.limits).toEqual([{ kind: 'five_hour', percentUsed: 30 }])
+  expect(store.limitsStatus).toBe('older than a reply')
 })
 
 // A read that never answers gives up after 10 s, so it cannot block every later read.

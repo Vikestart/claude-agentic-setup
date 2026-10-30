@@ -1009,3 +1009,93 @@ expect: (fail) a compaction never seen to end stops counting after 10 minutes
 ======= NEW
     if (false) {
 >>>>>>> END
+
+@@@ mods/asdev/hooks/band.tsx
+name: a reset kept window vanishes before the first reply
+expect: (fail) terminal: the kept limits stand in before the first reply
+<<<<<<< OLD
+  if (!replied) {
+    return kept
+  }
+======= NEW
+  if (!replied) {
+    return kept.filter(r => !hasReset(r, now))
+  }
+>>>>>>> END
+
+name: an idle band reads every 12 hours again
+expect: (fail) an idle band reads the figures every 5 minutes
+<<<<<<< OLD
+const USAGE_IDLE = 5 * 60_000
+======= NEW
+const USAGE_IDLE = 12 * 3600_000
+>>>>>>> END
+
+name: the usage read ignores the windows
+expect: (fail) the usage windows are read into the store
+<<<<<<< OLD
+        await $.store.set('limitsStatus', await keepWindows($, body, now))
+======= NEW
+        await $.store.set('limitsStatus', 'skipped')
+>>>>>>> END
+
+name: a window set to null stays
+expect: (fail) the usage windows are read into the store
+<<<<<<< OLD
+      got.delete(kind)
+======= NEW
+      void kind
+>>>>>>> END
+
+name: an older read overwrites a newer reply
+expect: (fail) a read asked before a reply does not overwrite it
+<<<<<<< OLD
+  if (num(at) && at > asked) {
+======= NEW
+  if (false) {
+>>>>>>> END
+
+name: a reply's figures go undated
+expect: (fail) the kept limits follow what the session reports
+<<<<<<< OLD
+      await $.store.set('limits', e.rateLimits)
+      await $.store.set('limitsAt', await $.clock.now())
+======= NEW
+      await $.store.set('limits', e.rateLimits)
+>>>>>>> END
+
+name: fresh kept limits draw faint
+expect: (fail) desktop: fresh kept limits are not drawn faint
+<<<<<<< OLD
+    const old = !own.length && !(num(keptAt) && Math.abs(now - keptAt) < LIMITS_FRESH)
+======= NEW
+    const old = !own.length
+>>>>>>> END
+
+name: the cache timer forgets a restart
+expect: (fail) terminal: the cache timer survives a restart
+<<<<<<< OLD
+    const stored = (await read($, cacheAt))
+      || asTimes(await $.store.get(CACHE_STORE))[await $.session.id().catch(() => '')]
+======= NEW
+    const stored = (await read($, cacheAt))
+>>>>>>> END
+
+name: another chat's cache time stands in
+expect: (fail) terminal: the cache timer survives a restart
+<<<<<<< OLD
+      || asTimes(await $.store.get(CACHE_STORE))[await $.session.id().catch(() => '')]
+======= NEW
+      || Object.values(asTimes(await $.store.get(CACHE_STORE)))[0]
+>>>>>>> END
+
+@@@ mods/asdev/hooks/compaction.ts
+name: a reply's cache time is not kept for a restart
+expect: (fail) terminal: the cache timer counts down from the last reply
+<<<<<<< OLD
+      const id = await $.session.id().catch(() => '')
+      if (id) {
+======= NEW
+      const id = await $.session.id().catch(() => '')
+      if (false) {
+>>>>>>> END

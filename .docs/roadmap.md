@@ -168,7 +168,10 @@ Outcomes and order only; active work goes in `implementation_plan.md` when a pha
 - **Work-setup band: live check** (back-ported 2026-10-30; app restart needed, traps.md Mods): the
   Context ring, the 5-hour and weekly bars, hover cards and the narrow-window form draw. Today/Month
   stay hidden here (owner, 2026-10-30: not on the Enterprise plan, so no extra usage); their code and
-  the weekday 08–16 pace are kept as they are.
+  the weekday 08–16 pace are kept as they are. Since 2026-10-30 the 5-hour and week bars also come
+  from `/api/oauth/usage`, newest figure wins, read every 5 minutes while idle: check `limitsStatus`
+  in the store reads `ok` (the field names were taken from the engine's usage panel, not seen live),
+  and that the cache timer shows the right minutes after a restart.
 - **`crlf.py --fix` honours `.gitattributes` `eol` pins** (2026-10-30, cut from the audit skill):
   today it converts pinned files too, and the skill says to keep them out by hand.
 - **Generalise the suite helpers** — Nebulingo's `neighbour_suites.py` / `battery_gate.py` and Tilspire's slice runner into the audit suite with a small per-project config; when a third project needs one.
