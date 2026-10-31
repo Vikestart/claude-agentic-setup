@@ -1,6 +1,7 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface as Engine, Register, ToolCallResult } from 'claude-code'
 import { keepEndings, refusal } from './guards'
+import { limitNotes } from './limits'
 import { unpushed } from './shipped'
 
 // Graceful compaction (implementation_plan step 3): the session compacts at a clean break it chooses,
@@ -81,6 +82,7 @@ const docsAt = atom({ plugin: 'asdev', key: 'docsAt' } as const, 0)
 // rules.ts's record of the instructions as loaded; declared again here because the engine reads only
 // atoms declared in the file that uses them.
 const rulesSeen = atom({ plugin: 'asdev', key: 'rules' } as const, {} as Record<string, { mtimeMs: number; text: string }>)
+const limitNoted = atom({ plugin: 'asdev', key: 'limitNoted' } as const, {} as Record<string, { line: number; resetsAt?: string }>)
 // The context the main chat started from, 0 until measured. Kept in the store under the session id
 // too, since the session state does not outlive the app; the oldest of BASE_KEEP chats drop out.
 const contextBase = atom({ plugin: 'asdev', key: 'contextBase' } as const, 0)
@@ -349,6 +351,8 @@ export const register: Register = on => {
       await update($, docsAt, () => at)
     }
     // Said, so a Write meant to turn the file LF does not pass for done.
+    const limits = await limitNotes($, e.agentId).catch(() => [] as string[])
+    if (limits.length) r = { ...r, context: [...(r.context ?? []), ...limits] }
     if (kept) r = { ...r, context: [...(r.context ?? []), `Saved with CRLF endings to match the existing file. If LF was intended, run \`python ~/.claude/skills/asdev-web-audit/scripts/crlf.py --fix --lf ${String(e.file_path)}\`.`] }
     if (e.agentId) return agentNote($, e.agentId, e.tool, r, String((e as { command?: unknown }).command ?? ''))
     const { context } = await $.session.usage()
@@ -445,6 +449,8 @@ export const register: Register = on => {
       await update($, docsAt, () => 0)
       // The compacted session reloads the instructions: rules.ts takes a new baseline on the next prompt.
       await update($, rulesSeen, () => ({}))
+      // The summary may drop a usage note, so the next prompt or tool call repeats it.
+      await update($, limitNoted, () => ({}))
       carryOn($)
     }
   })

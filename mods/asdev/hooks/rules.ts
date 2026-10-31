@@ -1,5 +1,6 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface as Engine, Register } from 'claude-code'
+import { limitNotes } from './limits'
 
 // A session keeps the global instructions it loaded at its start (or last compaction): a rule edited
 // meanwhile reaches it only after the next compaction. So the next prompt carries a note naming what
@@ -102,6 +103,8 @@ export const register: Register = on => {
     } catch {
       // A failed check must never hold a prompt back.
     }
+    // The usage notes (limits.ts) ride along, as they do on compaction.ts's tool.call hook.
+    notes = [...notes, ...await limitNotes($).catch(() => [] as string[])]
     return next(notes.length ? { ...e, context: [...(e.context ?? []), ...notes] } : e)
   })
 }
