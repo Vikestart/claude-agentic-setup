@@ -117,7 +117,10 @@ skill must still work without it.
   jobs and strings went to Opus, because Sonnet's definition ended "when in doubt use
   opus-medium-executor" and code jobs bundled their docs. Now: report-only browser checks, docs from
   facts, strings and exact-spec changes go to Sonnet, split out of a code job once its code lands.
-  Canvases are always Opus (main chat or an Opus subagent). The same count showed 44% of spawns at
+  Canvases are drawn in the main chat only (owner, 2026-10-31): no agent definition lists the
+  Artifact tool, whose schema alone is ~14k tokens (55k characters, measured 2026-10-31; Sonnet
+  agents start at ~35k without it), so an executor building a canvas's design is handed the file an
+  `Artifact` read saves. Agents before the tool lists (2026-09-30) were offered it. The same count showed 44% of spawns at
   `opus-high-executor` for non-sensitive pages and dashboards, so §6's effort bullet and the
   orchestrator's `opus-high-executor` row say `high` is never for those.
 - **Each rule lives in one place** (owner, 2026-10-21: "simplify … without losing any real

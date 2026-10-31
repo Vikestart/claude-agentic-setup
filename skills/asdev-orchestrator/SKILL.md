@@ -28,18 +28,18 @@ session's effort. Each definition fixes model and effort together.
 | Definition | Use it for |
 |---|---|
 | `haiku-high-helper` | Run-and-report: suites, gates, falsify runs, sweeps, yes/no page checks (loads, console errors, element present); edits nothing. A job its safeguards decline (scanner findings) goes to `sonnet-medium-executor`. One job each: spawn a fresh one, never continue it with SendMessage (above a 100k prompt Haiku costs 5×). |
-| `sonnet-medium-executor` | Any job the brief can state exactly: docs and changelog from given facts, browser checks that judge how a page looks, strings from a list, exact-spec changes. Split these out of a code job once its code lands. Never sensitive code, judgement or a canvas. |
+| `sonnet-medium-executor` | Any job the brief can state exactly: docs and changelog from given facts, browser checks that judge how a page looks, strings from a list, exact-spec changes. Split out of a code job once its code lands. Never sensitive code or judgement. |
 | `sonnet-high-executor` | Exact-spec work a `sonnet-medium-executor` attempt got wrong; and where the owner put Sonnet on a phase, its significant sensitive code. |
-| `opus-medium-executor` | **The default executor:** implementation, discovery, plans, tests, fix rounds, design canvases — inside a sensitive phase too, for everything but the sensitive code itself. |
+| `opus-medium-executor` | **The default executor:** implementation, discovery, plans, tests, fix rounds — inside a sensitive phase too, for everything but the sensitive code itself. |
 | `Explore` | Read-only searches (Haiku, high; overrides the built-in). Locates, never judges. |
 | `opus-high-executor` | Significant sensitive code (CLAUDE.md §6's list — never an ordinary page, dashboard or theme); debugging that resisted a `medium` attempt. |
 | `opus-xhigh-executor` | Only after `opus-high-executor` has failed at the same work: the top of the ladder. |
 | `opus-medium-reviewer` | **The default reviewer:** plan attacks, challenging work, detached reviews between rounds and phases, a high-impact or cross-cutting wave. |
 | `opus-high-reviewer` | The one review that ends sensitive work (see Reviews). |
-| Gemini, `gemini.py` | Outside Claude, asked for like an agent: a second-opinion review beside the Claude one, or exact-brief work. Nothing sensitive (roadmap). |
+| Gemini, `gemini.py` | Outside Claude, asked for like an agent: a second-opinion review beside the Claude one, or exact-brief work. Nothing sensitive. |
 | `fable-*`, `*-max-*`, `opus-xhigh-reviewer`, `sonnet-medium-reviewer` | **Only when the owner names them**, never proposed. |
 
-Nothing that needs judgement runs below Opus: volume is not triviality.
+Nothing that needs judgement runs below Opus: volume is not triviality. Only the main chat draws canvases.
 
 ## Keeping contexts small
 
@@ -63,7 +63,7 @@ for agents, an hour for the main chat).
 - **Keep an agent's waits short.** Agents run suite slices; a full battery or long falsify run that
   could outlast the cache is yours or a small fresh agent's, never a large builder's.
 - **A long run is started once, then the turn ends;** the completion notification wakes whoever
-  started it. A foreground agent's end of turn kills its background commands, so never spawn one for a long run.
+  started it. A foreground agent's turn end kills its background commands: never spawn one for a long run.
 - **In a planned phase you stay the orchestrator.** Write the brief from the plan and the reference
   docs — reading the code first means it is read twice. Edits beyond a glance-sized correction go
   to a fresh agent from the table above. Your own checks stay small: the diff stat, one targeted read, a run's
@@ -97,7 +97,7 @@ included** (e.g. Opus 5.5).
   over time without asking; `settings.json` refuses an eleventh, so an approved wave above 10 needs
   that setting raised first.
 - **Never run suites that share a disposable database concurrently** — two agents resetting one
-  instance corrupt both runs and produce failures that look like real regressions.
+  instance corrupt both runs.
 
 ## The brief
 
@@ -107,7 +107,8 @@ verification to run and quote.
 
 - **Never "keep working"** unless the brief names the independent work to do meanwhile.
 - **Hand over what you already know** — exact paths, function names, excerpts, a diff or a hash —
-  rather than setting a search. A reference several agents need is read once by you and excerpted.
+  rather than setting a search. A reference several agents need is read once by you and excerpted;
+  a canvas, as the file an `Artifact` read saves (agents lack that 14k-token tool).
 - **Paste the plan section and task lines the agent needs**; point at `implementation_plan.md` only
   when it needs the whole plan.
 - **For large files, hand over names, not ranges,** and the instruction to use `code_map.py` /

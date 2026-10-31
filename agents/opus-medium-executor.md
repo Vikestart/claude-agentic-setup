@@ -1,6 +1,6 @@
 ---
 name: opus-medium-executor
-description: Opus at medium effort. The DEFAULT executor: implementation, discovery, writing plans, writing tests, fix rounds and refactors — inside a sensitive phase too. Design canvases are always Opus. Not for writing the significant sensitive code itself (opus-high-executor), nor for docs, report-only browser checks or strings the brief can state exactly (sonnet-medium-executor).
+description: Opus at medium effort. The DEFAULT executor: implementation, discovery, writing plans, writing tests, fix rounds and refactors — inside a sensitive phase too. Never draws a design canvas (the main chat does); builds from one handed over as a file. Not for writing the significant sensitive code itself (opus-high-executor), nor for docs, report-only browser checks or strings the brief can state exactly (sonnet-medium-executor).
 model: opus
 effort: medium
 tools: Bash, Read, Edit, Write, Glob, Grep, Monitor, TaskStop, ToolSearch, Skill, SendMessage, mcp__Claude_Browser, mcp__plugin_chrome-devtools-mcp_chrome-devtools
