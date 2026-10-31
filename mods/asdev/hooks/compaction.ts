@@ -351,7 +351,7 @@ export const register: Register = on => {
       await update($, docsAt, () => at)
     }
     // Said, so a Write meant to turn the file LF does not pass for done.
-    const limits = await limitNotes($, e.agentId).catch(() => [] as string[])
+    const limits = e.agentId ? [] : await limitNotes($).catch(() => [] as string[])
     if (limits.length) r = { ...r, context: [...(r.context ?? []), ...limits] }
     if (kept) r = { ...r, context: [...(r.context ?? []), `Saved with CRLF endings to match the existing file. If LF was intended, run \`python ~/.claude/skills/asdev-web-audit/scripts/crlf.py --fix --lf ${String(e.file_path)}\`.`] }
     if (e.agentId) return agentNote($, e.agentId, e.tool, r, String((e as { command?: unknown }).command ?? ''))

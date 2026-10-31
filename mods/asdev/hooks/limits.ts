@@ -2,25 +2,23 @@ import { atom, read, update } from 'claude-code'
 import type { EngineInterface as Engine, SessionRateLimit } from 'claude-code'
 
 // The band shows the owner how full the usage windows are; the model never sees it. Past these lines
-// the chat is told to go easy: the first a caution, the second firmer. Notes only, never a block
-// (owner, 2026-10-31).
+// the main chat is told to bring the docs up to date as for a handover, so work cut off at the limit
+// picks up after the reset; at the second line again, with what came since. Notes only, never a
+// block, and never to agents, which own no docs (owner, 2026-10-31).
 const LINES: Record<string, { name: string; at: number[] }> = {
   five_hour: { name: '5-hour', at: [90, 95] },
   seven_day: { name: 'weekly', at: [98, 99] },
 }
-const CAREFUL = 'Be careful with spend until then: work directly, keep reads, runs and output small, and '
-  + 'spawn no subagent without asking the owner first.'
-const CLOSE = 'The limit is close: spawn no subagent unless the owner asks for one, start no long run or '
-  + 'wide read, finish the current step in as few turns as possible, and tell the owner where things stand.'
-const AGENT = 'Finish the current step, then hand back what is done, what is left and the exact next step; '
-  + 'start nothing new.'
+const HANDOVER = 'as if preparing a handover (the `asdev-handover` skill, short of its paste-ready message), '
+  + 'so the work can stop at the limit and pick up after the reset with nothing lost.'
+const FIRST = 'The owner asks you to bring all the documentation up to date now, ' + HANDOVER
+const AGAIN = 'The limit is close. The owner asks you to bring all the documentation up to date again with '
+  + 'everything since, ' + HANDOVER
 
 type Noted = Record<string, { line: number; resetsAt?: string }>
 // Per chat, so each chat hears of a line once per window; compaction.ts clears it, since the summary
 // may drop the note.
 const limitNoted =atom({ plugin: 'asdev', key: 'limitNoted' } as const, {} as Noted)
-// An agent hears only the firmer line, once. A reload starts it over: at most one repeated note.
-const agentsNoted = new Set<string>()
 
 type Hit = { r: SessionRateLimit; line: number; top: boolean; resets: number }
 
@@ -47,15 +45,10 @@ async function crossed($: Engine, now: number): Promise<Hit[]> {
   })
 }
 
-// The notes due now: for the main chat a line it has not heard of in this window, for an agent the firmer line.
-export async function limitNotes($: Engine, agentId?: string): Promise<string[]> {
+// The notes due now: each line the main chat has not heard of in this window.
+export async function limitNotes($: Engine): Promise<string[]> {
   const now = await $.clock.now()
   const hits = await crossed($, now)
-  if (agentId) {
-    const due = hits.filter(h => h.top && !agentsNoted.has(`${agentId} ${h.r.kind} ${h.r.resetsAt}`))
-    for (const h of due) agentsNoted.add(`${agentId} ${h.r.kind} ${h.r.resetsAt}`)
-    return due.map(h => lead(h, now) + AGENT)
-  }
   const noted = await read($, limitNoted)
   const due = hits.filter(h => {
     const p = noted[h.r.kind]
@@ -63,5 +56,5 @@ export async function limitNotes($: Engine, agentId?: string): Promise<string[]>
   })
   if (!due.length) return []
   await update($, limitNoted, n => ({ ...n, ...Object.fromEntries(due.map(h => [h.r.kind, { line: h.line, resetsAt: h.r.resetsAt }])) }))
-  return due.map(h => lead(h, now) + (h.top ? CLOSE : CAREFUL))
+  return due.map(h => lead(h, now) + (h.top ? AGAIN : FIRST))
 }

@@ -37,7 +37,8 @@ test('the 5-hour window: a caution at 90%, a firmer note at 95%, each once', asy
   const first = await notes($)
   expect(first.length).toBe(1)
   expect(first[0]).toContain("The owner's 5-hour usage is at 90% and resets in 2 h.")
-  expect(first[0]).toContain('spawn no subagent without asking the owner first')
+  expect(first[0]).toContain('bring all the documentation up to date now, as if preparing a handover')
+  expect(first[0]).toContain('nothing lost')
   w.set(94)
   expect(await notes($)).toEqual([])
   await $.prompt.submit({ text: 'go on' })
@@ -47,6 +48,7 @@ test('the 5-hour window: a caution at 90%, a firmer note at 95%, each once', asy
   expect(w.prompts[1].length).toBe(1)
   expect(w.prompts[1][0]).toContain('usage is at 95%')
   expect(w.prompts[1][0]).toContain('The limit is close')
+  expect(w.prompts[1][0]).toContain('up to date again with everything since')
   expect(await notes($)).toEqual([])
 })
 
@@ -59,7 +61,7 @@ test('the weekly window: lines at 98% and 99%, beside the 5-hour one', async ($:
   expect(both.length).toBe(2)
   expect(both[0]).toContain('5-hour usage is at 91%')
   expect(both[1]).toContain("The owner's weekly usage is at 98% and resets in 3 days.")
-  expect(both[1]).toContain('Be careful with spend')
+  expect(both[1]).toContain('up to date now')
   w.set(91, 99.2)
   const firm = await notes($)
   expect(firm.length).toBe(1)
@@ -85,17 +87,9 @@ test('a compaction may drop the note, so the next call repeats it', async ($: an
   expect((await notes($)).length).toBe(1)
 })
 
-test('an agent hears only the firmer line, once each', async ($: any, on) => {
+test('agents own no docs, so they hear nothing; the main chat still does', async ($: any, on) => {
   const w = world(on)
-  w.set(93)
+  w.set(96, 99.5)
   expect(await notes($, 'agent-1')).toEqual([])
-  w.set(96)
-  const firm = await notes($, 'agent-1')
-  expect(firm.length).toBe(1)
-  expect(firm[0]).toContain('5-hour usage is at 96%')
-  expect(firm[0]).toContain('hand back what is done')
-  expect(await notes($, 'agent-1')).toEqual([])
-  expect((await notes($, 'agent-2')).length).toBe(1)
-  // The main chat's own note is separate from the agents'.
-  expect((await notes($))[0]).toContain('The limit is close')
+  expect((await notes($)).length).toBe(2)
 })
