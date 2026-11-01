@@ -5,11 +5,11 @@ description: How to run subagents and reviews in the owner's setup — the agent
 
 # Orchestration
 
-CLAUDE.md §6 holds the rules that always apply; this skill is how to carry them out. The measurements behind these rules are in
+CLAUDE.md §6 holds the rules; this skill carries them out. Their evidence:
 `~/.claude/claude-agentic-setup/.docs/reference/setup-architecture.md` ("Evidence behind the rules").
 
 **You are the orchestrator.** Synthesis, scope, integration and release stay with you. Use the
-smallest useful roster, and give each agent concrete work that can be checked on its own.
+smallest useful roster, each agent's work checkable on its own.
 
 ## Is it worth an agent?
 
@@ -22,8 +22,8 @@ effort floor.
 
 ## The agent definitions (`~/.claude/agents/`)
 
-Effort comes from the definition, never from the Agent tool: a built-in agent type inherits the
-session's effort. Each definition fixes model and effort together.
+Each definition fixes model and effort; the Agent tool sets neither, and a built-in type inherits
+the session's.
 
 | Definition | Use it for |
 |---|---|
@@ -50,8 +50,9 @@ for agents, an hour for the main chat).
   gets the plan's path and a compact brief, never the planner's thread.
 - **Size every brief against the two limits:** an executor stops at ~125k with nothing written,
   and hands back at ~250k (the `asdev` mod's notes). A brief that will not fit — more than ~2 steps across
-  large files (over ~1,000 lines), or roughly 150 tool calls — is split up front into sequential
-  builders with disjoint files, each starting from the previous one's hand-back.
+  large files (over ~1,000 lines, test files too), or roughly 150 tool calls — is split up front into sequential
+  builders with disjoint files, each starting from the previous one's hand-back. Building and proving
+  are two steps: for significant sensitive work, a second agent writes guards, falsify runs and gate from the builder's diff.
 - **A hand-back starts a fresh agent** for the rest. Agents obey the main chat's `autoCompactWindow`
   too (compaction ~33k below it, `traps.md`), so the window stays ~50k above their ceiling.
 - **Approval covers the continuations.** An approved roster covers fresh continuation and
@@ -105,12 +106,12 @@ A compact handoff: objective and acceptance criteria, the steps in order, mandat
 database and environment constraints, files owned vs forbidden, invariants, "do not commit", and the
 verification to run and quote.
 
-- **Never "keep working"** unless the brief names the independent work to do meanwhile.
+- **Never "keep working"** without naming the independent work to do meanwhile.
 - **Hand over what you already know** — exact paths, function names, excerpts, a diff or a hash —
   rather than setting a search. A reference several agents need is read once by you and excerpted;
   a canvas, as the file an `Artifact` read saves (agents lack that 14k-token tool).
 - **Paste the plan section and task lines the agent needs**; point at `implementation_plan.md` only
-  when it needs the whole plan.
+  for the whole plan.
 - **For large files, hand over names, not ranges,** and the instruction to use `code_map.py` /
   `code_show.py` (audit suite).
 - **Always include:** the project's quiet runner (or `quiet.py`), a report cap (executors ~900

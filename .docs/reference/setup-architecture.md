@@ -215,6 +215,11 @@ Moved out of `CLAUDE.shared.md` and the orchestrator skill on 2026-10-01 (budget
   output tokens a call against `Edit` ~236; 7% of edits failed on "String to replace not found"
   (wrapping, whitespace or quotes drifted). §1: a hardcoded "expect 24 cached entries" failed a
   healthy service worker that also held runtime-cached files.
+- **Building and proving split** (Tilspire 1.20.0, reported 2026-11-01): four `sonnet-high-executor`
+  builders in a row, each briefed to build a sensitive lane across large files and also prove it
+  (guards in a ~150k-line `tests/run.php`, falsify, slices, gate), each hit the 250k hand-back; a
+  continuation agent finished each, at one extra start (~40–50k) per lane. "Build" and "prove" read
+  as one step, so the orchestrator skill now names them two, and counts a test file as a large file.
 - **Agent start-up:** over 271 runs (`agent_audit.py`) an agent cost ~50k to cold-start (~27k
   after explicit tool lists, ~40–51k measured in the app 2026-10-01) and a median ~285k of fresh
   input before it could work. A mechanical sweep as a script: 31 path fixes across 17 files, exact
