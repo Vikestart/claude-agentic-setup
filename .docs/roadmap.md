@@ -183,6 +183,16 @@ Outcomes and order only; active work goes in `implementation_plan.md` when a pha
   (read, then write); the lost chat falls back to 150k or loses its timer after a restart.
 - **`crlf.py --fix` honours `.gitattributes` `eol` pins** (2026-10-30, cut from the audit skill):
   today it converts pinned files too, and the skill says to keep them out by hand.
+- **The setup in cloud sessions — parked 2026-11-02 (owner: one content chat, not worth it yet).**
+  A cloud session is a fresh VM with only the project clone: no `~/.claude`, so no mod (it loads via
+  `CLAUDE_CODE_PLUGIN_DIRS` in user settings), no `CLAUDE.md`, skills, agents or hooks; repo
+  `enabledPlugins` don't load there either (docs: cloud-environments, "What carries over from your
+  setup"). If revisited: an environment setup script clones this repo into `~/.claude/` and lays it
+  out like the installer, plus the env var `CLAUDE_CODE_PLUGIN_DIRS` on the environment. Untested:
+  whether the setup script can clone the private repo (the GitHub proxy may not be up yet; fallback
+  a read-only token as a network secret or a clone at session start); whether the desktop app draws
+  a mod band for a cloud session at all; the usage rows need the OAuth token the VM lacks; the env
+  cache (~7 days) goes stale unless each session pulls.
 - **Generalise the suite helpers** — Nebulingo's `neighbour_suites.py` / `battery_gate.py` and Tilspire's slice runner into the audit suite with a small per-project config; when a third project needs one.
 - **Project follow-ups (unverified since 2026-09-01; belong in each project's own roadmap):** nebulingo — add `.tmp/` and `.docs/proofs/` to `.auditignore` and a `.token-limits.json` for `scripts/` (242 advisory findings → ~80); nebulingo — `includes/lesson_authoring.php` (819 KB, read 309 times by agents) is the costliest file to work near.
 
