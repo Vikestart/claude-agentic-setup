@@ -76,6 +76,7 @@ async function keepWindows($: Engine, body: Record<string, unknown>, asked: numb
   }
   await $.store.set('limits', [...got.values()])
   await $.store.set('limitsAt', asked)
+  await keepWeekDay($, [...got.values()], asked)
   return 'ok'
 }
 const USAGE_WAIT = 10_000
@@ -121,7 +122,21 @@ function allowance(m: Month, start: number, now: number): number {
   const days = workDays(y, mo, d.getDate())
   return DAY_SHARE * (days ? Math.max(0, m.limit - start) / days : m.limit / workDays(y, mo + 1, 1))
 }
-const dollars = (n: number) => `$${Math.round(n).toLocaleString('en-US')}`
+// How far through today's working hours, the Today rows' pace.
+function dayPaceAt(now: number): number {
+  const d = new Date(now)
+  return Math.min(1, Math.max(0, (d.getHours() + d.getMinutes() / 60 - WORK_FROM) / (WORK_TO - WORK_FROM)))
+}
+// Weekdays whose working hours start before `end`, from the day of `from` (Mon-Fri, as the month's).
+function workDaysBefore(from: number, end: number): number {
+  let n = 0
+  for (const d = new Date(from); d.setHours(WORK_FROM, 0, 0, 0) < end; d.setDate(d.getDate() + 1)) {
+    const w = d.getDay()
+    n += w > 0 && w < 6 ? 1 : 0
+  }
+  return n
+}
+const dollars = (n: number) =>`$${Math.round(n).toLocaleString('en-US')}`
 const cents = (n: number) => `$${n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
 // A read stuck past this (the credential or the store, not only the fetch) stops blocking the next.
@@ -183,6 +198,58 @@ async function refreshMonth($: Engine, now: number, every = USAGE_EVERY): Promis
   $.ui.invalidate('ui.render')
 }
 
+// The weekly window a Today row stands beside: only with no 5-hour window and no account figure (whose
+// own Today it would repeat), and not once the week has reset.
+function todayWeek(limits: SessionRateLimit[], hasMonth: boolean, now: number): SessionRateLimit | undefined {
+  const w = limits.find(r => r.kind === 'seven_day')
+  return !hasMonth && w && !hasReset(w, now) && !limits.some(r => r.kind === 'five_hour') ? w : undefined
+}
+
+// The weekly figure at the first reading of each local day (again after a fall, the week's reset), for
+// the Today row of a plan with no 5-hour window.
+async function keepWeekDay($: Engine, limits: SessionRateLimit[], now: number): Promise<void> {
+  const w = limits.find(r => r.kind === 'seven_day')
+  if (!w || !num(w.percentUsed)) {
+    return
+  }
+  const d = asDay(await $.store.get('weekDay'))
+  if (!d || d.day !== dayOf(now) || w.percentUsed < d.used) {
+    await $.store.set('weekDay', { day: dayOf(now), used: w.percentUsed })
+  }
+}
+const pct1 = (n: number) => `${n < 10 ? Math.round(n * 10) / 10 : Math.round(n)}%`
+
+// Ultra has no 5-hour window, so a Today row takes its place: not a limit, a daily share of the week to
+// keep track by, as Enterprise's Today is of the month (owner, 2026-11-02). Same rules: what the week
+// had left this morning over the working days to its reset, 95% of it, and the working hours' pace.
+function weekToday(w: SessionRateLimit, d: DayStart | undefined, now: number, old: boolean): Row {
+  const resets = Date.parse(w.resetsAt ?? '')
+  // No figure yet today: today began where the last one stood.
+  const start = d?.day === dayOf(now) ? d.used : w.percentUsed
+  const days = workDaysBefore(now, resets)
+  // None left before the reset (a weekend): the next week's share.
+  const may = DAY_SHARE * (days ? Math.max(0, 100 - start) / days : 100 / Math.max(1, workDaysBefore(resets, resets + WINDOW_MS.seven_day)))
+  const spent = Math.max(0, w.percentUsed - start)
+  const over = spent > may
+  const share = may ? spent / may : 1
+  const dayPace = dayPaceAt(now)
+  return {
+    name: 'Today',
+    label: 'Today',
+    used: share,
+    ticks: [{ at: dayPace, red: share > dayPace }],
+    pace: dayPace,
+    ahead: over,
+    value: `${Math.round(share * 100)}% / ${Math.round(dayPace * 100)}%`,
+    detail: `${pct1(spent)} of ${pct1(may)} of the week`,
+    old,
+    alt: `pace ${Math.round(dayPace * 100)}%` + (over ? ', past today\'s share' : ''),
+    tip: `${pct1(spent)} of the week used today, of ${pct1(may)} allowed${old ? ' (last known)' : ''}`
+      + ` · allowed: what the week had left this morning over the working days to its reset`
+      + ` · second figure and arrow: ${Math.round(dayPace * 100)}% of the working day (${WORK_FROM}:00-${WORK_TO}:00) gone`,
+  }
+}
+
 // The Today and Month rows from the kept figure; none without one, or with one from an earlier month.
 function monthRows(m: Month | undefined, d: DayStart | undefined, now: number): Row[] {
   if (!m || !sameMonth(m.at, now)) {
@@ -197,8 +264,7 @@ function monthRows(m: Month | undefined, d: DayStart | undefined, now: number): 
   const d0 = new Date(now), first = new Date(d0.getFullYear(), d0.getMonth(), 1).getTime()
   const pace = (now - first) / (new Date(d0.getFullYear(), d0.getMonth() + 1, 1).getTime() - first)
   const ahead = m.used / m.limit > pace
-  const hour = d0.getHours() + d0.getMinutes() / 60
-  const dayPace = Math.min(1, Math.max(0, (hour - WORK_FROM) / (WORK_TO - WORK_FROM)))
+  const dayPace = dayPaceAt(now)
   const asOf = new Date(m.at).toTimeString().slice(0, 5)
   const unit = m.currency === 'USD' ? '' : ` ${m.currency}`
   return [{
@@ -492,6 +558,7 @@ export const register: Register = on => {
       $.store.get('month'),
       $.store.get('dayStart'),
       $.store.get('limitsAt'),
+      $.store.get('weekDay'),
     ])
     const got = answered ? await figures : await Promise.race([figures, $.clock.sleep(FIRST_WAIT).then(() => undefined)])
     if (got) {
@@ -499,7 +566,7 @@ export const register: Register = on => {
     } else {
       void figures.then(() => { answered = true; $.ui.invalidate('ui.render') })
     }
-    const [usage, settings, kept, keptMonth, keptDay, keptAt] = got ?? []
+    const [usage, settings, kept, keptMonth, keptDay, keptAt, keptWeekDay] = got ?? []
     const context = usage?.context
     const cost = usage?.cost
     // Absent in a fresh session and after a compaction or relaunch until the next reply; the band
@@ -521,6 +588,8 @@ export const register: Register = on => {
     // The account figure is the month's own: a monthly window beside it would count it twice.
     const rateLimits = pickLimits(own, kept ?? [], own.length > 0 || tokens !== undefined, now)
       .filter(r => !months.length || !isMonthly(r.kind))
+    const week = todayWeek(rateLimits, months.length > 0, now)
+    const today = week && weekToday(week, asDay(keptWeekDay), now, old)
 
     // The window the session compacts against is the setting when one is set, not the model's.
     const setting = settings?.autoCompactWindow
@@ -564,6 +633,7 @@ export const register: Register = on => {
       const ahead = pace !== undefined && used > pace
       const h = Math.max(0, Math.round((resets - now) / 3600_000))
       const when = Number.isNaN(resets) ? '' : h < 48 ? `${h}h` : `${Math.round(h / 24)}d`
+      if (r === week && today) list.push(today)
       list.push({
         name: limitName(r.kind),
         label: limitLabel(r.kind),
@@ -742,6 +812,7 @@ export const register: Register = on => {
     if (e.changed.includes('rateLimits')) {
       await $.store.set('limits', e.rateLimits)
       await $.store.set('limitsAt', await $.clock.now())
+      await keepWeekDay($, e.rateLimits, await $.clock.now())
     } else if (!e.rateLimits.length && e.context.tokens !== undefined
       && ((await $.store.get('limits')) as SessionRateLimit[] | undefined)?.length) {
       await $.store.set('limits', [])
@@ -764,17 +835,21 @@ export const register: Register = on => {
     // A small bar per limit, the first two the band shows, in place of a word (owner, 2026-10-03);
     // Today and Month while the account figure shows.
     const got = await Promise.race([
-      Promise.all([$.session.usage(), $.store.get('limits') as Promise<SessionRateLimit[] | undefined>, $.store.get('month'), $.store.get('dayStart')]),
+      Promise.all([$.session.usage(), $.store.get('limits') as Promise<SessionRateLimit[] | undefined>, $.store.get('month'), $.store.get('dayStart'), $.store.get('weekDay')]),
       $.clock.sleep(FIRST_WAIT).then(() => undefined),
     ])
     const now = await $.clock.now()
     const own = got?.[0].rateLimits ?? []
     const months = monthRows(asMonth(got?.[2]), asDay(got?.[3]), now).map(r => ({ name: r.name, used: r.used }))
     // Usage windows first: on a plan that has them they bind sooner than the spend (Enterprise has none).
-    const rows = [...pickLimits(own, got?.[1] ?? [], own.length > 0 || got?.[0].context.tokens !== undefined, now)
+    const windows = pickLimits(own, got?.[1] ?? [], own.length > 0 || got?.[0].context.tokens !== undefined, now)
       .filter(r => !months.length || !isMonthly(r.kind))
-      // A figure from a window that has since reset says nothing about the new one.
-      .map(r => ({ name: limitName(r.kind), used: hasReset(r, now) ? 0 : r.percentUsed / 100 })), ...months]
+    const week = todayWeek(windows, months.length > 0, now)
+    // A figure from a window that has since reset says nothing about the new one.
+    const rows = [...windows.flatMap(r => [
+      ...(r === week ? [{ name: 'Today', used: weekToday(r, asDay(got?.[4]), now, false).used }] : []),
+      { name: limitName(r.kind), used: hasReset(r, now) ? 0 : r.percentUsed / 100 },
+    ]), ...months]
       .slice(0, 2)
     const pct = (f: number) => `${Math.round(f * 100)}%`
     const show = () => update($, isCollapsed, () => false)

@@ -674,3 +674,83 @@ for (const surface of ['terminal', 'desktop'] as const) {
     else expect((await foot.find({ type: 'Svg' }))?.props.alt).toBe('5 hours 50%, today 9%')
   })
 }
+
+// Ultra has no 5-hour window: a Today row takes its place, today's share of what the week had left this
+// morning over the working days to its reset (95% of it), with the working hours' pace.
+for (const surface of ['terminal', 'desktop'] as const) {
+  // Wednesday noon; the week resets Monday 10:00, so Wed, Thu, Fri and Mon are left.
+  const wed = new Date(2026, 10, 4, 12).getTime()
+  const resetsAt = new Date(2026, 10, 9, 10).toISOString()
+  const mount = async ($: any, on: any, used: number, weekDay: unknown, five?: number) => {
+    mock.clock(on, { now: wed })
+    const limits = [
+      ...(five === undefined ? [] : [{ kind: 'five_hour', percentUsed: five, resetsAt: new Date(2026, 10, 4, 15).toISOString() }]),
+      { kind: 'seven_day', percentUsed: used, resetsAt },
+    ]
+    on('session.usage', async () => ({ value: { startedAt: 0, rateLimits: limits, context: { tokens: 50_000, window: 330_000 } } }) as never)
+    on('settings.read', async () => ({ value: {} }) as never)
+    const store: Record<string, unknown> = { weekDay }
+    on('store.get', async (_$: any, e: any) => ({ value: store[e.key] }) as never)
+    return $.ui.mount({ plugin: 'asdev', surface, component: 'AbovePrompt', props: { hasSurvey: false } })
+  }
+  // The desktop shows the share beside the bar; the terminal, with no hover card, the week's figures.
+  const row = async (ui: any, detail: string, share: string) => surface === 'terminal'
+    ? ui.find({ text: new RegExp(`^${detail}$`) })
+    : paced(ui, surface, ...share.split(' / ') as [string, string])
+  const morning = (used: number) => ({ day: '2026-11-04', used })
+
+  test(`${surface}: with no 5-hour window, a Today row stands before Week`, async ($: any, on) => {
+    // 60% left this morning over 4 working days: 14.25% allowed, 3% used.
+    const ui = await mount($, on, 43, morning(40))
+    const today = await row(ui, '3% of 14% of the week', '21% / 50%')
+    expect(today).toBeDefined()
+    expect(today?.props.color).not.toBe(RED)
+    const names = (await ui.findAll({ type: 'Text' })).map((t: any) => /^(Context|Today|5 hours|5h|Week)\b/.exec(t.text)?.[1]).filter(Boolean)
+    expect([...new Set(names)]).toEqual(['Context', 'Today', 'Week'])
+  })
+
+  test(`${surface}: Today turns red past its share of the week`, async ($: any, on) => {
+    // 80% left over 4 days: 19% allowed, 23% used.
+    const ui = await mount($, on, 43, morning(20))
+    expect((await row(ui, '23% of 19% of the week', '121% / 50%'))?.props.color).toBe(RED)
+  })
+
+  test(`${surface}: no weekly figure yet today counts nothing used today`, async ($: any, on) => {
+    const ui = await mount($, on, 43, { day: '2026-11-03', used: 30 })
+    expect(await row(ui, '0% of 14% of the week', '0% / 50%')).toBeDefined()
+  })
+
+  test(`${surface}: a plan with a 5-hour window shows no Today row`, async ($: any, on) => {
+    const ui = await mount($, on, 43, morning(40), 50)
+    expect(await ui.find({ text: /^Today\b/ })).toBeUndefined()
+  })
+
+  if (surface === 'desktop') test(`${surface}: the collapsed band shows Today and Week`, async ($: any, on) => {
+    const band = await mount($, on, 43, morning(40))
+    await band.press({ key: 'hide' })
+    const foot = await $.ui.mount({ plugin: 'asdev', surface, component: 'SessionMode', props: { modes: [] } })
+    expect((await foot.find({ type: 'Svg' }))?.props.alt).toBe('Today 21%, week 43%')
+  })
+}
+
+// The weekly figure at the day's first reading is kept, and taken again after the week resets.
+test('the weekly figure at the start of each day is kept', async ($: any, on) => {
+  const clock = mock.clock(on, { now: new Date(2026, 10, 4, 9).getTime() })
+  const store: Record<string, unknown> = {}
+  on('store.get', async (_$, e) => ({ value: store[e.key] }) as never)
+  on('store.set', async (_$, e) => { store[e.key] = e.value; return { value: undefined } as never })
+  on('ui.invalidate', async () => ({ value: undefined }) as never)
+  on('session.measure', async (_$, e) => ({ changed: e.changed }) as never)
+  const context = { tokens: 50_000, window: 330_000 }
+  const week = (percentUsed: number) => [{ kind: 'seven_day', percentUsed }]
+
+  await $.session.measure({ context, rateLimits: week(40), changed: ['rateLimits'] })
+  expect(store.weekDay).toEqual({ day: '2026-11-04', used: 40 })
+  await $.session.measure({ context, rateLimits: week(43), changed: ['rateLimits'] })
+  expect(store.weekDay).toEqual({ day: '2026-11-04', used: 40 })
+  await $.session.measure({ context, rateLimits: week(2), changed: ['rateLimits'] })
+  expect(store.weekDay).toEqual({ day: '2026-11-04', used: 2 })
+  await clock.advance(24 * 3600_000)
+  await $.session.measure({ context, rateLimits: week(9), changed: ['rateLimits'] })
+  expect(store.weekDay).toEqual({ day: '2026-11-05', used: 9 })
+})
