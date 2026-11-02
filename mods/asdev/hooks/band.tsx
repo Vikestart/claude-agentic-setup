@@ -122,18 +122,17 @@ function allowance(m: Month, start: number, now: number): number {
   const days = workDays(y, mo, d.getDate())
   return DAY_SHARE * (days ? Math.max(0, m.limit - start) / days : m.limit / workDays(y, mo + 1, 1))
 }
-// How far through today's working hours, the Today rows' pace.
-function dayPaceAt(now: number): number {
+// The weekly Today's day is every day, 09-23: personal use, not the work setup's hours (owner, 2026-11-02).
+const DAY_FROM = 9, DAY_TO = 23
+// How far through today's hours from `from` to `to`, the Today rows' pace.
+function dayPaceAt(now: number, from: number, to: number): number {
   const d = new Date(now)
-  return Math.min(1, Math.max(0, (d.getHours() + d.getMinutes() / 60 - WORK_FROM) / (WORK_TO - WORK_FROM)))
+  return Math.min(1, Math.max(0, (d.getHours() + d.getMinutes() / 60 - from) / (to - from)))
 }
-// Weekdays whose working hours start before `end`, from the day of `from` (Mon-Fri, as the month's).
-function workDaysBefore(from: number, end: number): number {
+// Days whose hours start before `end`, from the day of `from`.
+function daysBefore(from: number, end: number): number {
   let n = 0
-  for (const d = new Date(from); d.setHours(WORK_FROM, 0, 0, 0) < end; d.setDate(d.getDate() + 1)) {
-    const w = d.getDay()
-    n += w > 0 && w < 6 ? 1 : 0
-  }
+  for (const d = new Date(from); d.setHours(DAY_FROM, 0, 0, 0) < end; d.setDate(d.getDate() + 1)) n++
   return n
 }
 const dollars = (n: number) =>`$${Math.round(n).toLocaleString('en-US')}`
@@ -220,19 +219,19 @@ async function keepWeekDay($: Engine, limits: SessionRateLimit[], now: number): 
 const pct1 = (n: number) => `${n < 10 ? Math.round(n * 10) / 10 : Math.round(n)}%`
 
 // Ultra has no 5-hour window, so a Today row takes its place: not a limit, a daily share of the week to
-// keep track by, as Enterprise's Today is of the month (owner, 2026-11-02). Same rules: what the week
-// had left this morning over the working days to its reset, 95% of it, and the working hours' pace.
+// keep track by, as Enterprise's Today is of the month (owner, 2026-11-02): 95% of what the week had
+// left this morning over the days to its reset, every day counted, and a 09-23 pace.
 function weekToday(w: SessionRateLimit, d: DayStart | undefined, now: number, old: boolean): Row {
   const resets = Date.parse(w.resetsAt ?? '')
   // No figure yet today: today began where the last one stood.
   const start = d?.day === dayOf(now) ? d.used : w.percentUsed
-  const days = workDaysBefore(now, resets)
-  // None left before the reset (a weekend): the next week's share.
-  const may = DAY_SHARE * (days ? Math.max(0, 100 - start) / days : 100 / Math.max(1, workDaysBefore(resets, resets + WINDOW_MS.seven_day)))
+  const days = daysBefore(now, resets)
+  // None left (a reset before today's 09:00): the next week's share.
+  const may = DAY_SHARE * (days ? Math.max(0, 100 - start) / days : 100 / Math.max(1, daysBefore(resets, resets + WINDOW_MS.seven_day)))
   const spent = Math.max(0, w.percentUsed - start)
   const over = spent > may
   const share = may ? spent / may : 1
-  const dayPace = dayPaceAt(now)
+  const dayPace = dayPaceAt(now, DAY_FROM, DAY_TO)
   return {
     name: 'Today',
     label: 'Today',
@@ -245,8 +244,8 @@ function weekToday(w: SessionRateLimit, d: DayStart | undefined, now: number, ol
     old,
     alt: `pace ${Math.round(dayPace * 100)}%` + (over ? ', past today\'s share' : ''),
     tip: `${pct1(spent)} of the week used today, of ${pct1(may)} allowed${old ? ' (last known)' : ''}`
-      + ` · allowed: what the week had left this morning over the working days to its reset`
-      + ` · second figure and arrow: ${Math.round(dayPace * 100)}% of the working day (${WORK_FROM}:00-${WORK_TO}:00) gone`,
+      + ` · allowed: what the week had left this morning over the days to its reset`
+      + ` · second figure and arrow: ${Math.round(dayPace * 100)}% of the day (${DAY_FROM}:00-${DAY_TO}:00) gone`,
   }
 }
 
@@ -264,7 +263,7 @@ function monthRows(m: Month | undefined, d: DayStart | undefined, now: number): 
   const d0 = new Date(now), first = new Date(d0.getFullYear(), d0.getMonth(), 1).getTime()
   const pace = (now - first) / (new Date(d0.getFullYear(), d0.getMonth() + 1, 1).getTime() - first)
   const ahead = m.used / m.limit > pace
-  const dayPace = dayPaceAt(now)
+  const dayPace = dayPaceAt(now, WORK_FROM, WORK_TO)
   const asOf = new Date(m.at).toTimeString().slice(0, 5)
   const unit = m.currency === 'USD' ? '' : ` ${m.currency}`
   return [{

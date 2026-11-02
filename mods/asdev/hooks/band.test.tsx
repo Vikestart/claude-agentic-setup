@@ -676,13 +676,13 @@ for (const surface of ['terminal', 'desktop'] as const) {
 }
 
 // Ultra has no 5-hour window: a Today row takes its place, today's share of what the week had left this
-// morning over the working days to its reset (95% of it), with the working hours' pace.
+// morning over the days to its reset (95% of it), every day counted, with a 09-23 pace.
 for (const surface of ['terminal', 'desktop'] as const) {
-  // Wednesday noon; the week resets Monday 10:00, so Wed, Thu, Fri and Mon are left.
+  // Wednesday noon, 3 of the day's 14 hours gone; the week resets Monday 10:00, so Wed to Mon are left: 6 days.
   const wed = new Date(2026, 10, 4, 12).getTime()
   const resetsAt = new Date(2026, 10, 9, 10).toISOString()
-  const mount = async ($: any, on: any, used: number, weekDay: unknown, five?: number) => {
-    mock.clock(on, { now: wed })
+  const mount = async ($: any, on: any, used: number, weekDay: unknown, five?: number, now = wed) => {
+    mock.clock(on, { now })
     const limits = [
       ...(five === undefined ? [] : [{ kind: 'five_hour', percentUsed: five, resetsAt: new Date(2026, 10, 4, 15).toISOString() }]),
       { kind: 'seven_day', percentUsed: used, resetsAt },
@@ -700,9 +700,9 @@ for (const surface of ['terminal', 'desktop'] as const) {
   const morning = (used: number) => ({ day: '2026-11-04', used })
 
   test(`${surface}: with no 5-hour window, a Today row stands before Week`, async ($: any, on) => {
-    // 60% left this morning over 4 working days: 14.25% allowed, 3% used.
+    // 60% left this morning over 6 days: 9.5% allowed, 3% used.
     const ui = await mount($, on, 43, morning(40))
-    const today = await row(ui, '3% of 14% of the week', '21% / 50%')
+    const today = await row(ui, '3% of 9.5% of the week', '32% / 21%')
     expect(today).toBeDefined()
     expect(today?.props.color).not.toBe(RED)
     const names = (await ui.findAll({ type: 'Text' })).map((t: any) => /^(Context|Today|5 hours|5h|Week)\b/.exec(t.text)?.[1]).filter(Boolean)
@@ -710,15 +710,30 @@ for (const surface of ['terminal', 'desktop'] as const) {
   })
 
   test(`${surface}: Today turns red past its share of the week`, async ($: any, on) => {
-    // 80% left over 4 days: 19% allowed, 23% used.
+    // 80% left over 6 days: 12.7% allowed, 23% used.
     const ui = await mount($, on, 43, morning(20))
-    expect((await row(ui, '23% of 19% of the week', '121% / 50%'))?.props.color).toBe(RED)
+    expect((await row(ui, '23% of 13% of the week', '182% / 21%'))?.props.color).toBe(RED)
   })
 
   test(`${surface}: no weekly figure yet today counts nothing used today`, async ($: any, on) => {
+    // 57% left over 6 days: 9% allowed.
     const ui = await mount($, on, 43, { day: '2026-11-03', used: 30 })
-    expect(await row(ui, '0% of 14% of the week', '0% / 50%')).toBeDefined()
+    expect(await row(ui, '0% of 9% of the week', '0% / 21%')).toBeDefined()
   })
+
+  test(`${surface}: a weekend counts as days`, async ($: any, on) => {
+    // Saturday: Sat, Sun and Mon left, 60% over 3 days: 19% allowed.
+    const ui = await mount($, on, 43, { day: '2026-11-07', used: 40 }, undefined, new Date(2026, 10, 7, 12).getTime())
+    expect(await row(ui, '3% of 19% of the week', '16% / 21%')).toBeDefined()
+  })
+
+  // 08:00 is before the day, 23:30 after it: the pace holds at 0% and 100%.
+  for (const [hour, pace] of [[8, '0%'], [23.5, '100%']] as const) {
+    test(`${surface}: the weekly Today's pace at ${hour}:00 is ${pace}`, async ($: any, on) => {
+      const ui = await mount($, on, 43, morning(40), undefined, new Date(2026, 10, 4).getTime() + hour * 3600_000)
+      expect(await row(ui, '3% of 9.5% of the week', `32% / ${pace}`)).toBeDefined()
+    })
+  }
 
   test(`${surface}: a plan with a 5-hour window shows no Today row`, async ($: any, on) => {
     const ui = await mount($, on, 43, morning(40), 50)
@@ -729,7 +744,7 @@ for (const surface of ['terminal', 'desktop'] as const) {
     const band = await mount($, on, 43, morning(40))
     await band.press({ key: 'hide' })
     const foot = await $.ui.mount({ plugin: 'asdev', surface, component: 'SessionMode', props: { modes: [] } })
-    expect((await foot.find({ type: 'Svg' }))?.props.alt).toBe('Today 21%, week 43%')
+    expect((await foot.find({ type: 'Svg' }))?.props.alt).toBe('Today 32%, week 43%')
   })
 }
 
