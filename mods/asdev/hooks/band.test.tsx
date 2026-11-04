@@ -8,6 +8,11 @@ const paced = async (ui: any, surface: string, used: string, pace: string) => {
   const sup = await ui.find({ text: new RegExp(`^ / ${pace}$`) })
   return sup?.props.size === 'caption' && sup.props.dimColor ? ui.find({ text: new RegExp(`^${used}$`) }) : undefined
 }
+// On the desktop a figure of 100% or more stands without its pace, so three digits keep their room.
+const over = async (ui: any, used: string, pace: string) => {
+  if (await ui.find({ text: new RegExp(`^\\s/\\s${pace}$`) })) return undefined
+  return ui.find({ type: 'Text', text: new RegExp(`^${used}$`) })
+}
 
 // The app gives no sign of a compaction it did not start, so the band says so, collapsed or not.
 for (const surface of ['terminal', 'desktop'] as const) {
@@ -617,7 +622,8 @@ for (const surface of ['terminal', 'desktop'] as const) {
   test(`${surface}: Today turns red past its allowance`, async ($: any, on) => {
     // $1,300 left over 8 days: $154 allowed, $212 spent.
     const ui = await mount($, on, wed, 200)
-    expect((await row(ui, '$212', '$154', '137% / 50%'))?.props.color).toBe(RED)
+    const used = surface === 'terminal' ? await row(ui, '$212', '$154', '137% / 50%') : await over(ui, '137%', '50%')
+    expect(used?.props.color).toBe(RED)
   })
 
   test(`${surface}: a weekend shows the next working day's allowance`, async ($: any, on) => {
@@ -712,7 +718,8 @@ for (const surface of ['terminal', 'desktop'] as const) {
   test(`${surface}: Today turns red past its share of the week`, async ($: any, on) => {
     // 80% left over 6 days: 12.7% allowed, 23% used.
     const ui = await mount($, on, 43, morning(20))
-    expect((await row(ui, '23% of 13% of the week', '182% / 21%'))?.props.color).toBe(RED)
+    const used = surface === 'terminal' ? await row(ui, '23% of 13% of the week', '182% / 21%') : await over(ui, '182%', '21%')
+    expect(used?.props.color).toBe(RED)
   })
 
   test(`${surface}: no weekly figure yet today counts nothing used today`, async ($: any, on) => {

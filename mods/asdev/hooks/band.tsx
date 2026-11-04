@@ -722,7 +722,13 @@ export const register: Register = on => {
     const { Box, Button, Svg, Text } = $.ui.resolve(e)
     const bars = list.filter(r => !r.round).length
     const cols = e.viewport?.columns
-    const meters = list.reduce((n, r) => n + (r.round ? 2 : r.label.length + 1) + 1 + USED_W + (r.value.includes(' / ') ? PACE_W : 0), 0)
+    // At 100% or more the pace no longer tells anything, and a three-digit figure leaves no room for it
+    // (owner, 2026-11-04).
+    const split = (r: Row) => {
+      const [used, pace] = r.value.split(' / ')
+      return { used, pace: parseFloat(used) >= 100 ? undefined : pace }
+    }
+    const meters = list.reduce((n, r) => n + (r.round ? 2 : r.label.length + 1) + 1 + USED_W + (split(r).pace ? PACE_W : 0), 0)
     const rest = (cost: boolean, ring: boolean) => meters + (ring ? 3 + CACHE_W : 0) + (cost ? usd.length + 1 : 0) + 2
       + (list.length + (ring ? 1 : 0)) * 2 + SLACK
     const fits = (n: number) => !cols || cols - n >= bars * MIN_W / CELL_PX
@@ -735,7 +741,7 @@ export const register: Register = on => {
       // The pace sits raised, smaller and grey after the figure, so the used share reads first
       // (owner, 2026-10-27). No Text draws superscript: a top-aligned smaller run stands in for it.
       // A fixed width, so a figure that gains a digit no longer shifts the meters after it (owner, 2026-10-27).
-      const [used, pace] = r.value.split(' / ')
+      const { used, pace } = split(r)
       const alt = `${r.name}: ${r.value}${r.old && r.alt !== 'loading' ? ' (last known)' : ''}${r.alt ? `, ${r.alt}` : ''}`
       return [
         ...r.round
