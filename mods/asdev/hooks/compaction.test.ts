@@ -128,6 +128,28 @@ test('no trigger: the line mid-reply, an aborted turn, a subagent', async ($: an
   expect(w.ran).toEqual([])
 })
 
+test('a reply that asks and still promises the compaction is sent back once, to say it is held', async ($: any, on) => {
+  mock.clock(on)
+  const t = { now: 160_000 }
+  const w = world(on, t)
+  on('process.run', async () => ({ value: { exitCode: 0, stdout: '## main...origin/main\n', stderr: '' } }) as never)
+  const first = (text: string) =>
+    $.classic.Stop({ hook_event_name: 'Stop', session_id: 's', transcript_path: 't', cwd: '/p', stop_hook_active: false, last_assistant_message: text })
+  const asks = 'Will you raise the limit?\n\nA compaction is starting now.\n\nready to compact'
+  await read($)
+  expect((await read($)).context ?? []).toEqual([])
+  expect((await first(asks)).block).toContain('the compaction is held')
+  expect((await read($)).context?.[0]).toContain('next clean break')
+  // Once only; a reply that asks nothing, one with no trigger line and one below the line stop as usual.
+  expect((await stop($, asks)).block).toBeUndefined()
+  expect((await first('Docs updated.\n\nready to compact')).block).toBeUndefined()
+  expect((await first('Will you raise the limit?')).block).toBeUndefined()
+  t.now = 100_000
+  expect((await first(asks)).block).toBeUndefined()
+  await tick()
+  expect(w.ran).toEqual([])
+})
+
 test('a reply that asks the owner is not compacted; the nudge comes back on the next tool call', async ($: any, on) => {
   mock.clock(on)
   const t = { now: 152_000 }

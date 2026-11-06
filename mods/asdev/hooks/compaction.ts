@@ -35,6 +35,11 @@ const DOCS = ['implementation_plan.md', 'task.md', 'handover.md', 'roadmap.md']
 // answer (seen 2026-10-24, a Tilspire chat asking for canvas picks). Said in the notes, and enforced.
 const NOT_WITH_A_QUESTION = 'Never in a reply that asks the owner a question or waits on their pick: '
   + 'ask first, and compact at the break after they answer.'
+// A reply that writes the line anyway promises a compaction that does not come, and the app shows no
+// reason (owner, 2026-11-06: a Nebulingo chat ended so under four questions, at 278k).
+const HELD_BACK = 'That reply asks the owner something, so the compaction is held: it would cut in before they '
+  + 'can answer, and the line saying it is starting is wrong. Reply with one short sentence telling them it '
+  + 'will run after their answer. Repeat nothing else, and leave out the closing line that triggers it.'
 
 // Was the "When compacting" rule in CLAUDE.shared.md; given to every main-chat compaction without its own.
 const INSTRUCTIONS = 'Keep: the current phase and task, decisions with their reasons, open questions, and any '
@@ -306,16 +311,18 @@ function carryOn($: Engine) {
   void $.prompt.submit({ text }).catch(() => undefined)
 }
 
-async function wantsCompact($: Engine, answer: string): Promise<boolean> {
-  if (!isTrigger(answer)) return false
+async function compactCall($: Engine, answer: string): Promise<'go' | 'held' | undefined> {
+  if (!isTrigger(answer)) return undefined
   const { context } = await $.session.usage()
   const tokens = context.tokens ?? 0
-  if (tokens < await compactFrom($)) return false
-  if (!asksOwner(answer)) return true
+  if (tokens < await compactFrom($)) return undefined
+  if (!asksOwner(answer)) return 'go'
   // Held for the answer: the next tool call repeats the nudge, so the compaction is not lost.
   await update($, nudgedAt, () => tokens - NUDGE_EVERY)
-  return false
+  return 'held'
 }
+
+const wantsCompact = async ($: Engine, answer: string) => await compactCall($, answer) === 'go'
 
 export const register: Register = on => {
   on('tool.call', async ($, e, next) => {
@@ -426,6 +433,7 @@ export const register: Register = on => {
     if (!r.block && !e.stop_hook_active) {
       const why = await unpushed(e.last_assistant_message ?? '', e.cwd, argv => $.process.run(argv, { timeoutMs: 10_000 }))
       if (why) return { ...r, block: why }
+      if (await compactCall($, e.last_assistant_message ?? '') === 'held') return { ...r, block: HELD_BACK }
     }
     if (!r.block || !(await wantsCompact($, e.last_assistant_message ?? ''))) return r
     resume = r.block

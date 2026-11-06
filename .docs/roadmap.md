@@ -183,6 +183,9 @@ Outcomes and order only; active work goes in `implementation_plan.md` when a pha
   (read, then write); the lost chat falls back to 150k or loses its timer after a restart.
 - **`crlf.py --fix` honours `.gitattributes` `eol` pins** (2026-10-30, cut from the audit skill):
   today it converts pinned files too, and the skill says to keep them out by hand.
+- **Transcript sizes, seen 2026-11-06, not looked into:** single chat transcripts in
+  `~/.claude/projects` reach 15.5 GB (Tilspire, two of them), 13 GB (Nebulingo), 5 GB (TSWDB) and
+  3.3 GB (Framvis). Unknown what fills them, and whether it costs more than disk space.
 - **The setup in cloud sessions — parked 2026-11-02 (owner: one content chat, not worth it yet).**
   A cloud session is a fresh VM with only the project clone: no `~/.claude`, so no mod (it loads via
   `CLAUDE_CODE_PLUGIN_DIRS` in user settings), no `CLAUDE.md`, skills, agents or hooks; repo
