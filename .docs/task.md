@@ -26,3 +26,5 @@ reviewed. Nothing is built yet.
 - [ ] 6. Paste-ready instruction for the Nebulingo, Tilspire and Framvis chats; FYI for running chats
   - Given 2026-11-17 with the restart request; waiting for the three chats' judgement passes.
 - [ ] Live check after a restart; walkthrough, changelog, completion routine
+  - URL check done 2026-11-17: nebulingo.com, tilspire.com, framvis.com and the staging hosts answer
+    404 for `/.docs/roadmap.md`, `/.docs/brain/MEMORY.md` and `/.docs/`.
