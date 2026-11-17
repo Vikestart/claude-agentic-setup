@@ -42,6 +42,10 @@ Outcomes and order only; active work goes in `implementation_plan.md` when a pha
 
 ## Later
 
+- **A code graph beside the brain (owner, 2026-11-17).** Graphify (`pip install graphifyy`) builds a
+  graph of a project's code and docs, with an HTML view, a report, a JSON graph and a hook that queries
+  it before Grep. Kept out of the second-brain phase: Obsidian's graph view covers the notes, and
+  adding a package is the owner's call. Revisit once the brain has run for a while.
 - **Long sessions, analysed 2026-10-16 — owner's decisions open.** The four open main chats (Tilspire,
   Nebulingo, Framvis since 1–2 Oct; TSWDB since 15 Sep) compact as designed: about every 60 calls,
   ~163k → ~83k, average prompt ~132k (the 1M-window chats of September averaged ~530k). API-equivalent
