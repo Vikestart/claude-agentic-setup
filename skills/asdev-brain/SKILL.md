@@ -45,11 +45,12 @@ Obsidian. The harness's own memory points there, so "save a memory" writes a bra
 
 ## The index, `MEMORY.md`
 
-It is loaded into every turn of the main chat and of every agent, so it stays small: at most 40
-lines, each under 150 characters, `- [Title](file.md) — hook`. Every note must be reachable from
-it, directly or through the `[[links]]` of a note it lists. When it fills up, gather related notes
-under a hub note whose body lists them as `[[links]]`, and replace their lines with one line to the
-hub. Index lines written on two devices merge on pull (`merge=union`); remove any doubled line.
+Only it is loaded, every turn, in the main chat and every agent, so it stays small: at most 40
+lines, each under 150 characters, `- [Title](file.md) — hook`. When it fills, gather related notes
+under a hub note listing each as `- [[name]] — hook`, within the same limits, and give the hub one
+index line; a full hub splits into sub-hubs. Drill down by hook; open only what the task needs.
+Every note must be reachable from the index. Lines written on two devices merge on pull
+(`merge=union`); drop any doubled line.
 
 ## Never in a committed brain
 
