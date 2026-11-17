@@ -28,3 +28,6 @@ reviewed. Nothing is built yet.
 - [ ] Live check after a restart; walkthrough, changelog, completion routine
   - URL check done 2026-11-17: nebulingo.com, tilspire.com, framvis.com and the staging hosts answer
     404 for `/.docs/roadmap.md`, `/.docs/brain/MEMORY.md` and `/.docs/`.
+  - Live, this repo, 2026-11-17: a new chat saved a memory; it landed in `.docs/brain/` with the
+    harness's own fields (`originSessionId`, `modified`), the hidden folder stayed empty, `check`
+    passed (4ed52e0). Left: a worktree chat, and the hook in the projects after the restart.
