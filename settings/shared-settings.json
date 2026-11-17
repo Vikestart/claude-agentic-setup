@@ -6,7 +6,8 @@
     "env.CLAUDE_CODE_PLUGIN_DIRS": "~/.claude/claude-agentic-setup/mods/asdev",
     "env.CLAUDE_CODE_PLUGIN_DIR_WATCH": "1",
     "workflowSizeGuideline": "medium",
-    "autoCompactWindow": 330000
+    "autoCompactWindow": 330000,
+    "autoDreamEnabled": false
   },
   "unset": {
     "subagentPromptCacheTtl": "1h"

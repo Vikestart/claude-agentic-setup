@@ -12,7 +12,12 @@ reviewed. Nothing is built yet.
     `solo-on-own-projects`, astole and the two `xampp` notes became lines in `CLAUDE.personal.md`.
   - The blueprints and `htdocs` folders held only older copies; all three root folders renamed
     `memory.migrated-20261117-154544`. `~/.codex`'s 2 stale notes left alone (no repo, Codex decoupled).
-- [ ] 4. The mod's SessionStart hook (setup, migrate, index into context): build, then tests and falsify as a separate step
-- [ ] 5. Rule edits: CLAUDE.shared.md, asdev-handover, asdev-planner, asdev-release; `autoDreamEnabled: false`
+- [x] 4. The mod's SessionStart hook (setup, migrate, index into context): build, then tests and falsify as a separate step
+  - `brain.py start` does setup, then migrate, each only when it has work, and returns the index only
+    then; `hooks/brain.ts` runs it at startup, resume and /clear, never at a compaction. A refusal is
+    told once per device and project; the set-up session's "write notes to `.docs/brain/`" line comes
+    back after a compaction. About 0.8 s per start.
+- [x] 5. Rule edits: CLAUDE.shared.md, asdev-handover, asdev-planner, asdev-release; `autoDreamEnabled: false`
+  - The compaction summary keeps uncommitted brain notes; setup-architecture.md has the decision.
 - [ ] 6. Paste-ready instruction for the Nebulingo, Tilspire and Framvis chats; FYI for running chats
 - [ ] Live check after a restart; walkthrough, changelog, completion routine

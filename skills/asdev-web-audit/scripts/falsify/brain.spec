@@ -143,3 +143,40 @@ expect: FAIL doc_hygiene shows a brain breach
             if False:
                 report.add(".docs/brain"
 >>>>>>> END
+
+@@@ skills/asdev-web-audit/scripts/brain.py
+name: start runs setup at every start
+expect: FAIL a second start does nothing and returns no index
+<<<<<<< OLD
+    if current and same_path(current, where.brain) and not sources:
+        out.step(True, "start"
+======= NEW
+    if False:
+        out.step(True, "start"
+>>>>>>> END
+
+name: start returns the index when nothing changed
+expect: FAIL an old folder holding only copies the brain has
+<<<<<<< OLD
+    if out.facts.get("newly_set") or out.facts.get("moved"):
+======= NEW
+    if True:
+>>>>>>> END
+
+name: start never migrates
+expect: FAIL start sets up, moves the old notes in
+<<<<<<< OLD
+    if out.passed and sources:
+        migrate(where, out, stamp)
+======= NEW
+    if False:
+        migrate(where, out, stamp)
+>>>>>>> END
+
+name: start skips a project whose old folder holds notes again
+expect: FAIL a note the harness left in the old folder after setup is moved in
+<<<<<<< OLD
+    if current and same_path(current, where.brain) and not sources:
+======= NEW
+    if current and same_path(current, where.brain):
+>>>>>>> END

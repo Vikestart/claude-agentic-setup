@@ -1229,3 +1229,53 @@ expect: (fail) a reopened chat keeps the start it had
 ======= NEW
   if (tokens < START_UNKNOWN + FIRST_GAP) return undefined
 >>>>>>> END
+
+@@@ mods/asdev/hooks/compaction.ts
+name: the brain set-up runs at a compaction too
+expect: (fail) a start with nothing to do adds nothing
+<<<<<<< OLD
+      const text = e.source === 'compact' ? await afterCompact($, e.cwd) : await brainStart($, e.cwd, e.source)
+======= NEW
+      const text = e.source === 'compact' ? (await brainStart($, e.cwd, e.source), await afterCompact($, e.cwd)) : await brainStart($, e.cwd, e.source)
+>>>>>>> END
+
+name: the compaction notice drops the line on where notes go
+expect: (fail) a start that sets the brain up says where notes go
+<<<<<<< OLD
+  const brain = await brainReminder($)
+======= NEW
+  const brain: string = ''
+>>>>>>> END
+
+@@@ mods/asdev/hooks/brain.ts
+name: a refusal is told at every start
+expect: (fail) a refusal is told once per project
+<<<<<<< OLD
+  if (failed && told[brain] !== failed) {
+======= NEW
+  if (failed) {
+>>>>>>> END
+
+name: a refusal once told is never told again after it changes
+expect: (fail) a refusal is told once per project
+<<<<<<< OLD
+    await $.store.set(REFUSED, { ...told, [brain]: failed })
+======= NEW
+    await $.store.set(REFUSED, { ...told, [brain]: told[brain] ?? failed })
+>>>>>>> END
+
+name: the set-up session is not told where notes go
+expect: (fail) a start that sets the brain up says where notes go
+<<<<<<< OLD
+    parts.push(`This project's memory now lives in its committed second brain, set up just now on this device. ${keepWriting(brain)}`)
+======= NEW
+    parts.push('This project\'s memory now lives in its committed second brain.')
+>>>>>>> END
+
+name: notes left in the old folder after setup go unannounced
+expect: (fail) notes left in the old folder by an earlier session are moved in
+<<<<<<< OLD
+  if (s.moved) parts.push(
+======= NEW
+  if (false) parts.push(
+>>>>>>> END

@@ -77,20 +77,19 @@ decision in one line.
 3. **Test it:** could a new session act correctly from `reference/` alone? If it would have to ask
    "why did we…?", the answer belongs there, with its reason.
 
-## 3b. Memory — only what outlives the project
+## 3b. The brain — what this session learned
 
-`reference/` holds facts about *this* project. Memory holds what applies across projects: the
-owner's preferences and corrections, how they like to work, pointers to outside resources. For each
-lesson from this session, pick one home, never both:
+For each lesson from this session, pick one home, never two (the `asdev-brain` skill's table):
 
-- about this codebase → `reference/` (step 3);
-- about the owner or how to work with them, and not obvious from any file → memory: one fact per
-  file, update an existing one rather than adding a near-duplicate, index line in `MEMORY.md`;
-- already recorded in code, git history or an instruction file → neither.
+- a whole subject of this codebase → `reference/` (step 3);
+- a decision with its reason, a trap, an owner correction about this project → a note in
+  `.docs/brain/`, updating an existing one rather than adding a near-duplicate;
+- the owner as a person, or how they want every project worked → one line in
+  `~/.claude/CLAUDE.personal.md`;
+- already recorded in code, git history or an instruction file → nowhere.
 
-Correct or delete a memory this session proved wrong. The index `MEMORY.md` is loaded every turn:
-keep each line under ~150 characters, merge superseded entries, and once it passes ~40 lines run
-the `consolidate-memory` skill.
+Correct or delete a note this session proved wrong, then run `brain.py check` until it is clean.
+Notes reach another device only through git: commit them, and list any still uncommitted in State.
 
 ## 4. Write `.docs/handover.md`
 
@@ -100,7 +99,7 @@ Short, and linking rather than repeating — anything written only here is lost 
 # Handover — <project> — <YYYY-MM-DD>
 
 ## State
-- Branch: <branch>, <in sync with origin | ahead/behind>; uncommitted: <none | files>
+- Branch: <branch>, <in sync with origin | ahead/behind>; uncommitted: <none | files, `.docs/brain/` included>
 - Deployment: local <…> · staging <…> · production <…> (how each was verified)
 - Next session's context limit: <shared cap | override <N> — <reason>> (step 4b)
 

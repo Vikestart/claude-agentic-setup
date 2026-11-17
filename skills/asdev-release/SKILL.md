@@ -48,7 +48,8 @@ If the project names none of this, ask once rather than guessing — a wrong gue
 ## 2. Sync the branches — once per release task, not every phase
 
 1. Preserve uncommitted work (commit it if it is finished and yours; otherwise leave it untouched
-   and say so).
+   and say so). Commit `.docs/brain/` changes first, docs only: a checkout would otherwise strand
+   them on one branch or split the brain between two.
 2. `git fetch origin`.
 3. Fast-forward local `main` and `staging` to their remotes.
 4. Merge the updated `main` into `staging`.

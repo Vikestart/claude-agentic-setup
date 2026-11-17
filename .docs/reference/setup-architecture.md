@@ -27,7 +27,8 @@ how the shared repo, its installer and the links work is in [`setup-repo.md`](se
 | Skill | Holds | CLAUDE.md sends a session there when… |
 |---|---|---|
 | `asdev-planner` | Plan template, roster question, plan review, roadmap/plan/task rules, phase completion | a change reaches the Planning Gate, or a planned phase completes |
-| `asdev-handover` | The handover steps, the memory-vs-reference rule, the paste-ready message and FYI, failures seen before | the owner approves a handover |
+| `asdev-handover` | The handover steps, where each lesson goes, the paste-ready message and FYI, failures seen before | the owner approves a handover |
+| `asdev-brain` | Where a learned fact goes, the note and index rules, what never goes in, `brain.py` | saving or pruning a memory note, or a brain's set-up, migration or check |
 | `asdev-orchestrator` | Agent definitions table, rosters, spawning, briefs, verification, reviewers | before spawning an agent, proposing a roster, or a detached review |
 | `asdev-release` | Release shape per project, pre-flight, branch sync, staging and production validation, rollback, when to pause | a merge into `staging` or `main`, a deploy, or a PR merged on GitHub |
 | `asdev-web-audit` | The one scanner suite, falsification, archiving, the setup's own tooling scripts | the audit gate, and any guard or tooling work |
@@ -38,6 +39,18 @@ Each skill's private material lives in its `local/` overlay, which the share bun
 skill must still work without it.
 
 ## Decisions, with their reasons
+
+- **A second brain in each project's `.docs/brain/`** (owner, 2026-11-17; plan in git history).
+  Memory sat in hidden folders under `~/.claude/projects/`, outside git (14 folders, 193 notes), so
+  what one device learned never reached another. The harness's `autoMemoryDirectory` now points it
+  at the committed brain. The harness honours it only in the git-ignored `settings.local.json`, as
+  an absolute path, read once per session from the session's own folder: so `brain.py setup` runs
+  per folder, and points worktrees at the main repo's brain. The mod's start-up hook runs
+  `brain.py start` at every start, so no device or project is set up by hand, and tells the session
+  that set it up to write notes there itself, since the harness switches only at the next start.
+  Never a `type: user` note (the harness treats those as private) or a secret. The index merges
+  with `merge=union`, since two devices append lines to it. `autoDreamEnabled: false`, so no
+  background job rewrites committed notes unattended. Obsidian is only a viewer.
 
 - **Gemini as a second provider, through `gemini.py`** (owner, 2026-10-27; Google AI Pro). The
   bridge is Antigravity CLI's headless `agy -p`: Gemini CLI stopped serving AI Pro accounts on

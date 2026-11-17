@@ -275,6 +275,41 @@ try:
            "old folder")
     shutil.rmtree(old_memory(d))
 
+    # ---- start: the asdev mod's start-up hook
+    s = repo("s")
+    old = old_memory(s)
+    note(old, "first")
+    (old / "MEMORY.md").write_text("# Memory Index\n\n- [First](first.md) — f\n", encoding="utf-8")
+    code, data = brain("start", s, "--stamp", "20260101-000000")
+    check("start sets up, moves the old notes in, and returns the index",
+          code == 0 and data.get("newly_set") is True and data.get("moved") == 1
+          and setting_of(s) == s / ".docs" / "brain" and (s / ".docs" / "brain" / "first.md").is_file()
+          and not old.exists() and "[First](first.md)" in data.get("index", ""))
+    code, data = brain("start", s)
+    check("a second start does nothing and returns no index",
+          code == 0 and [x["step"] for x in data.get("steps", [])] == ["start"] and "index" not in data)
+    note(old_memory(s), "later")
+    code, data = brain("start", s, "--stamp", "20260101-000001")
+    check("a note the harness left in the old folder after setup is moved in at the next start",
+          code == 0 and data.get("newly_set") is False and data.get("moved") == 1
+          and (s / ".docs" / "brain" / "later.md").is_file() and "index" in data)
+    note(old_memory(s), "first")
+    code, data = brain("start", s, "--stamp", "20260101-000002")
+    check("an old folder holding only copies the brain has is renamed, and no index returned",
+          code == 0 and data.get("moved") == 0 and "index" not in data and not old_memory(s).joinpath("first.md").exists())
+    t = repo("t")
+    (t / ".claude").mkdir()
+    (t / ".claude" / "settings.local.json").write_text(json.dumps({"autoMemoryDirectory": "D:\\elsewhere"}),
+                                                       encoding="utf-8")
+    note(old_memory(t), "mine")
+    code, data = brain("start", t)
+    check("start refuses a setting that points elsewhere and leaves the old folder as it is",
+          code == 1 and "setting" in failed(data) and (old_memory(t) / "mine.md").is_file()
+          and not (t / ".docs" / "brain" / "mine.md").exists())
+    (root / "loose").mkdir()
+    code, data = brain("start", root / "loose")
+    check("start skips a folder outside a git repo", code == 3 and data.get("skipped"))
+
     # ---- doc_hygiene runs the check
     note(db, "island")
     hygiene = subprocess.run([sys.executable, str(HERE / "doc_hygiene.py"), "--path", str(d)],

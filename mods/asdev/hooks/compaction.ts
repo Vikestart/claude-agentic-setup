@@ -1,5 +1,6 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface as Engine, Register, ToolCallResult } from 'claude-code'
+import { brainReminder, brainStart } from './brain'
 import { keepEndings, refusal } from './guards'
 import { limitNotes } from './limits'
 import { unpushed } from './shipped'
@@ -43,7 +44,7 @@ const HELD_BACK = 'That reply asks the owner something, so the compaction is hel
 
 // Was the "When compacting" rule in CLAUDE.shared.md; given to every main-chat compaction without its own.
 const INSTRUCTIONS = 'Keep: the current phase and task, decisions with their reasons, open questions, and any '
-  + 'uncommitted, unpushed or undeployed state. Drop: tool output, file contents (they are on disk) '
+  + 'uncommitted (`.docs/brain/` notes included), unpushed or undeployed state. Drop: tool output, file contents (they are on disk) '
   + 'and resolved dead ends.'
 
 // The budgets live in the audit suite's doc_hygiene.py (one source), so the mod asks it.
@@ -230,7 +231,8 @@ async function afterCompact($: Engine, cwd: string): Promise<string> {
     text += '\n\nYour last message to the owner before the compaction, verbatim — the owner may be '
       + `replying to it:\n<<<\n${reply}\n>>>`
   }
-  return text
+  const brain = await brainReminder($)
+  return brain ? `${text}\n\n${brain}` : text
 }
 
 // `seen`: a fingerprint of each file the agent read whole. Rereading an unchanged file adds it to the
@@ -495,12 +497,14 @@ export const register: Register = on => {
       await update($, nudgedAt, () => 0)
       await update($, docsAt, () => 0)
     }
-    if (e.source !== 'compact') return r
     try {
-      const text = await afterCompact($, e.cwd)
+      // A compaction goes on in the session its start set the brain up for: only the notice runs, and it
+      // repeats brainStart's line about where notes go.
+      const text = e.source === 'compact' ? await afterCompact($, e.cwd) : await brainStart($, e.cwd, e.source)
+      if (!text) return r
       return { ...r, additionalContext: [...(r.additionalContext ?? []), text] }
     } catch {
-      // A broken notice must never break the session start.
+      // A broken notice or brain set-up must never break the session start.
       return r
     }
   })

@@ -13,6 +13,7 @@ USAGE (from the session's folder, or with --project)
     brain.py setup     point the harness's memory at the main repo's .docs/brain/
     brain.py migrate   copy the old hidden memory folder in; never overwrites, never deletes
     brain.py check     the brain's rules; exit 1 on a breach
+    brain.py start     setup, then migrate, each only when it has work: the asdev mod's start-up hook
 
 --json prints one JSON object instead of lines (the asdev mod's start-up hook reads it).
 Exit codes: 0 done or clean, 1 refused or a breach, 3 not applicable (no git repo, or no .docs/).
@@ -334,6 +335,25 @@ def merge_index(source: Path, dest: Path, renamed: dict[str, str], out: Out) -> 
     return wanted
 
 
+# ---------------------------------------------------------------------------------------------- start
+
+def start(where: Where, out: Out, stamp: str) -> None:
+    """Setup, then migrate, at every session start; quiet when neither has work."""
+    current = setting(where)
+    sources = holding(old_folders(where))
+    # Most starts: set up long ago, nothing left behind. Setup's git checks would only cost time.
+    if current and same_path(current, where.brain) and not sources:
+        out.step(True, "start", "memory already points at the brain, and no old folder holds notes")
+        return
+    setup(where, out)
+    # Notes the harness left in the old folder: the partner's, a device's first session's, or those
+    # written in the session that set the brain up, since the harness switches only after it.
+    if out.passed and sources:
+        migrate(where, out, stamp)
+    if out.facts.get("newly_set") or out.facts.get("moved"):
+        out.facts["index"] = read(where.brain / INDEX) if (where.brain / INDEX).is_file() else ""
+
+
 # ---------------------------------------------------------------------------------------------- check
 
 def notes_in(brain: Path) -> dict[str, Path]:
@@ -472,6 +492,8 @@ def run(command: str, project: Path, stamp: str | None = None) -> tuple[Out, Whe
             setup(where, out)
         elif command == "migrate":
             migrate(where, out, stamp or datetime.now().strftime("%Y%m%d-%H%M%S"))
+        elif command == "start":
+            start(where, out, stamp or datetime.now().strftime("%Y%m%d-%H%M%S"))
         else:
             check(where, out)
     except (OSError, ValueError) as exc:
@@ -483,7 +505,7 @@ def main(argv: list[str] | None = None) -> int:
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
-    ap.add_argument("command", choices=["setup", "migrate", "check"])
+    ap.add_argument("command", choices=["setup", "migrate", "check", "start"])
     ap.add_argument("--project", type=Path, default=Path.cwd(),
                     help="the session's folder (default: the current one)")
     ap.add_argument("--json", action="store_true", help="one JSON object instead of lines")

@@ -111,9 +111,10 @@ halt until the owner approves (what approval covers: CLAUDE.md §1).
 
 1. **Verify** against the plan's verification section — evidence, not claims.
 2. **Reference docs:** record durable architecture, decisions *with their reason*, invariants and
-   caveats in `.docs/reference/`, in the file that owns the subject. Correct or remove only what has
-   gone stale. Generated files (`platform-manifest.md`, dated audit reports) are rewritten by the
-   tool that owns them, never by hand. If this touches the project's `CLAUDE.md` / `AGENTS.md`, keep it within the size budget in the `asdev-conventions` skill.
+   caveats in `.docs/reference/`, in the file that owns the subject; a smaller lesson is a brain
+   note (`asdev-brain`). Correct or remove only what has gone stale. Generated files
+   (`platform-manifest.md`, dated audit reports) change only through their tool. If this touches
+   `CLAUDE.md` / `AGENTS.md`, keep it within its budget in `asdev-conventions`.
 3. **Clear** the phase from `implementation_plan.md` and its tasks from `task.md` (`tasks_done.py`). If the approved
    plan listed another phase, promote it; otherwise the plan says no plan is active.
 4. **`walkthrough.md`:** replace it with this phase only — what was built, how it was verified, and
