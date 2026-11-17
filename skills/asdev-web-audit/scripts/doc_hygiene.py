@@ -27,9 +27,11 @@ from __future__ import annotations
 import os
 import re
 import sys
+from pathlib import Path
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
+import brain  # noqa: E402
 from _common import (  # noqa: E402
     Report, ReadError, cli, git_ignored, git_tracked, in_scope, read_text,
     scope_active, scope_contains_prefix,
@@ -98,6 +100,9 @@ MEMORY_KB = 6
 
 def memory_index(root: str) -> str:
     """The MEMORY.md Claude Code loads for this project, or "" when there is none."""
+    brain_index = os.path.join(root, ".docs", "brain", "MEMORY.md")
+    if os.path.isfile(brain_index):
+        return brain_index
     config = os.environ.get("CLAUDE_CONFIG_DIR") or os.path.join(os.path.expanduser("~"), ".claude")
     slug = re.sub(r"[^A-Za-z0-9]", "-", os.path.abspath(root))
     path = os.path.join(config, "projects", slug, "memory", "MEMORY.md")
@@ -162,6 +167,14 @@ def run(args) -> Report:
                 "or intentionally track it only after confirming a private "
                 "remote and production Markdown/.docs denial",
             )
+
+    # The second brain's rules (brain.py check), so every gate shows a lost note or a committed
+    # secret; advisory here like the rest, while `brain.py check` alone exits 1.
+    if not scope_active() or scope_contains_prefix(".docs/brain"):
+        out, _, skipped = brain.run("check", Path(root))
+        for s in out.steps if not skipped else []:
+            if not s["ok"]:
+                report.add(".docs/brain", None, "BRAIN_" + re.sub(r"\W+", "_", s["step"]).upper(), s["message"])
 
     # Reference files are kept, never pruned, but one past REFERENCE_KB is split by topic.
     ref = os.path.join(docs, "reference")

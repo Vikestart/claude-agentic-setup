@@ -28,7 +28,7 @@ from sync_agents_md import PERSONAL, PERSONAL_EXAMPLE, expand_imports
 
 CLAUDE_HOME = Path.home() / ".claude"
 SKILLS = CLAUDE_HOME / "skills"
-DEFAULT_SKILLS = ["asdev-conventions", "asdev-web-audit", "asdev-blueprints", "asdev-handover", "asdev-planner", "asdev-orchestrator", "asdev-release"]
+DEFAULT_SKILLS = ["asdev-conventions", "asdev-web-audit", "asdev-blueprints", "asdev-handover", "asdev-planner", "asdev-orchestrator", "asdev-release", "asdev-brain"]
 
 # Never bundled, wherever they appear.
 EXCLUDED_DIRS = {"local", "__pycache__", ".sandbox", ".git", "evals", "node_modules"}

@@ -158,6 +158,7 @@ class RuleBudgets(unittest.TestCase):
         "skills/asdev-handover/SKILL.md": 10.5,
         "skills/asdev-web-audit/SKILL.md": 21,
         "skills/asdev-blueprints/SKILL.md": 27,
+        "skills/asdev-brain/SKILL.md": 5.5,
     }
     AGENT_KB = 3
 

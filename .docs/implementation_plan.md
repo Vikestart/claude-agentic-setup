@@ -24,6 +24,9 @@ Nebulingo 66, Tilspire 55), outside git, and partly duplicating `.docs/reference
 - `recurlex` and `anti-video` have memory folders but no project folder on this machine. TSWDB's
   `legacy-wp` folder has no git and no `.docs/`.
 - `autoDreamEnabled` (background memory consolidation) is not set in `settings.json`.
+- The owner works alone on their projects; the partner has separate projects and shares only this
+  setup repo (owner, 2026-11-17). So `merge=union` guards one person's devices, and this repo's brain
+  is the only one both write to.
 
 ## Steps
 1. **Skill `asdev-brain`** (new, about 5 kB). The rules it sets:
@@ -52,15 +55,19 @@ Nebulingo 66, Tilspire 55), outside git, and partly duplicating `.docs/reference
      - It refuses when the target repo does not exist.
      - It never deletes.
    - **`check`** fails on:
-     - broken `[[links]]`;
+     - an index line pointing at no note, and a note the index cannot reach, directly or through
+       `[[links]]` (built: a lost note is the real breakage, because the harness loads only the
+       index; a `[[link]]` to a note not yet written is listed, not failed, since the harness's
+       own instructions and Obsidian both use those as "worth writing");
      - an index over 40 lines, or with lines over 150 characters;
      - `type: user` notes;
      - a secrets-scanner finding in a note;
      - a hidden `memory/` folder the harness recreated for this project, which is the real sign that
        the setting is not taking effect.
 
-     It also lists notes nothing links to. `doc_hygiene.py` runs it, so `audit_all --changed`
-     scans new notes at every gate.
+     `doc_hygiene.py` shows its findings, so `audit_all --changed` scans new notes at every gate.
+   - Built: `setup` adds an ignore rule only where the file is not already ignored. Claude Code puts
+     `settings.local.json` in each person's global git ignore, and setup runs on every device.
 3. **This repo:**
    - `setup` and `migrate`, then the judgement pass.
    - Notes about the owner personally go to `CLAUDE.personal.md`. Notes about the shared setup stay,
