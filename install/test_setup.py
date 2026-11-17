@@ -284,6 +284,14 @@ class Verify(unittest.TestCase):
             for suite in folder.glob("test_*.py"):
                 self.assertIn(suite.name, listed)
 
+    def test_every_falsify_spec_is_checked(self):
+        import verify
+        listed = {Path(argv[-1]).name for _, argv, _ in verify.checks([])}
+        specs = [p for p in (verify.AUDIT / "falsify").glob("*") if p.suffix in (".spec", ".json")]
+        self.assertTrue(specs)
+        for spec in specs:
+            self.assertIn(spec.name, listed)
+
     def test_exit_zero_without_its_summary_is_not_a_pass(self):
         import verify
         self.assertEqual(verify.last_line("3/3 ok\n", r"^\d+/\d+ ok"), ("3/3 ok", True))

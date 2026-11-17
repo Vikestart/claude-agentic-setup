@@ -31,6 +31,12 @@ def checks(gate_roots: list[Path]) -> list[tuple[str, list[str], str]]:
         # The app's own engine: the band draws with props an older `claude` on PATH refuses (2026-10-30).
         ("asdev mod tests", [os.environ.get("CLAUDE_CODE_EXECPATH") or "claude", "plugin", "test", str(REPO / "mods" / "asdev")], r"^\s*\d+ pass"),
     ]
+    # A mutation whose anchor no longer matches the code is never run, so its guard stands unproven
+    # while every suite stays green: 10 had drifted unnoticed by 2026-11-17. Found, not listed.
+    specs = sorted(p for p in (AUDIT / "falsify").glob("*") if p.suffix in (".spec", ".json"))
+    found += [(f"falsify anchors {s.name}", [py, str(AUDIT / "falsify.py"), "--check", "--cwd", str(REPO),
+                                             "--mutations", str(s)], r"^check: \d+/\d+ anchors unique")
+              for s in specs]
     setup_tests = REPO / "install" / "test_setup.py"
     if setup_tests.is_file():
         found.append(("setup tests", [py, str(setup_tests)], r"^(Ran \d+ tests?|OK|FAILED).*"))

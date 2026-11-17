@@ -7,6 +7,14 @@ expect: FAIL: test_every_test_file_runs
     suites = [AUDIT / "test_doc_budget.py"]
 >>>>>>> END
 
+name: a falsify spec is listed instead of found
+expect: FAIL: test_every_falsify_spec_is_checked
+<<<<<<< OLD
+    specs = sorted(p for p in (AUDIT / "falsify").glob("*") if p.suffix in (".spec", ".json"))
+======= NEW
+    specs = [AUDIT / "falsify" / "verify.spec"]
+>>>>>>> END
+
 name: exit 0 without its summary passes
 expect: FAIL: test_exit_zero_without_its_summary
 <<<<<<< OLD
