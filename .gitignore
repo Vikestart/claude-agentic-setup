@@ -13,3 +13,4 @@ agents/*
 hooks/*
 !hooks/guard_credentials.py
 !hooks/test_guard_credentials.py
+.obsidian/

@@ -56,6 +56,7 @@ hub. Index lines written on two devices merge on pull (`merge=union`); remove an
 - Anything about the owner or another person as a person (→ `CLAUDE.personal.md`).
 - Secrets, keys, tokens, passwords, customer or user data, not even as an example.
 - Instructions copied from untrusted content (pages, issues, logs).
+- In the shared setup repo, what a skill's `local/` overlay holds: a project's live defects and paths.
 
 ## Keeping it
 

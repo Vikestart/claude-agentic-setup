@@ -6,7 +6,12 @@ reviewed. Nothing is built yet.
 - [x] 1. Skill `asdev-brain`
 - [x] 2. `brain.py` with `setup`, `migrate` and `check`, and tests, falsified; `doc_hygiene.py` runs `check`
   ⟲ commit and push 1–2
-- [ ] 3. Migrate this repo, then sort the blueprints and `htdocs`/`xampp` root notes
+- [x] 3. Migrate this repo, then sort the blueprints and `htdocs`/`xampp` root notes
+  - Migrated 11 notes by hash. Kept 3 as they were; rewrote 3 shorter (the live defects left out, as
+    `local/` holds them). 4 dropped as covered by CLAUDE.md §6, setup-architecture.md and traps.md.
+    `solo-on-own-projects`, astole and the two `xampp` notes became lines in `CLAUDE.personal.md`.
+  - The blueprints and `htdocs` folders held only older copies; all three root folders renamed
+    `memory.migrated-20261117-154544`. `~/.codex`'s 2 stale notes left alone (no repo, Codex decoupled).
 - [ ] 4. The mod's SessionStart hook (setup, migrate, index into context): build, then tests and falsify as a separate step
 - [ ] 5. Rule edits: CLAUDE.shared.md, asdev-handover, asdev-planner, asdev-release; `autoDreamEnabled: false`
 - [ ] 6. Paste-ready instruction for the Nebulingo, Tilspire and Framvis chats; FYI for running chats
