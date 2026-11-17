@@ -19,5 +19,9 @@ reviewed. Nothing is built yet.
     back after a compaction. About 0.8 s per start.
 - [x] 5. Rule edits: CLAUDE.shared.md, asdev-handover, asdev-planner, asdev-release; `autoDreamEnabled: false`
   - The compaction summary keeps uncommitted brain notes; setup-architecture.md has the decision.
+  - Committed 770c917. 5cdb706, on the owner's question about clusters: hubs list `[[name]] — hook`,
+    within the index's limits, and split into sub-hubs. `check` does not yet measure hub sizes.
+  - The falsify run that overlapped another was rerun alone; the shared-journal fix is a chip.
 - [ ] 6. Paste-ready instruction for the Nebulingo, Tilspire and Framvis chats; FYI for running chats
+  - Given 2026-11-17 with the restart request; waiting for the three chats' judgement passes.
 - [ ] Live check after a restart; walkthrough, changelog, completion routine
