@@ -7,3 +7,4 @@
 - [Self-managing, not admin](self-managing-not-admin.md) — mechanisms run themselves; owner input shrinks to one word, asked once
 - [Private content stays local](portable-shareable-setup.md) — `local/` overlays; live defects move there; leak classes a name search misses
 - [asdev-blueprints skill](asdev-blueprints-skill.md) — its chat never fixes a project; lessons from building it
+- [falsify.py: one run per --cwd](falsify-one-run-per-cwd.md) — parallel runs share a recovery file; the second undoes the first's edit
