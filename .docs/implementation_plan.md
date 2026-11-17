@@ -7,7 +7,8 @@ git, invisible to the partner's machine, and partly duplicating `.docs/reference
 
 **Decided (owner, 2026-11-17):** a second brain inside each project's `.docs/`, like Obsidian or
 Graphify. The open decisions below were settled on the recommendations: A, `.docs/brain/`, committed
-to git, a code graph on the roadmap; the plan and its roster were approved. The reason the owner gave:
+to git, a code graph on the roadmap; the plan was approved, and the big projects migrate in their own
+chats rather than by agents (see Subagents). The reason the owner gave:
 in the repo, the brain is not tied to one device.
 
 ## What was found (2026-11-17, CLI 2.1.325)
@@ -87,14 +88,12 @@ SessionStart hook that loads `brain/index.md`.
 - Gate: `audit_all.py --changed` in each repo touched; plugin and doc hygiene in this one.
 
 ## Subagents
-| Role | Definition | Model | Owns |
-|---|---|---|---|
-| Nebulingo migration pass | `opus-medium-executor` | Opus 5.5 | `nebulingo/.docs/brain/`, `reference/` links |
-| Tilspire migration pass | `opus-medium-executor` | Opus 5.5 | `tilspire/.docs/brain/`, `reference/` links |
-
-The main chat writes the skill, `brain.py` and the rule edits, and migrates the five small projects.
-The two big passes run in parallel once `brain.py` is done. After the owner's answers, and before
-step 1, the plan gets a detached review (`opus-high-reviewer`): it changes where every session writes.
+None (owner, 2026-11-17): Nebulingo, Tilspire and Framvis migrate in their own running chats, from a
+paste-ready instruction this chat writes once the skill and `brain.py` have shipped. Until a chat
+restarts, the harness still points its memory at the old folder, so the instruction tells it to write
+new notes straight into `.docs/brain/` meanwhile. This chat writes the skill, `brain.py`, the hook and
+the rule edits, and migrates this repo and the projects with no chat of their own. Before step 1, the
+plan gets a detached review (`opus-high-reviewer`): it changes where every session writes.
 
 ## Release
 - This repo: commit and push to `main`.
