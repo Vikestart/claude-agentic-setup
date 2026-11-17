@@ -238,12 +238,12 @@ try:
     check("check fails where the brain is not set up", code == 1 and "setting" in failed(data))
     brain("setup", d)
     db = d / ".docs" / "brain"
-    note(db, "hub", "see [[leaf]] and [[not-yet]]")
+    note(db, "hub", "see [[not-yet]]\n\n- [[leaf]] — the leaf")
     note(db, "leaf")
     (db / "MEMORY.md").write_text("# Brain\n\n- [Hub](hub.md) — the hub\n", encoding="utf-8")
     code, data = brain("check", d)
     check("a clean brain passes; a note reached through a hub's [[link]] counts as reached",
-          code == 0 and step(data, "reach").get("ok"))
+          code == 0 and step(data, "reach").get("ok") and step(data, "hubs").get("ok"))
     check("a link to a note not written yet is listed, not failed",
           step(data, "unwritten").get("warn") and "not-yet" in step(data, "unwritten").get("message", ""))
 
@@ -258,14 +258,18 @@ try:
         check(label, code == 1 and expect in failed(data))
         return data
 
-    def add_index(text):
-        with open(db / "MEMORY.md", "a", encoding="utf-8") as fh:
+    def add_index(text, to="MEMORY.md"):
+        with open(db / to, "a", encoding="utf-8") as fh:
             fh.write(text)
 
     breach("an index line pointing at no note fails", lambda: add_index("- [Gone](gone.md) — x\n"), "index links")
     breach("a note the index cannot reach fails", lambda: note(db, "island"), "reach")
     breach("an index over 40 lines fails", lambda: add_index("- filler\n" * 40), "index size")
     breach("an index line over 150 characters fails", lambda: add_index("- " + "x" * 149 + "\n"), "index size")
+    breach("a hub listing over 40 notes fails", lambda: add_index("- [[leaf]] — again\n" * 40, "hub.md"), "hubs")
+    breach("a hub line over 150 characters fails", lambda: add_index("- [[leaf]] — " + "x" * 138 + "\n", "hub.md"),
+           "hubs")
+    breach("a hub line with no hook fails", lambda: add_index("- [[leaf]]\n", "hub.md"), "hubs")
     breach("a type: user note fails",
            lambda: (note(db, "person", kind="user"), add_index("- [Person](person.md) — p\n")), "personal")
     value = "q8Zr4TfLx2Wm9VbN"

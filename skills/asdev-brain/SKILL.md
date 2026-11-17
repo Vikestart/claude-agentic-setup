@@ -65,10 +65,10 @@ Every note must be reachable from the index. Lines written on two devices merge 
   their own. Uncommitted notes reach no other device. Commit them before any branch switch
   (`asdev-release`); the handover and the compaction break report any left over.
 - **Check:** `python $HOME/.claude/skills/asdev-web-audit/scripts/brain.py check` from the project
-  root. It fails on an index line pointing at no note, a note the index cannot reach, an index over
-  its limits, a `type: user` note, a secret, or a hidden memory folder the harness recreated for
-  the project, which means the setting stopped working: report that to the owner. It lists links
-  to notes not yet written. `doc_hygiene.py` runs it, so every gate shows its findings.
+  root. It fails on an index line pointing at no note, a note the index cannot reach, an index or
+  hub over its limits, a `type: user` note, a secret, or a hidden memory folder the harness
+  recreated for the project, which means the setting stopped working: report that to the owner. It
+  lists links to notes not yet written. `doc_hygiene.py` runs it at every gate.
 
 ## Setting up and migrating by hand
 

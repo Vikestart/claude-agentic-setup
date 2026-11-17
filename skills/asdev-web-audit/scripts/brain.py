@@ -56,6 +56,7 @@ USER_TYPE = re.compile(r"^\s*type:\s*['\"]?user['\"]?\s*$", re.M)
 NAME = re.compile(r"^name:\s*['\"]?([^'\"\r\n]+?)['\"]?\s*$", re.M)
 WIKILINK = re.compile(r"\[\[([^\]\r\n]+)\]\]")
 MDLINK = re.compile(r"\]\(([^)\s]+)\)")
+HUB_ENTRY = re.compile(r"^\s*[-*+]\s+\[\[[^\]\r\n]+\]\](.*)$")
 
 
 class NotApplicable(Exception):
@@ -451,6 +452,29 @@ def check(where: Where, out: Out) -> None:
              else f"all {len(notes)} note(s) reachable from the index")
     if unwritten:
         out.step(True, "unwritten", f"links to notes not written yet: {shorten(sorted(unwritten))}", warn=True)
+
+    # A hub is drilled through like the index, so it keeps the index's limits; an entry without a hook
+    # makes the session open every listed note to find the one it needs.
+    hubs, over = 0, []
+    for rel, path in sorted(notes.items()):
+        entries = [(n, ln, m.group(1)) for n, ln in enumerate(read(path).splitlines(), 1)
+                   if (m := HUB_ENTRY.match(ln))]
+        if not entries:
+            continue
+        hubs += 1
+        long_entries = [n for n, ln, _ in entries if len(ln) > INDEX_MAX_CHARS]
+        bare = [n for n, _, hook in entries if not hook.strip(" \t—–-:")]
+        if len(entries) > INDEX_MAX_LINES:
+            over.append(f"{rel} lists {len(entries)} notes")
+        if long_entries:
+            over.append(f"{rel}:{long_entries[0]} is over {INDEX_MAX_CHARS} characters")
+        if bare:
+            over.append(f"{rel}:{bare[0]} has no hook")
+    if hubs:
+        out.step(not over, "hubs",
+                 f"{shorten(over)}; a hub lists at most {INDEX_MAX_LINES} notes as `- [[name]] — hook`, each "
+                 f"line at most {INDEX_MAX_CHARS} characters, and a full one splits into sub-hubs" if over
+                 else f"{hubs} hub(s), each within the index's limits")
 
     personal = []
     secrets = []

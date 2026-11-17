@@ -180,3 +180,27 @@ expect: FAIL a note the harness left in the old folder after setup is moved in
 ======= NEW
     if current and same_path(current, where.brain):
 >>>>>>> END
+
+name: a hub over 40 notes passes
+expect: FAIL a hub listing over 40 notes fails
+<<<<<<< OLD
+        if len(entries) > INDEX_MAX_LINES:
+======= NEW
+        if False:
+>>>>>>> END
+
+name: a long hub line passes
+expect: FAIL a hub line over 150 characters fails
+<<<<<<< OLD
+        long_entries = [n for n, ln, _ in entries if len(ln) > INDEX_MAX_CHARS]
+======= NEW
+        long_entries = []
+>>>>>>> END
+
+name: a hub line with no hook passes
+expect: FAIL a hub line with no hook fails
+<<<<<<< OLD
+        bare = [n for n, _, hook in entries if not hook.strip(" \t—–-:")]
+======= NEW
+        bare = []
+>>>>>>> END
