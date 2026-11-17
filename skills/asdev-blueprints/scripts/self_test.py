@@ -289,8 +289,12 @@ def check_paths(rep: Report, root: Path, skill_text: str, ref_texts: dict[str, s
                 p = normalise_path(raw)
                 if p is None or p in seen or p in loose_seen or p.split("/", 1)[0] in PROJECTS:
                     continue
-                if p.startswith((".docs/", "assets/", "references/", "local/", "scripts/", "asdev-conventions/", "asdev-web-audit/")):
-                    continue  # skill-internal or per-project template paths, not pointers into a project
+                if p.startswith(("references/", "local/", "asdev-conventions/", "asdev-web-audit/")) or (SKILL_DIR / p).exists():
+                    continue  # the skill's own files
+                # The shared half cites these as templates for a new project; the overlay cites real files
+                # (2026-11-17: its `assets/js/admin-support-mail.js` stayed stale two weeks, unchecked).
+                if not src.startswith("local/") and p.startswith((".docs/", "assets/", "scripts/")):
+                    continue
                 loose_seen[p] = f"{src}:{lineno}"
                 if not any((root / proj / p).exists() for proj in PROJECTS):
                     loose_missing.append(f"{p} ({loose_seen[p]})")
