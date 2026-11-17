@@ -110,7 +110,7 @@ expect: FAIL md range section Steps
 name: md: closing hashes stay in a heading's name
 expect: FAIL md range section Sub step
 <<<<<<< OLD
-        name = re.sub(r"[ 	]+#+$", "", re.sub(r"<!--.*?-->", "", title).strip()) or "(untitled)"
+        name = re.sub(r"[ \t]+#+$", "", re.sub(r"<!--.*?-->", "", title).strip()) or "(untitled)"
 ======= NEW
         name = re.sub(r"<!--.*?-->", "", title).strip() or "(untitled)"
 >>>>>>> END

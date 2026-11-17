@@ -2,7 +2,7 @@
 name: truncated output is taken at face value again
 expect: AssertionError: False is not true
 <<<<<<< OLD
-    m["estimated"] = m["output"] < 5 * visible_tokens
+    m["estimated"] = out_tokens < visible_tokens
 ======= NEW
     m["estimated"] = False
 >>>>>>> END
@@ -10,7 +10,7 @@ expect: AssertionError: False is not true
 name: complete output is overwritten by the estimate
 expect: AssertionError: True is not false
 <<<<<<< OLD
-    m["estimated"] = m["output"] < 5 * visible_tokens
+    m["estimated"] = out_tokens < visible_tokens
 ======= NEW
     m["estimated"] = True
 >>>>>>> END

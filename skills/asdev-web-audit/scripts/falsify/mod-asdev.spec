@@ -520,10 +520,10 @@ nudge(tokens)
 name: the trigger line compacts below 150k
 expect: (fail) the trigger line compacts with the instructions, from 150k only
 <<<<<<< OLD
-  if (tokens < await compactFrom($)) return false
-  if (!asksOwner(answer)) return true
+  if (tokens < await compactFrom($)) return undefined
+  if (!asksOwner(answer)) return 'go'
 ======= NEW
-  if (!asksOwner(answer)) return true
+  if (!asksOwner(answer)) return 'go'
 >>>>>>> END
 
 name: under /goal the trigger stop stays blocked
@@ -903,8 +903,12 @@ name: Today never turns red
 expect: (fail) terminal: Today turns red past its allowance
 <<<<<<< OLD
   const over = spent > may
+  const share = may ? spent / may : 1
+  const d0 = new Date(now)
 ======= NEW
   const over = false
+  const share = may ? spent / may : 1
+  const d0 = new Date(now)
 >>>>>>> END
 
 name: yesterday's start counts as today's
@@ -952,17 +956,17 @@ context.tokens !== undefined, now)
 name: the collapsed band leaves the spend out
 expect: (fail) terminal: the collapsed band shows Today and Month
 <<<<<<< OLD
-r.percentUsed / 100 })), ...months]
+    ]), ...months]
 ======= NEW
-r.percentUsed / 100 }))]
+    ])]
 >>>>>>> END
 
 name: the collapsed band puts the spend before a usage window
 expect: (fail) terminal: the collapsed band puts a usage window before the spend
 <<<<<<< OLD
-    const rows = [...pickLimits(
+    const rows = [...windows.flatMap(r => [
 ======= NEW
-    const rows = [...months, ...pickLimits(
+    const rows = [...months, ...windows.flatMap(r => [
 >>>>>>> END
 
 name: the Month figure leaves out the pace
@@ -976,17 +980,19 @@ expect: (fail) desktop: the account figure is a Today and a Month row
 name: the Today figure leaves out the pace
 expect: (fail) desktop: the account figure is a Today and a Month row
 <<<<<<< OLD
+    // A share beside the bar, the dollars in the hover card: dollars wrapped the band (owner, 2026-10-27).
     value: `${Math.round(share * 100)}% / ${Math.round(dayPace * 100)}%`,
 ======= NEW
+    // A share beside the bar, the dollars in the hover card: dollars wrapped the band (owner, 2026-10-27).
     value: `${Math.round(share * 100)}%`,
 >>>>>>> END
 
 name: Today's pace runs on past the working day
 expect: (fail) desktop: Today's pace at 18:00 is 100%, the working hours only
 <<<<<<< OLD
-  const dayPace = Math.min(1, Math.max(0, (hour - WORK_FROM) / (WORK_TO - WORK_FROM)))
+  return Math.min(1, Math.max(0, (d.getHours() + d.getMinutes() / 60 - from) / (to - from)))
 ======= NEW
-  const dayPace = Math.max(0, (hour - WORK_FROM) / (WORK_TO - WORK_FROM))
+  return Math.max(0, (d.getHours() + d.getMinutes() / 60 - from) / (to - from))
 >>>>>>> END
 
 @@@ mods/asdev/hooks/compaction.ts
@@ -1219,7 +1225,7 @@ expect: (fail) a reopened chat keeps the start it had
 name: the trigger line compacts before the chat's own threshold
 expect: (fail) a reopened chat keeps the start it had
 <<<<<<< OLD
-  if (tokens < await compactFrom($)) return false
+  if (tokens < await compactFrom($)) return undefined
 ======= NEW
-  if (tokens < START_UNKNOWN + FIRST_GAP) return false
+  if (tokens < START_UNKNOWN + FIRST_GAP) return undefined
 >>>>>>> END
