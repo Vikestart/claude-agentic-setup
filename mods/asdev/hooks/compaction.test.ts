@@ -478,17 +478,26 @@ test('a reload clears a frozen compaction status, or resumes a running one', asy
 
 // A compaction whose end is never seen (a reload lost the wait) stops counting after 10 minutes.
 test('a compaction never seen to end stops counting after 10 minutes', async ($: any, on) => {
-  const clock = mock.clock(on, { now: 10_000_000 })
+  // The test's own clock, which jumps: mock.clock resolves every 1 s tick on the way, and those 600 took
+  // 3.8 s of the 5 s test budget, so the setup's side-by-side checks timed it out (2026-11-17).
+  let now = 10_000_000
+  const held: (() => void)[] = []
+  on('clock.now', async () => ({ value: now }) as never)
+  on('clock.sleep', async () => { await new Promise<void>(r => held.push(r)); return { value: undefined } as never })
+  const until = async (ok: () => boolean) => { for (let i = 0; i < 500 && !ok(); i++) await tick() }
+  const jump = async (ms: number) => { await until(() => held.length > 0); now += ms; held.splice(0).forEach(r => r()) }
   for (const ev of ['ui.toast', 'ui.invalidate'] as const) on(ev, async () => ({ value: undefined }) as never)
   const status: (string | undefined)[] = []
   on('ui.status', async (_$, e: any) => { status.push(e.text); return { value: undefined } as never })
   let finish = () => {}
   on('session.compact', async (_$, e) => { await new Promise<void>(r => { finish = r }); return { messages: e.messages } as never })
   const done = $.session.compact({ trigger: 'auto', messages: MSGS })
-  await clock.advance(9 * 60_000)
-  expect(status.at(-1)).toContain('Compacting')
-  await clock.advance(60_000 + 1000)
-  expect(status.at(-1)).toBeUndefined()
+  await jump(9 * 60_000)
+  await until(() => status.length >= 2)
+  expect(status.at(-1)).toBe('Compacting… 540 s')
+  await jump(60_000 + 1000)
+  await until(() => status.length >= 3)
+  expect(status).toEqual(['Compacting… 0 s', 'Compacting… 540 s', undefined])
   finish()
   await done
 })

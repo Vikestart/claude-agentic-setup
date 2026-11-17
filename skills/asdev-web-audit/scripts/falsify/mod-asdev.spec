@@ -1014,6 +1014,14 @@ expect: (fail) a compaction never seen to end stops counting after 10 minutes
     if (false) {
 >>>>>>> END
 
+name: a compaction stops counting after 5 minutes
+expect: (fail) a compaction never seen to end stops counting after 10 minutes
+<<<<<<< OLD
+const STALE_COMPACTION = 10 * 60_000
+======= NEW
+const STALE_COMPACTION = 5 * 60_000
+>>>>>>> END
+
 @@@ mods/asdev/hooks/band.tsx
 name: a reset kept window vanishes before the first reply
 expect: (fail) terminal: the kept limits stand in before the first reply
